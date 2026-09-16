@@ -5,33 +5,60 @@
 
   <meta
     name="viewport"
-    content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
   >
 
-  <meta name="theme-color" content="#1d1d1f">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="Playsafe">
+  <meta
+    name="theme-color"
+    content="#f5f5f7"
+  >
 
-  <link rel="manifest" href="./manifest.json">
+  <meta
+    name="apple-mobile-web-app-capable"
+    content="yes"
+  >
+
+  <meta
+    name="apple-mobile-web-app-status-bar-style"
+    content="default"
+  >
+
+  <meta
+    name="apple-mobile-web-app-title"
+    content="Playsafe"
+  >
+
+  <link
+    rel="manifest"
+    href="./manifest.json"
+  >
 
   <title>Playsafe</title>
 
   <style>
+
     * {
       box-sizing: border-box;
     }
 
+    html,
     body {
       margin: 0;
-      background: #f5f5f7;
-      color: #1d1d1f;
+      padding: 0;
+      min-height: 100%;
       font-family:
         -apple-system,
         BlinkMacSystemFont,
-        "Segoe UI",
+        "SF Pro Display",
+        "SF Pro Text",
         Arial,
         sans-serif;
+      background: #f5f5f7;
+      color: #1d1d1f;
+    }
+
+    body {
+      min-height: 100vh;
     }
 
     button,
@@ -39,1777 +66,1904 @@
       font: inherit;
     }
 
-    .app {
-      max-width: 700px;
-      margin: auto;
-      padding-bottom:
-        calc(40px + env(safe-area-inset-bottom));
-    }
-
     .header {
       background: white;
       padding:
-        calc(18px + env(safe-area-inset-top))
-        18px
-        16px;
-      border-bottom: 1px solid #e5e5e5;
-      position: sticky;
-      top: 0;
-      z-index: 50;
+        calc(40px + env(safe-area-inset-top))
+        20px
+        20px;
+      border-bottom: 1px solid #dddddf;
     }
 
-    .logo {
-      font-size: 12px;
-      letter-spacing: 1.5px;
-      font-weight: 700;
-      color: #777;
-      margin-bottom: 4px;
+    .brand {
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: 4px;
+      color: #77777b;
+      margin-bottom: 8px;
     }
 
     h1 {
+      font-size: 32px;
+      line-height: 1.1;
       margin: 0;
-      font-size: 27px;
-    }
-
-    .back {
-      color: #007aff;
-      font-weight: 600;
-      margin-bottom: 12px;
-      cursor: pointer;
+      font-weight: 800;
     }
 
     .content {
-      padding: 16px;
+      padding: 18px;
+      padding-bottom:
+        calc(30px + env(safe-area-inset-bottom));
+      max-width: 800px;
+      margin: 0 auto;
     }
 
     .search {
       width: 100%;
-      padding: 14px;
-      margin-bottom: 12px;
-      border: 1px solid #ddd;
-      border-radius: 12px;
-      font-size: 16px;
+      border: 1px solid #d8d8dc;
+      border-radius: 16px;
       background: white;
+      padding: 17px 16px;
+      font-size: 18px;
+      outline: none;
+      margin-bottom: 14px;
     }
 
-    .statusBar {
+    .search:focus {
+      border-color: #99999f;
+    }
+
+    .connection-card {
+      background: white;
+      border-radius: 16px;
+      padding: 13px 14px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 10px;
-      background: white;
-      border-radius: 12px;
-      padding: 11px 12px;
       margin-bottom: 8px;
-      font-size: 13px;
     }
 
-    .statusText {
-      font-weight: 650;
+    .connection {
+      font-weight: 700;
+      font-size: 17px;
     }
 
-    .onlineText {
-      color: #247a3c;
+    .connection.online {
+      color: #21833d;
     }
 
-    .offlineText {
-      color: #a05a00;
+    .connection.offline {
+      color: #b55a00;
     }
 
-    .errorText {
-      color: #b42318;
-    }
-
-    .syncButton {
+    .sync-button {
       border: 0;
-      border-radius: 9px;
-      padding: 8px 11px;
-      background: #e8e8ed;
+      border-radius: 12px;
+      background: #e8e8ec;
       color: #1d1d1f;
-      font-size: 12px;
+      padding: 12px 14px;
       font-weight: 700;
       cursor: pointer;
       white-space: nowrap;
     }
 
-    .syncButton:disabled {
-      opacity: .5;
+    .sync-button:disabled {
+      opacity: 0.55;
     }
 
-    .syncInfo {
-      color: #888;
-      font-size: 11px;
-      margin: 0 2px 13px;
+    .sync-info {
+      color: #8b8b8f;
+      font-size: 14px;
+      margin: 10px 3px 14px;
     }
 
-    .errorBox {
-      display: none;
-      background: #fff0ee;
-      border: 1px solid #ffd5d0;
-      color: #8a1c13;
-      border-radius: 12px;
-      padding: 12px;
-      margin-bottom: 12px;
-      font-size: 12px;
-      line-height: 1.4;
-      word-break: break-word;
-    }
-
-    .errorBox.show {
-      display: block;
-    }
-
-    .card,
-    .infoCard {
-      background: white;
+    .auth-box {
+      background: #fff8e6;
+      border: 1px solid #f0d590;
       border-radius: 16px;
-      padding: 17px;
+      padding: 15px;
+      margin-bottom: 14px;
+      display: none;
+    }
+
+    .auth-title {
+      font-weight: 750;
+      margin-bottom: 6px;
+    }
+
+    .auth-text {
+      font-size: 14px;
+      line-height: 1.4;
+      color: #6c6042;
       margin-bottom: 12px;
     }
 
-    .card {
+    .google-button {
+      border: 0;
+      border-radius: 12px;
+      padding: 12px 15px;
+      background: #1d1d1f;
+      color: white;
+      font-weight: 700;
       cursor: pointer;
     }
 
-    .number {
-      color: #777;
+    .error-box {
+      display: none;
+      background: #fff0ee;
+      color: #9d251d;
+      border: 1px solid #ffc4bd;
+      border-radius: 15px;
+      padding: 14px;
+      margin-bottom: 14px;
+      font-size: 15px;
+      line-height: 1.4;
+    }
+
+    .empty {
+      background: white;
+      border-radius: 18px;
+      padding: 28px 20px;
+      text-align: center;
+      color: #77777b;
+      font-size: 18px;
+    }
+
+    .object-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .object-card {
+      background: white;
+      border-radius: 17px;
+      padding: 16px;
+      cursor: pointer;
+      box-shadow:
+        0 1px 0 rgba(0, 0, 0, 0.03);
+    }
+
+    .object-number {
       font-size: 12px;
+      color: #8a8a8f;
       font-weight: 700;
+      margin-bottom: 4px;
     }
 
-    .objectName {
+    .object-name {
       font-size: 19px;
-      font-weight: 650;
-      margin-top: 4px;
+      font-weight: 750;
+      line-height: 1.2;
+      margin-bottom: 5px;
     }
 
-    .address {
-      color: #666;
+    .object-address {
+      color: #747478;
       font-size: 14px;
-      margin-top: 4px;
+      line-height: 1.35;
     }
 
-    .infoRow {
-      padding: 10px 0;
-      border-bottom: 1px solid #eee;
+    .back-button {
+      border: 0;
+      background: transparent;
+      padding: 0;
+      margin-bottom: 14px;
+      font-size: 16px;
+      color: #55555a;
+      cursor: pointer;
     }
 
-    .infoRow:last-child {
-      border-bottom: 0;
+    .detail-card {
+      background: white;
+      border-radius: 18px;
+      padding: 18px;
     }
 
-    .label {
-      font-size: 11px;
-      color: #888;
-      text-transform: uppercase;
+    .detail-title {
+      font-size: 25px;
+      font-weight: 800;
+      margin-bottom: 18px;
+    }
+
+    .detail-row {
+      border-top: 1px solid #eeeeef;
+      padding: 11px 0;
+    }
+
+    .detail-label {
+      color: #8a8a8f;
+      font-size: 12px;
       margin-bottom: 3px;
     }
 
-    .value {
+    .detail-value {
       font-size: 16px;
+      font-weight: 600;
+      word-break: break-word;
     }
 
-    .primaryButton {
+    .start-button {
       width: 100%;
       border: 0;
-      border-radius: 14px;
-      padding: 16px;
-      font-size: 16px;
-      font-weight: 700;
-      cursor: pointer;
+      border-radius: 15px;
       background: #1d1d1f;
       color: white;
-    }
-
-    .empty,
-    .loading {
-      background: white;
-      border-radius: 16px;
-      padding: 28px 18px;
-      text-align: center;
-      color: #777;
-      margin-bottom: 12px;
-    }
-
-    #objectView {
-      display: none;
+      font-size: 17px;
+      font-weight: 750;
+      padding: 16px;
+      margin-top: 18px;
+      cursor: pointer;
     }
 
     .toast {
-      display: none;
       position: fixed;
+      left: 50%;
       bottom:
         calc(25px + env(safe-area-inset-bottom));
-      left: 50%;
       transform: translateX(-50%);
-      max-width: calc(100% - 32px);
       background: #1d1d1f;
       color: white;
-      padding: 12px 16px;
-      border-radius: 12px;
-      z-index: 3000;
+      padding: 13px 20px;
+      border-radius: 13px;
+      max-width: 85%;
       text-align: center;
+      display: none;
+      z-index: 999;
+      font-size: 15px;
     }
 
-    .toast.show {
-      display: block;
-    }
   </style>
+
+  <!-- Google Identity Services -->
+  <script
+    src="https://accounts.google.com/gsi/client"
+    async
+    defer
+  ></script>
+
 </head>
 
 <body>
 
-<div class="app">
+  <div class="header">
 
-  <!-- OBJEKTIDE NIMEKIRI -->
-
-  <div id="listView">
-
-    <div class="header">
-      <div class="logo">PLAYSAFE</div>
-      <h1>Objektid</h1>
+    <div class="brand">
+      PLAYSAFE
     </div>
 
-    <div class="content">
+    <h1 id="pageTitle">
+      Objektid
+    </h1>
+
+  </div>
+
+
+  <main
+    class="content"
+    id="mainContent"
+  >
+
+    <div id="listView">
 
       <input
-        id="search"
+        id="searchInput"
         class="search"
+        type="search"
         placeholder="Otsi objekti või aadressi..."
+        autocomplete="off"
       >
 
-      <div class="statusBar">
+
+      <div class="connection-card">
 
         <div
           id="connectionStatus"
-          class="statusText"
+          class="connection"
         >
           Kontrollin ühendust...
         </div>
 
         <button
           id="syncButton"
-          class="syncButton"
-          onclick="sunkroniseeriObjektid(true)"
+          class="sync-button"
+          type="button"
         >
           ↻ Sünkroniseeri
         </button>
 
       </div>
 
+
       <div
         id="syncInfo"
-        class="syncInfo"
-      ></div>
+        class="sync-info"
+      >
+        Laen telefoni salvestatud registrit...
+      </div>
+
+
+      <div
+        id="authBox"
+        class="auth-box"
+      >
+
+        <div class="auth-title">
+          Google'i ühendus vajalik
+        </div>
+
+        <div class="auth-text">
+          Registri sünkroniseerimiseks logi sisse
+          Playsafe'i Google'i kontoga.
+          Offline töötamiseks pole sisselogimist vaja.
+        </div>
+
+        <button
+          id="googleButton"
+          class="google-button"
+          type="button"
+        >
+          Ühenda Google
+        </button>
+
+      </div>
+
 
       <div
         id="errorBox"
-        class="errorBox"
+        class="error-box"
       ></div>
 
-      <div id="objectList">
-        <div class="loading">
-          Laadin objekte...
-        </div>
-      </div>
-
-    </div>
-
-  </div>
-
-
-  <!-- OBJEKTI DETAIL -->
-
-  <div id="objectView">
-
-    <div class="header">
 
       <div
-        class="back"
-        onclick="tagasiObjektidesse()"
-      >
-        ‹ Objektid
-      </div>
-
-      <div class="logo">
-        PLAYSAFE
-      </div>
-
-      <h1 id="detailName"></h1>
+        id="objectList"
+        class="object-list"
+      ></div>
 
     </div>
 
-    <div class="content">
 
-      <div class="infoCard">
+    <div
+      id="detailView"
+      style="display:none"
+    ></div>
 
-        <div class="infoRow">
-          <div class="label">Jrk nr</div>
-          <div id="detailNr" class="value"></div>
-        </div>
-
-        <div class="infoRow">
-          <div class="label">Aadress</div>
-          <div id="detailAddress" class="value"></div>
-        </div>
-
-        <div class="infoRow">
-          <div class="label">Väljaku tüüp</div>
-          <div id="detailType" class="value"></div>
-        </div>
-
-        <div class="infoRow">
-          <div class="label">Hindamise liik</div>
-          <div id="detailInspection" class="value"></div>
-        </div>
-
-        <div class="infoRow">
-          <div class="label">Tellija</div>
-          <div id="detailClient" class="value"></div>
-        </div>
-
-        <div class="infoRow">
-          <div class="label">Staatus</div>
-          <div id="detailStatus" class="value"></div>
-        </div>
-
-        <div class="infoRow">
-          <div class="label">Aruande nr</div>
-          <div id="detailReport" class="value"></div>
-        </div>
-
-      </div>
-
-      <button
-        class="primaryButton"
-        onclick="alustaPildistamist()"
-      >
-        Alusta pildistamist
-      </button>
-
-    </div>
-
-  </div>
-
-</div>
+  </main>
 
 
-<div
-  id="toast"
-  class="toast"
-></div>
+  <div
+    id="toast"
+    class="toast"
+  ></div>
 
 
 <script>
 
-/* =========================================================
-   API
-   ========================================================= */
+  // =====================================================
+  // PLAYSAFE GOOGLE SEADISTUS
+  // =====================================================
 
-const API_URL =
-  "https://script.google.com/macros/s/AKfycbxMVDpbRFSi6RXIogv1qASAJJM4-GFtQ7RcKESiDOprNJN_rcVHbap8OUuPaniDvAgeAg/exec";
+  const CLIENT_ID =
+    "127555248023-80bisfncfjj0dsh61fjn0ofa3lj8mli1.apps.googleusercontent.com";
 
+  const SCRIPT_ID =
+    "AKfycbwtbtPQUIZcNUSlTi06uj9q84-WxbuS-kIrl5pZSDxO5hE8ShhI73EPofrE6v1Lm4iDzw";
 
-/* =========================================================
-   MUUTUJAD
-   ========================================================= */
+  const SCOPES =
+    "https://www.googleapis.com/auth/drive " +
+    "https://www.googleapis.com/auth/spreadsheets";
 
-let objektid = [];
-let aktiivneObjekt = null;
 
-let db = null;
-let syncTootab = false;
+  // =====================================================
+  // MUUTUJAD
+  // =====================================================
 
+  let db = null;
 
-/* =========================================================
-   INDEXED DB
-   ========================================================= */
+  let objektid = [];
 
-const DB_NAME =
-  "PlaysafePWA";
+  let tokenClient = null;
 
-const DB_VERSION =
-  1;
+  let accessToken = null;
 
-const OBJECT_STORE =
-  "objects";
+  let gisReady = false;
 
-const META_STORE =
-  "meta";
+  let syncInProgress = false;
 
 
-function openDB() {
+  // =====================================================
+  // DOM
+  // =====================================================
 
-  return new Promise(
-    function(resolve, reject) {
-
-      if (db) {
-        resolve(db);
-        return;
-      }
-
-      const req =
-        indexedDB.open(
-          DB_NAME,
-          DB_VERSION
-        );
-
-      req.onupgradeneeded =
-        function(event) {
-
-          const database =
-            event.target.result;
-
-          if (
-            !database.objectStoreNames
-              .contains(OBJECT_STORE)
-          ) {
-
-            database.createObjectStore(
-              OBJECT_STORE,
-              {
-                keyPath: "nr"
-              }
-            );
-          }
-
-          if (
-            !database.objectStoreNames
-              .contains(META_STORE)
-          ) {
-
-            database.createObjectStore(
-              META_STORE,
-              {
-                keyPath: "key"
-              }
-            );
-          }
-        };
-
-      req.onsuccess =
-        function(event) {
-
-          db =
-            event.target.result;
-
-          resolve(db);
-        };
-
-      req.onerror =
-        function() {
-
-          reject(
-            req.error
-          );
-        };
-    }
-  );
-}
-
-
-async function dbPut(
-  storeName,
-  value
-) {
-
-  await openDB();
-
-  return new Promise(
-    function(resolve, reject) {
-
-      const tx =
-        db.transaction(
-          storeName,
-          "readwrite"
-        );
-
-      const req =
-        tx
-          .objectStore(storeName)
-          .put(value);
-
-      req.onsuccess =
-        function() {
-          resolve(req.result);
-        };
-
-      req.onerror =
-        function() {
-          reject(req.error);
-        };
-    }
-  );
-}
-
-
-async function dbGetAll(
-  storeName
-) {
-
-  await openDB();
-
-  return new Promise(
-    function(resolve, reject) {
-
-      const tx =
-        db.transaction(
-          storeName,
-          "readonly"
-        );
-
-      const req =
-        tx
-          .objectStore(storeName)
-          .getAll();
-
-      req.onsuccess =
-        function() {
-
-          resolve(
-            req.result || []
-          );
-        };
-
-      req.onerror =
-        function() {
-          reject(req.error);
-        };
-    }
-  );
-}
-
-
-async function dbGet(
-  storeName,
-  key
-) {
-
-  await openDB();
-
-  return new Promise(
-    function(resolve, reject) {
-
-      const tx =
-        db.transaction(
-          storeName,
-          "readonly"
-        );
-
-      const req =
-        tx
-          .objectStore(storeName)
-          .get(key);
-
-      req.onsuccess =
-        function() {
-
-          resolve(
-            req.result || null
-          );
-        };
-
-      req.onerror =
-        function() {
-          reject(req.error);
-        };
-    }
-  );
-}
-
-
-/*
-  Asendame objektide registri
-  ühe tehinguga.
-
-  Nii ei teki olukorda, kus vana
-  register kustutatakse, aga uue
-  salvestamine pooleli jääb.
-*/
-
-async function dbReplaceObjects(
-  objects
-) {
-
-  await openDB();
-
-  return new Promise(
-    function(resolve, reject) {
-
-      const tx =
-        db.transaction(
-          OBJECT_STORE,
-          "readwrite"
-        );
-
-      const store =
-        tx.objectStore(
-          OBJECT_STORE
-        );
-
-      store.clear();
-
-      objects.forEach(
-        function(objekt) {
-
-          if (
-            objekt.nr === undefined ||
-            objekt.nr === null ||
-            objekt.nr === ""
-          ) {
-            return;
-          }
-
-          store.put(
-            objekt
-          );
-        }
-      );
-
-      tx.oncomplete =
-        function() {
-          resolve();
-        };
-
-      tx.onerror =
-        function() {
-          reject(tx.error);
-        };
-
-      tx.onabort =
-        function() {
-          reject(
-            tx.error ||
-            new Error(
-              "Andmebaasi tehing katkestati."
-            )
-          );
-        };
-    }
-  );
-}
-
-
-/* =========================================================
-   JSONP
-   ========================================================= */
-
-/*
-  Apps Scripti lugemis-API tagastab näiteks:
-
-  playsafe_xxxxx({
-    ok: true,
-    data: {...}
-  });
-
-  Selleks loome ajutise globaalse
-  callback funktsiooni ja script elemendi.
-*/
-
-function apiSync() {
-
-  return new Promise(
-    function(resolve, reject) {
-
-      const callbackName =
-        "playsafe_" +
-        Date.now() +
-        "_" +
-        Math.floor(
-          Math.random() *
-          1000000
-        );
-
-
-      let finished =
-        false;
-
-
-      const script =
-        document.createElement(
-          "script"
-        );
-
-
-      function cleanup() {
-
-        if (
-          script &&
-          script.parentNode
-        ) {
-
-          script.parentNode
-            .removeChild(
-              script
-            );
-        }
-
-
-        try {
-
-          delete window[
-            callbackName
-          ];
-
-        }
-        catch (error) {
-
-          window[
-            callbackName
-          ] = undefined;
-        }
-      }
-
-
-      const timeout =
-        setTimeout(
-          function() {
-
-            if (finished) {
-              return;
-            }
-
-            finished = true;
-
-            cleanup();
-
-            reject(
-              new Error(
-                "API timeout — Apps Script ei vastanud 30 sekundi jooksul."
-              )
-            );
-          },
-          30000
-        );
-
-
-      /*
-        Callback peab eksisteerima
-        ENNE script elemendi lisamist.
-      */
-
-      window[
-        callbackName
-      ] =
-        function(response) {
-
-          if (finished) {
-            return;
-          }
-
-          finished = true;
-
-          clearTimeout(
-            timeout
-          );
-
-
-          /*
-            Kõigepealt kontrollime vastust,
-            alles seejärel eemaldame callbacki.
-          */
-
-          if (!response) {
-
-            cleanup();
-
-            reject(
-              new Error(
-                "Apps Script tagastas tühja vastuse."
-              )
-            );
-
-            return;
-          }
-
-
-          if (
-            response.ok !== true
-          ) {
-
-            const message =
-              response.error
-              ?
-              String(
-                response.error
-              )
-              :
-              "Apps Script tagastas API vea.";
-
-            cleanup();
-
-            reject(
-              new Error(
-                message
-              )
-            );
-
-            return;
-          }
-
-
-          const data =
-            response.data;
-
-
-          cleanup();
-
-          resolve(
-            data
-          );
-        };
-
-
-      script.async =
-        true;
-
-
-      script.onerror =
-        function() {
-
-          if (finished) {
-            return;
-          }
-
-          finished = true;
-
-          clearTimeout(
-            timeout
-          );
-
-          cleanup();
-
-          reject(
-            new Error(
-              "JSONP skripti laadimine ebaõnnestus. Kontrolli Apps Scripti deployment'i ligipääsu."
-            )
-          );
-        };
-
-
-      const params =
-        new URLSearchParams();
-
-      params.set(
-        "api",
-        "sync"
-      );
-
-      params.set(
-        "callback",
-        callbackName
-      );
-
-      /*
-        Cache vältimiseks.
-      */
-
-      params.set(
-        "_",
-        String(
-          Date.now()
-        )
-      );
-
-
-      script.src =
-        API_URL +
-        "?" +
-        params.toString();
-
-
-      document.head
-        .appendChild(
-          script
-        );
-    }
-  );
-}
-
-
-/* =========================================================
-   KOHALIK REGISTER
-   ========================================================= */
-
-async function laadiKohalikudObjektid() {
-
-  objektid =
-    await dbGetAll(
-      OBJECT_STORE
-    );
-
-
-  objektid.sort(
-    function(a, b) {
-
-      return (
-        Number(b.nr || 0) -
-        Number(a.nr || 0)
-      );
-    }
-  );
-
-
-  kuvaObjektid(
-    objektid
-  );
-
-
-  await kuvaSyncInfo();
-}
-
-
-/* =========================================================
-   SÜNKRONISEERIMINE
-   ========================================================= */
-
-async function sunkroniseeriObjektid(
-  kasutajaAlgatas
-) {
-
-  if (syncTootab) {
-    return;
-  }
-
-
-  peidaViga();
-
-
-  if (!navigator.onLine) {
-
-    updateConnection();
-
-    if (kasutajaAlgatas) {
-
-      toast(
-        "Internet puudub — kasutan telefoni salvestatud objekte"
-      );
-    }
-
-    return;
-  }
-
-
-  syncTootab =
-    true;
-
-
-  updateConnection();
-
-
-  const button =
-    document.getElementById(
-      "syncButton"
-    );
-
-
-  button.disabled =
-    true;
-
-  button.textContent =
-    "Sünkroniseerin...";
-
-
-  try {
-
-    const data =
-      await apiSync();
-
-
-    if (
-      !data ||
-      !Array.isArray(
-        data.objektid
-      )
-    ) {
-
-      throw new Error(
-        "API vastuses puudub objektide nimekiri."
-      );
-    }
-
-
-    const uuedObjektid =
-      data.objektid;
-
-
-    console.log(
-      "Playsafe: serverist saadi",
-      uuedObjektid.length,
-      "objekti"
-    );
-
-
-    await dbReplaceObjects(
-      uuedObjektid
-    );
-
-
-    await dbPut(
-      META_STORE,
-      {
-        key:
-          "lastSync",
-
-        value:
-          Date.now(),
-
-        serverTime:
-          data.serverTime ||
-          null
-      }
-    );
-
-
-    await dbPut(
-      META_STORE,
-      {
-        key:
-          "elementTypes",
-
-        value:
-          Array.isArray(
-            data.elemendiTyypid
-          )
-          ?
-          data.elemendiTyypid
-          :
-          []
-      }
-    );
-
-
-    await laadiKohalikudObjektid();
-
-
-    if (kasutajaAlgatas) {
-
-      toast(
-        "Sünkroniseeritud: " +
-        objektid.length +
-        " objekti"
-      );
-    }
-  }
-  catch (error) {
-
-    console.error(
-      "Playsafe sünkroniseerimise viga:",
-      error
-    );
-
-
-    naitaViga(
-      error &&
-      error.message
-      ?
-      error.message
-      :
-      String(error)
-    );
-
-
-    /*
-      Oluline:
-      vea korral jätame telefonis
-      oleva registri alles.
-    */
-
-    await laadiKohalikudObjektid();
-
-
-    if (kasutajaAlgatas) {
-
-      toast(
-        "Sünkroniseerimine ebaõnnestus"
-      );
-    }
-  }
-  finally {
-
-    syncTootab =
-      false;
-
-
-    button.disabled =
-      false;
-
-    button.textContent =
-      "↻ Sünkroniseeri";
-
-
-    updateConnection();
-  }
-}
-
-
-/* =========================================================
-   VEA KUVAMINE
-   ========================================================= */
-
-function naitaViga(
-  text
-) {
-
-  const box =
-    document.getElementById(
-      "errorBox"
-    );
-
-
-  box.textContent =
-    "Sünkroniseerimise viga: " +
-    text;
-
-
-  box.classList.add(
-    "show"
-  );
-}
-
-
-function peidaViga() {
-
-  const box =
-    document.getElementById(
-      "errorBox"
-    );
-
-
-  box.textContent =
-    "";
-
-
-  box.classList.remove(
-    "show"
-  );
-}
-
-
-/* =========================================================
-   OBJEKTIDE KUVAMINE
-   ========================================================= */
-
-function kuvaObjektid(
-  list
-) {
-
-  const box =
+  const objectList =
     document.getElementById(
       "objectList"
     );
 
-
-  box.innerHTML =
-    "";
-
-
-  if (
-    !list ||
-    !list.length
-  ) {
-
-    box.innerHTML =
-
-      '<div class="empty">' +
-
-      (
-        navigator.onLine
-        ?
-        "Objekte ei ole veel telefoni sünkroniseeritud."
-        :
-        "Telefonis pole veel objektide nimekirja. Ühenda internetiga ja sünkroniseeri."
-      ) +
-
-      "</div>";
-
-    return;
-  }
-
-
-  list.forEach(
-    function(o) {
-
-      const el =
-        document.createElement(
-          "div"
-        );
-
-
-      el.className =
-        "card";
-
-
-      el.innerHTML =
-
-        '<div class="number">' +
-        "NR " +
-        esc(
-          o.nr
-        ) +
-        "</div>" +
-
-        '<div class="objectName">' +
-        esc(
-          o.objekt
-        ) +
-        "</div>" +
-
-        '<div class="address">' +
-        esc(
-          o.aadress || ""
-        ) +
-        "</div>";
-
-
-      el.onclick =
-        function() {
-
-          avaObjekt(
-            o
-          );
-        };
-
-
-      box.appendChild(
-        el
-      );
-    }
-  );
-}
-
-
-/* =========================================================
-   OTSING
-   ========================================================= */
-
-document
-  .getElementById(
-    "search"
-  )
-  .addEventListener(
-    "input",
-    function() {
-
-      const q =
-        this.value
-          .toLowerCase()
-          .trim();
-
-
-      const tulemused =
-        objektid.filter(
-          function(o) {
-
-            return (
-
-              String(
-                o.objekt || ""
-              )
-                .toLowerCase()
-                .includes(q)
-
-              ||
-
-              String(
-                o.aadress || ""
-              )
-                .toLowerCase()
-                .includes(q)
-
-              ||
-
-              String(
-                o.nr || ""
-              )
-                .toLowerCase()
-                .includes(q)
-            );
-          }
-        );
-
-
-      kuvaObjektid(
-        tulemused
-      );
-    }
-  );
-
-
-/* =========================================================
-   OBJEKTI AVAMINE
-   ========================================================= */
-
-function avaObjekt(o) {
-
-  aktiivneObjekt =
-    o;
-
-
-  document
-    .getElementById(
-      "detailName"
-    )
-    .textContent =
-    o.objekt || "";
-
-
-  document
-    .getElementById(
-      "detailNr"
-    )
-    .textContent =
-    o.nr || "—";
-
-
-  document
-    .getElementById(
-      "detailAddress"
-    )
-    .textContent =
-    o.aadress || "—";
-
-
-  document
-    .getElementById(
-      "detailType"
-    )
-    .textContent =
-    o.valjakuTyyp || "—";
-
-
-  document
-    .getElementById(
-      "detailInspection"
-    )
-    .textContent =
-    o.hindamiseLiik || "—";
-
-
-  document
-    .getElementById(
-      "detailClient"
-    )
-    .textContent =
-    o.tellija || "—";
-
-
-  document
-    .getElementById(
-      "detailStatus"
-    )
-    .textContent =
-    o.staatus || "—";
-
-
-  document
-    .getElementById(
-      "detailReport"
-    )
-    .textContent =
-    o.aruandeNr || "—";
-
-
-  showView(
-    "objectView"
-  );
-}
-
-
-/* =========================================================
-   VAATED
-   ========================================================= */
-
-function showView(
-  id
-) {
-
-  [
-    "listView",
-    "objectView"
-  ]
-    .forEach(
-      function(viewId) {
-
-        document
-          .getElementById(
-            viewId
-          )
-          .style.display =
-          viewId === id
-          ?
-          "block"
-          :
-          "none";
-      }
-    );
-
-
-  window.scrollTo(
-    0,
-    0
-  );
-}
-
-
-function tagasiObjektidesse() {
-
-  showView(
-    "listView"
-  );
-}
-
-
-/* =========================================================
-   PILDISTAMINE
-   ========================================================= */
-
-function alustaPildistamist() {
-
-  window.playsafeTest =
-    function(data) {
-
-      alert(
-        "JSONP TÖÖTAB!\n\n" +
-        "ok = " +
-        data.ok
-      );
-    };
-
-
-  const script =
-    document.createElement(
-      "script"
-    );
-
-
-  script.src =
-    "https://script.google.com/macros/s/AKfycbxMVDpbRFSi6RXIogv1qASAJJM4-GFtQ7RcKESiDOprNJN_rcVHbap8OUuPaniDvAgeAg/exec?api=sync&callback=playsafeTest&_=" +
-    Date.now();
-
-
-  script.onerror =
-    function() {
-
-      alert(
-        "JSONP EI LAADINUD"
-      );
-    };
-
-
-  document.head.appendChild(
-    script
-  );
-}
-
-
-/* =========================================================
-   VIIMANE SÜNK
-   ========================================================= */
-
-async function kuvaSyncInfo() {
-
-  const info =
-    await dbGet(
-      META_STORE,
-      "lastSync"
-    );
-
-
-  const el =
+  const searchInput =
     document.getElementById(
-      "syncInfo"
+      "searchInput"
     );
 
-
-  if (
-    !info ||
-    !info.value
-  ) {
-
-    el.textContent =
-      "Seda telefoni pole veel registriga sünkroniseeritud.";
-
-    return;
-  }
-
-
-  const date =
-    new Date(
-      info.value
-    );
-
-
-  el.textContent =
-
-    "Viimane sünk: " +
-
-    date.toLocaleString(
-      "et-EE",
-      {
-        day:
-          "2-digit",
-
-        month:
-          "2-digit",
-
-        year:
-          "numeric",
-
-        hour:
-          "2-digit",
-
-        minute:
-          "2-digit"
-      }
-    );
-}
-
-
-/* =========================================================
-   ÜHENDUSE OLEK
-   ========================================================= */
-
-function updateConnection() {
-
-  const status =
+  const connectionStatus =
     document.getElementById(
       "connectionStatus"
     );
 
-
-  if (!navigator.onLine) {
-
-    status.className =
-      "statusText offlineText";
-
-    status.textContent =
-      "● Offline — kasutan telefoni andmeid";
-  }
-
-  else if (syncTootab) {
-
-    status.className =
-      "statusText onlineText";
-
-    status.textContent =
-      "↑ Sünkroniseerin registrit...";
-  }
-
-  else {
-
-    status.className =
-      "statusText onlineText";
-
-    status.textContent =
-      "✓ Ühendus olemas";
-  }
-}
-
-
-/* =========================================================
-   TOAST
-   ========================================================= */
-
-function toast(
-  text
-) {
-
-  const el =
+  const syncButton =
     document.getElementById(
-      "toast"
+      "syncButton"
+    );
+
+  const syncInfo =
+    document.getElementById(
+      "syncInfo"
+    );
+
+  const authBox =
+    document.getElementById(
+      "authBox"
+    );
+
+  const googleButton =
+    document.getElementById(
+      "googleButton"
+    );
+
+  const errorBox =
+    document.getElementById(
+      "errorBox"
+    );
+
+  const listView =
+    document.getElementById(
+      "listView"
+    );
+
+  const detailView =
+    document.getElementById(
+      "detailView"
+    );
+
+  const pageTitle =
+    document.getElementById(
+      "pageTitle"
     );
 
 
-  el.textContent =
-    text;
+  // =====================================================
+  // INDEXEDDB
+  // =====================================================
+
+  function openDB() {
+
+    return new Promise(
+      function(resolve, reject) {
+
+        const request =
+          indexedDB.open(
+            "PlaysafePWA",
+            1
+          );
 
 
-  el.classList.add(
-    "show"
-  );
+        request.onupgradeneeded =
+          function(event) {
+
+            const database =
+              event.target.result;
 
 
-  setTimeout(
-    function() {
+            if (
+              !database.objectStoreNames.contains(
+                "objects"
+              )
+            ) {
 
-      el.classList.remove(
-        "show"
+              database.createObjectStore(
+                "objects",
+                {
+                  keyPath: "nr"
+                }
+              );
+            }
+
+
+            if (
+              !database.objectStoreNames.contains(
+                "meta"
+              )
+            ) {
+
+              database.createObjectStore(
+                "meta",
+                {
+                  keyPath: "key"
+                }
+              );
+            }
+          };
+
+
+        request.onsuccess =
+          function() {
+
+            db =
+              request.result;
+
+            resolve();
+          };
+
+
+        request.onerror =
+          function() {
+
+            reject(
+              request.error
+            );
+          };
+      }
+    );
+  }
+
+
+  function dbGetObjects() {
+
+    return new Promise(
+      function(resolve, reject) {
+
+        const transaction =
+          db.transaction(
+            "objects",
+            "readonly"
+          );
+
+        const store =
+          transaction.objectStore(
+            "objects"
+          );
+
+        const request =
+          store.getAll();
+
+
+        request.onsuccess =
+          function() {
+
+            resolve(
+              request.result || []
+            );
+          };
+
+
+        request.onerror =
+          function() {
+
+            reject(
+              request.error
+            );
+          };
+      }
+    );
+  }
+
+
+  function dbReplaceObjects(data) {
+
+    return new Promise(
+      function(resolve, reject) {
+
+        const transaction =
+          db.transaction(
+            "objects",
+            "readwrite"
+          );
+
+        const store =
+          transaction.objectStore(
+            "objects"
+          );
+
+
+        store.clear();
+
+
+        data.forEach(
+          function(item) {
+
+            if (
+              item.nr !== undefined &&
+              item.nr !== null &&
+              item.nr !== ""
+            ) {
+
+              store.put(
+                item
+              );
+            }
+          }
+        );
+
+
+        transaction.oncomplete =
+          function() {
+
+            resolve();
+          };
+
+
+        transaction.onerror =
+          function() {
+
+            reject(
+              transaction.error
+            );
+          };
+      }
+    );
+  }
+
+
+  function dbSetMeta(
+    key,
+    value
+  ) {
+
+    return new Promise(
+      function(resolve, reject) {
+
+        const transaction =
+          db.transaction(
+            "meta",
+            "readwrite"
+          );
+
+        const store =
+          transaction.objectStore(
+            "meta"
+          );
+
+        const request =
+          store.put(
+            {
+              key: key,
+              value: value
+            }
+          );
+
+
+        request.onsuccess =
+          function() {
+
+            resolve();
+          };
+
+
+        request.onerror =
+          function() {
+
+            reject(
+              request.error
+            );
+          };
+      }
+    );
+  }
+
+
+  function dbGetMeta(key) {
+
+    return new Promise(
+      function(resolve, reject) {
+
+        const transaction =
+          db.transaction(
+            "meta",
+            "readonly"
+          );
+
+        const store =
+          transaction.objectStore(
+            "meta"
+          );
+
+        const request =
+          store.get(
+            key
+          );
+
+
+        request.onsuccess =
+          function() {
+
+            resolve(
+              request.result
+                ? request.result.value
+                : null
+            );
+          };
+
+
+        request.onerror =
+          function() {
+
+            reject(
+              request.error
+            );
+          };
+      }
+    );
+  }
+
+
+  // =====================================================
+  // GOOGLE IDENTITY SERVICES
+  // =====================================================
+
+  function initGoogleAuth() {
+
+    if (
+      !window.google ||
+      !google.accounts ||
+      !google.accounts.oauth2
+    ) {
+
+      gisReady = false;
+
+      return false;
+    }
+
+
+    tokenClient =
+      google.accounts.oauth2.initTokenClient(
+        {
+
+          client_id:
+            CLIENT_ID,
+
+          scope:
+            SCOPES,
+
+          callback:
+            function() {}
+
+        }
       );
 
-    },
-    2200
-  );
-}
+
+    gisReady = true;
+
+    return true;
+  }
 
 
-/* =========================================================
-   ESCAPE
-   ========================================================= */
+  function waitForGoogle() {
 
-function esc(v) {
+    return new Promise(
+      function(resolve) {
 
-  return String(
-    v || ""
-  )
-    .replace(
-      /&/g,
-      "&amp;"
-    )
-    .replace(
-      /</g,
-      "&lt;"
-    )
-    .replace(
-      />/g,
-      "&gt;"
-    )
-    .replace(
-      /"/g,
-      "&quot;"
-    )
-    .replace(
-      /'/g,
-      "&#039;"
-    );
-}
+        let attempts = 0;
+
+        const timer =
+          setInterval(
+            function() {
+
+              attempts++;
 
 
-/* =========================================================
-   ONLINE / OFFLINE
-   ========================================================= */
+              if (
+                initGoogleAuth()
+              ) {
 
-window.addEventListener(
-  "online",
-  function() {
+                clearInterval(
+                  timer
+                );
 
-    updateConnection();
+                resolve(
+                  true
+                );
 
-    toast(
-      "Internet taastatud"
-    );
+                return;
+              }
 
-    sunkroniseeriObjektid(
-      false
+
+              if (
+                attempts >= 30
+              ) {
+
+                clearInterval(
+                  timer
+                );
+
+                resolve(
+                  false
+                );
+              }
+
+            },
+            200
+          );
+      }
     );
   }
-);
 
 
-window.addEventListener(
-  "offline",
-  function() {
+  function requestGoogleToken() {
 
-    updateConnection();
+    return new Promise(
+      function(resolve, reject) {
 
-    toast(
-      "Offline-režiim"
-    );
-  }
-);
+        if (
+          !navigator.onLine
+        ) {
+
+          reject(
+            new Error(
+              "Internetiühendus puudub."
+            )
+          );
+
+          return;
+        }
 
 
-/* =========================================================
-   SERVICE WORKER
-   ========================================================= */
+        if (
+          !gisReady ||
+          !tokenClient
+        ) {
 
-if (
-  "serviceWorker" in navigator
-) {
+          reject(
+            new Error(
+              "Google'i sisselogimisteenus ei ole veel valmis."
+            )
+          );
 
-  window.addEventListener(
-    "load",
-    function() {
+          return;
+        }
 
-      navigator
-        .serviceWorker
-        .register(
-          "./service-worker.js"
-        )
-        .then(
-          function(registration) {
 
-            /*
-              Kontrollime kohe,
-              kas GitHubis on uus versioon.
-            */
+        tokenClient.callback =
+          function(response) {
 
-            registration.update();
+            if (
+              response.error
+            ) {
 
+              reject(
+                new Error(
+                  response.error_description ||
+                  response.error
+                )
+              );
+
+              return;
+            }
+
+
+            accessToken =
+              response.access_token;
+
+
+            authBox.style.display =
+              "none";
+
+
+            resolve(
+              accessToken
+            );
+          };
+
+
+        tokenClient.requestAccessToken(
+          {
+            prompt:
+              accessToken
+                ? ""
+                : "consent"
           }
-        )
-        .catch(
-          function(error) {
+        );
+      }
+    );
+  }
 
-            console.error(
-              "Service worker viga:",
-              error
+
+  // =====================================================
+  // APPS SCRIPT API
+  // =====================================================
+
+  async function runAppsScript(
+    functionName,
+    parameters
+  ) {
+
+    if (
+      !accessToken
+    ) {
+
+      throw new Error(
+        "Google'i autoriseerimine on vajalik."
+      );
+    }
+
+
+    const body = {
+
+      function:
+        functionName
+
+    };
+
+
+    if (
+      parameters &&
+      parameters.length
+    ) {
+
+      body.parameters =
+        parameters;
+    }
+
+
+    const response =
+      await fetch(
+        "https://script.googleapis.com/v1/scripts/" +
+        encodeURIComponent(
+          SCRIPT_ID
+        ) +
+        ":run",
+        {
+
+          method:
+            "POST",
+
+          headers: {
+
+            "Authorization":
+              "Bearer " +
+              accessToken,
+
+            "Content-Type":
+              "application/json"
+
+          },
+
+          body:
+            JSON.stringify(
+              body
+            )
+
+        }
+      );
+
+
+    let data;
+
+
+    try {
+
+      data =
+        await response.json();
+
+    }
+    catch (error) {
+
+      throw new Error(
+        "Google API vastus ei olnud loetav."
+      );
+    }
+
+
+    if (
+      response.status === 401
+    ) {
+
+      accessToken = null;
+
+      throw new Error(
+        "Google'i sisselogimine aegus. Vajuta uuesti Sünkroniseeri."
+      );
+    }
+
+
+    if (
+      !response.ok
+    ) {
+
+      const message =
+        data &&
+        data.error &&
+        data.error.message
+          ? data.error.message
+          : "Google API viga " +
+            response.status;
+
+      throw new Error(
+        message
+      );
+    }
+
+
+    if (
+      data.error
+    ) {
+
+      let message =
+        "Apps Scripti käivitamine ebaõnnestus.";
+
+
+      if (
+        data.error.details &&
+        data.error.details.length
+      ) {
+
+        const detail =
+          data.error.details[0];
+
+        if (
+          detail.errorMessage
+        ) {
+
+          message =
+            detail.errorMessage;
+        }
+      }
+
+
+      throw new Error(
+        message
+      );
+    }
+
+
+    if (
+      !data.response
+    ) {
+
+      throw new Error(
+        "Apps Script ei tagastanud vastust."
+      );
+    }
+
+
+    return data.response.result;
+  }
+
+
+  // =====================================================
+  // SÜNKRONISEERIMINE
+  // =====================================================
+
+  async function synchronize() {
+
+    if (
+      syncInProgress
+    ) {
+      return;
+    }
+
+
+    hideError();
+
+
+    if (
+      !navigator.onLine
+    ) {
+
+      toast(
+        "Offline — kasutan telefoni salvestatud registrit."
+      );
+
+      updateConnection();
+
+      return;
+    }
+
+
+    syncInProgress = true;
+
+    syncButton.disabled =
+      true;
+
+    syncButton.textContent =
+      "Sünkroniseerin...";
+
+
+    try {
+
+      if (
+        !accessToken
+      ) {
+
+        await requestGoogleToken();
+      }
+
+
+      const result =
+        await runAppsScript(
+          "getObjektid",
+          []
+        );
+
+
+      if (
+        !Array.isArray(
+          result
+        )
+      ) {
+
+        throw new Error(
+          "getObjektid() ei tagastanud objektide nimekirja."
+        );
+      }
+
+
+      await dbReplaceObjects(
+        result
+      );
+
+
+      const now =
+        new Date().toISOString();
+
+
+      await dbSetMeta(
+        "lastSync",
+        now
+      );
+
+
+      objektid =
+        result;
+
+
+      renderObjects();
+
+      await updateSyncInfo();
+
+
+      authBox.style.display =
+        "none";
+
+
+      toast(
+        "Sünkroniseeritud — " +
+        objektid.length +
+        " objekti"
+      );
+
+    }
+    catch (error) {
+
+      console.error(
+        error
+      );
+
+
+      showError(
+        "Sünkroniseerimise viga: " +
+        (
+          error &&
+          error.message
+            ? error.message
+            : String(error)
+        )
+      );
+
+
+      if (
+        !accessToken
+      ) {
+
+        authBox.style.display =
+          "block";
+      }
+
+
+      toast(
+        "Sünkroniseerimine ebaõnnestus"
+      );
+
+    }
+    finally {
+
+      syncInProgress =
+        false;
+
+      syncButton.disabled =
+        false;
+
+      syncButton.textContent =
+        "↻ Sünkroniseeri";
+
+      updateConnection();
+    }
+  }
+
+
+  // =====================================================
+  // OBJEKTIDE KUVAMINE
+  // =====================================================
+
+  function getValue(
+    object,
+    possibleKeys
+  ) {
+
+    for (
+      const key of possibleKeys
+    ) {
+
+      if (
+        object[key] !== undefined &&
+        object[key] !== null &&
+        object[key] !== ""
+      ) {
+
+        return object[key];
+      }
+    }
+
+    return "";
+  }
+
+
+  function getObjectName(object) {
+
+    return getValue(
+      object,
+      [
+        "objekt",
+        "nimi",
+        "Objekt",
+        "Nimi"
+      ]
+    );
+  }
+
+
+  function getObjectAddress(object) {
+
+    return getValue(
+      object,
+      [
+        "aadress",
+        "Aadress"
+      ]
+    );
+  }
+
+
+  function escapeHtml(value) {
+
+    return String(
+      value === undefined ||
+      value === null
+        ? ""
+        : value
+    )
+      .replace(
+        /&/g,
+        "&amp;"
+      )
+      .replace(
+        /</g,
+        "&lt;"
+      )
+      .replace(
+        />/g,
+        "&gt;"
+      )
+      .replace(
+        /"/g,
+        "&quot;"
+      )
+      .replace(
+        /'/g,
+        "&#039;"
+      );
+  }
+
+
+  function renderObjects() {
+
+    const query =
+      searchInput.value
+        .trim()
+        .toLowerCase();
+
+
+    const filtered =
+      objektid.filter(
+        function(object) {
+
+          const text = [
+
+            object.nr,
+
+            getObjectName(
+              object
+            ),
+
+            getObjectAddress(
+              object
+            ),
+
+            getValue(
+              object,
+              [
+                "tellija",
+                "Tellija"
+              ]
+            )
+
+          ]
+            .join(
+              " "
+            )
+            .toLowerCase();
+
+
+          return text.includes(
+            query
+          );
+        }
+      );
+
+
+    objectList.innerHTML =
+      "";
+
+
+    if (
+      filtered.length === 0
+    ) {
+
+      objectList.innerHTML =
+        '<div class="empty">' +
+        (
+          objektid.length === 0
+            ? "Objekte ei ole veel telefoni sünkroniseeritud."
+            : "Otsingule vastavaid objekte ei leitud."
+        ) +
+        "</div>";
+
+      return;
+    }
+
+
+    filtered.forEach(
+      function(object) {
+
+        const card =
+          document.createElement(
+            "div"
+          );
+
+        card.className =
+          "object-card";
+
+
+        card.innerHTML =
+
+          '<div class="object-number">' +
+          "NR " +
+          escapeHtml(
+            object.nr
+          ) +
+          "</div>" +
+
+          '<div class="object-name">' +
+          escapeHtml(
+            getObjectName(
+              object
+            ) ||
+            "Nimetu objekt"
+          ) +
+          "</div>" +
+
+          '<div class="object-address">' +
+          escapeHtml(
+            getObjectAddress(
+              object
+            )
+          ) +
+          "</div>";
+
+
+        card.addEventListener(
+          "click",
+          function() {
+
+            showObject(
+              object
             );
           }
         );
+
+
+        objectList.appendChild(
+          card
+        );
+      }
+    );
+  }
+
+
+  function detailRow(
+    label,
+    value
+  ) {
+
+    if (
+      value === undefined ||
+      value === null ||
+      value === ""
+    ) {
+
+      return "";
     }
-  );
-}
 
 
-/* =========================================================
-   START
-   ========================================================= */
+    return (
 
-(async function() {
+      '<div class="detail-row">' +
 
-  try {
+        '<div class="detail-label">' +
+          escapeHtml(
+            label
+          ) +
+        "</div>" +
 
-    await openDB();
+        '<div class="detail-value">' +
+          escapeHtml(
+            value
+          ) +
+        "</div>" +
 
+      "</div>"
 
-    /*
-      1. Telefonis olev register
-      kuvatakse kohe.
-
-      See töötab ka täiesti offline.
-    */
-
-    await laadiKohalikudObjektid();
-
-
-    updateConnection();
+    );
+  }
 
 
-    /*
-      2. Interneti olemasolul
-      proovime Google registrit
-      värskendada.
-    */
+  function showObject(object) {
+
+    listView.style.display =
+      "none";
+
+    detailView.style.display =
+      "block";
+
+    pageTitle.textContent =
+      "Objekt";
+
+
+    const name =
+      getObjectName(
+        object
+      ) ||
+      "Nimetu objekt";
+
+
+    detailView.innerHTML =
+
+      '<button class="back-button" id="backButton">' +
+        "‹ Tagasi objektidesse" +
+      "</button>" +
+
+      '<div class="detail-card">' +
+
+        '<div class="detail-title">' +
+          escapeHtml(
+            name
+          ) +
+        "</div>" +
+
+        detailRow(
+          "Jrk nr",
+          object.nr
+        ) +
+
+        detailRow(
+          "Aadress",
+          getObjectAddress(
+            object
+          )
+        ) +
+
+        detailRow(
+          "Väljaku tüüp",
+          getValue(
+            object,
+            [
+              "valjakuTyyp",
+              "väljakuTyyp",
+              "valjaku_tyyp",
+              "Väljaku tüüp"
+            ]
+          )
+        ) +
+
+        detailRow(
+          "Hindamise liik",
+          getValue(
+            object,
+            [
+              "hindamiseLiik",
+              "hindamine",
+              "Hindamise liik"
+            ]
+          )
+        ) +
+
+        detailRow(
+          "Tellija",
+          getValue(
+            object,
+            [
+              "tellija",
+              "Tellija"
+            ]
+          )
+        ) +
+
+        detailRow(
+          "Staatus",
+          getValue(
+            object,
+            [
+              "staatus",
+              "Staatus"
+            ]
+          )
+        ) +
+
+        detailRow(
+          "Aruande nr",
+          getValue(
+            object,
+            [
+              "aruandeNr",
+              "aruande_nr",
+              "Aruande nr"
+            ]
+          )
+        ) +
+
+        '<button class="start-button" id="startButton">' +
+          "Alusta pildistamist" +
+        "</button>" +
+
+      "</div>";
+
+
+    document
+      .getElementById(
+        "backButton"
+      )
+      .addEventListener(
+        "click",
+        showList
+      );
+
+
+    document
+      .getElementById(
+        "startButton"
+      )
+      .addEventListener(
+        "click",
+        function() {
+
+          toast(
+            "Google API ühendus on valmis. Elemendid ja fotod lisame järgmises etapis."
+          );
+        }
+      );
+  }
+
+
+  function showList() {
+
+    detailView.style.display =
+      "none";
+
+    listView.style.display =
+      "block";
+
+    pageTitle.textContent =
+      "Objektid";
+  }
+
+
+  // =====================================================
+  // ÜHENDUS / INFO
+  // =====================================================
+
+  function updateConnection() {
 
     if (
       navigator.onLine
     ) {
 
-      await sunkroniseeriObjektid(
-        false
+      connectionStatus.textContent =
+        "✓ Ühendus olemas";
+
+      connectionStatus.className =
+        "connection online";
+
+    }
+    else {
+
+      connectionStatus.textContent =
+        "● Offline";
+
+      connectionStatus.className =
+        "connection offline";
+    }
+  }
+
+
+  async function updateSyncInfo() {
+
+    const lastSync =
+      await dbGetMeta(
+        "lastSync"
+      );
+
+
+    if (
+      !lastSync
+    ) {
+
+      syncInfo.textContent =
+        "Seda telefoni pole veel registriga sünkroniseeritud.";
+
+      return;
+    }
+
+
+    const date =
+      new Date(
+        lastSync
+      );
+
+
+    syncInfo.textContent =
+      "Telefonis " +
+      objektid.length +
+      " objekti • viimati sünkroniseeritud " +
+      date.toLocaleString(
+        "et-EE"
+      );
+  }
+
+
+  function showError(message) {
+
+    errorBox.textContent =
+      message;
+
+    errorBox.style.display =
+      "block";
+  }
+
+
+  function hideError() {
+
+    errorBox.style.display =
+      "none";
+
+    errorBox.textContent =
+      "";
+  }
+
+
+  function toast(message) {
+
+    const element =
+      document.getElementById(
+        "toast"
+      );
+
+
+    element.textContent =
+      message;
+
+    element.style.display =
+      "block";
+
+
+    clearTimeout(
+      toast.timer
+    );
+
+
+    toast.timer =
+      setTimeout(
+        function() {
+
+          element.style.display =
+            "none";
+
+        },
+        3000
+      );
+  }
+
+
+  // =====================================================
+  // EVENTID
+  // =====================================================
+
+  searchInput.addEventListener(
+    "input",
+    renderObjects
+  );
+
+
+  syncButton.addEventListener(
+    "click",
+    synchronize
+  );
+
+
+  googleButton.addEventListener(
+    "click",
+    async function() {
+
+      hideError();
+
+
+      try {
+
+        await requestGoogleToken();
+
+        await synchronize();
+
+      }
+      catch (error) {
+
+        showError(
+          "Google'i ühenduse viga: " +
+          (
+            error.message ||
+            String(error)
+          )
+        );
+      }
+    }
+  );
+
+
+  window.addEventListener(
+    "online",
+    function() {
+
+      updateConnection();
+
+      toast(
+        "Internetiühendus taastatud"
+      );
+    }
+  );
+
+
+  window.addEventListener(
+    "offline",
+    function() {
+
+      updateConnection();
+
+      toast(
+        "Offline — andmed jäävad telefoni"
+      );
+    }
+  );
+
+
+  // =====================================================
+  // SERVICE WORKER
+  // =====================================================
+
+  if (
+    "serviceWorker" in navigator
+  ) {
+
+    window.addEventListener(
+      "load",
+      function() {
+
+        navigator.serviceWorker
+          .register(
+            "./service-worker.js"
+          )
+          .then(
+            function(registration) {
+
+              registration.update();
+            }
+          )
+          .catch(
+            function(error) {
+
+              console.error(
+                "Service Worker:",
+                error
+              );
+            }
+          );
+      }
+    );
+  }
+
+
+  // =====================================================
+  // KÄIVITAMINE
+  // =====================================================
+
+  async function startApp() {
+
+    try {
+
+      await openDB();
+
+
+      objektid =
+        await dbGetObjects();
+
+
+      renderObjects();
+
+      await updateSyncInfo();
+
+      updateConnection();
+
+
+      const googleLoaded =
+        await waitForGoogle();
+
+
+      if (
+        navigator.onLine &&
+        !googleLoaded
+      ) {
+
+        showError(
+          "Google'i sisselogimisteenust ei õnnestunud laadida."
+        );
+
+        authBox.style.display =
+          "block";
+
+        return;
+      }
+
+
+      if (
+        navigator.onLine
+      ) {
+
+        authBox.style.display =
+          "block";
+      }
+
+    }
+    catch (error) {
+
+      showError(
+        "Rakenduse käivitamise viga: " +
+        (
+          error.message ||
+          String(error)
+        )
       );
     }
   }
-  catch (error) {
-
-    console.error(
-      "Playsafe käivitamise viga:",
-      error
-    );
 
 
-    naitaViga(
-      error &&
-      error.message
-      ?
-      error.message
-      :
-      String(error)
-    );
-  }
-
-})();
+  startApp();
 
 </script>
 
