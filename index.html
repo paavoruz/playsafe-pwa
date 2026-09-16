@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="et">
 <head>
-
   <meta charset="UTF-8">
 
   <meta
@@ -10,29 +9,15 @@
   >
 
   <meta name="theme-color" content="#1d1d1f">
-
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Playsafe">
 
-  <meta
-    name="apple-mobile-web-app-status-bar-style"
-    content="default"
-  >
-
-  <meta
-    name="apple-mobile-web-app-title"
-    content="Playsafe"
-  >
-
-  <link
-    rel="manifest"
-    href="./manifest.json"
-  >
+  <link rel="manifest" href="./manifest.json">
 
   <title>Playsafe</title>
 
-
   <style>
-
     * {
       box-sizing: border-box;
     }
@@ -41,7 +26,6 @@
       margin: 0;
       background: #f5f5f7;
       color: #1d1d1f;
-
       font-family:
         -apple-system,
         BlinkMacSystemFont,
@@ -58,22 +42,17 @@
     .app {
       max-width: 700px;
       margin: auto;
-
       padding-bottom:
         calc(40px + env(safe-area-inset-bottom));
     }
 
     .header {
       background: white;
-
       padding:
         calc(18px + env(safe-area-inset-top))
         18px
         16px;
-
-      border-bottom:
-        1px solid #e5e5e5;
-
+      border-bottom: 1px solid #e5e5e5;
       position: sticky;
       top: 0;
       z-index: 50;
@@ -107,14 +86,9 @@
       width: 100%;
       padding: 14px;
       margin-bottom: 12px;
-
-      border:
-        1px solid #ddd;
-
+      border: 1px solid #ddd;
       border-radius: 12px;
-
       font-size: 16px;
-
       background: white;
     }
 
@@ -122,17 +96,11 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-
       gap: 10px;
-
       background: white;
-
       border-radius: 12px;
-
       padding: 11px 12px;
-
-      margin-bottom: 12px;
-
+      margin-bottom: 8px;
       font-size: 13px;
     }
 
@@ -148,19 +116,18 @@
       color: #a05a00;
     }
 
+    .errorText {
+      color: #b42318;
+    }
+
     .syncButton {
       border: 0;
       border-radius: 9px;
-
       padding: 8px 11px;
-
       background: #e8e8ed;
-
       color: #1d1d1f;
-
       font-size: 12px;
       font-weight: 700;
-
       cursor: pointer;
       white-space: nowrap;
     }
@@ -172,11 +139,24 @@
     .syncInfo {
       color: #888;
       font-size: 11px;
+      margin: 0 2px 13px;
+    }
 
-      margin:
-        -4px
-        2px
-        13px;
+    .errorBox {
+      display: none;
+      background: #fff0ee;
+      border: 1px solid #ffd5d0;
+      color: #8a1c13;
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 12px;
+      font-size: 12px;
+      line-height: 1.4;
+      word-break: break-word;
+    }
+
+    .errorBox.show {
+      display: block;
     }
 
     .card,
@@ -231,47 +211,23 @@
 
     .primaryButton {
       width: 100%;
-
       border: 0;
-
       border-radius: 14px;
-
       padding: 16px;
-
       font-size: 16px;
       font-weight: 700;
-
       cursor: pointer;
-
       background: #1d1d1f;
       color: white;
     }
 
-    .empty {
-      background: white;
-
-      border-radius: 16px;
-
-      padding: 28px 18px;
-
-      text-align: center;
-
-      color: #777;
-
-      margin-bottom: 12px;
-    }
-
+    .empty,
     .loading {
       background: white;
-
       border-radius: 16px;
-
-      padding: 22px 18px;
-
+      padding: 28px 18px;
       text-align: center;
-
       color: #777;
-
       margin-bottom: 12px;
     }
 
@@ -281,64 +237,38 @@
 
     .toast {
       display: none;
-
       position: fixed;
-
       bottom:
         calc(25px + env(safe-area-inset-bottom));
-
       left: 50%;
-
-      transform:
-        translateX(-50%);
-
-      max-width:
-        calc(100% - 32px);
-
+      transform: translateX(-50%);
+      max-width: calc(100% - 32px);
       background: #1d1d1f;
       color: white;
-
       padding: 12px 16px;
-
       border-radius: 12px;
-
       z-index: 3000;
-
       text-align: center;
     }
 
     .toast.show {
       display: block;
     }
-
   </style>
-
 </head>
-
 
 <body>
 
 <div class="app">
 
-
-  <!-- =====================================================
-       OBJEKTIDE NIMEKIRI
-       ===================================================== -->
+  <!-- OBJEKTIDE NIMEKIRI -->
 
   <div id="listView">
 
     <div class="header">
-
-      <div class="logo">
-        PLAYSAFE
-      </div>
-
-      <h1>
-        Objektid
-      </h1>
-
+      <div class="logo">PLAYSAFE</div>
+      <h1>Objektid</h1>
     </div>
-
 
     <div class="content">
 
@@ -347,7 +277,6 @@
         class="search"
         placeholder="Otsi objekti või aadressi..."
       >
-
 
       <div class="statusBar">
 
@@ -368,20 +297,20 @@
 
       </div>
 
-
       <div
         id="syncInfo"
         class="syncInfo"
-      >
-      </div>
+      ></div>
 
+      <div
+        id="errorBox"
+        class="errorBox"
+      ></div>
 
       <div id="objectList">
-
         <div class="loading">
           Laadin objekte...
         </div>
-
       </div>
 
     </div>
@@ -389,9 +318,7 @@
   </div>
 
 
-  <!-- =====================================================
-       OBJEKTI DETAIL
-       ===================================================== -->
+  <!-- OBJEKTI DETAIL -->
 
   <div id="objectView">
 
@@ -412,110 +339,46 @@
 
     </div>
 
-
     <div class="content">
 
       <div class="infoCard">
 
         <div class="infoRow">
-
-          <div class="label">
-            Jrk nr
-          </div>
-
-          <div
-            id="detailNr"
-            class="value"
-          ></div>
-
+          <div class="label">Jrk nr</div>
+          <div id="detailNr" class="value"></div>
         </div>
 
-
         <div class="infoRow">
-
-          <div class="label">
-            Aadress
-          </div>
-
-          <div
-            id="detailAddress"
-            class="value"
-          ></div>
-
+          <div class="label">Aadress</div>
+          <div id="detailAddress" class="value"></div>
         </div>
 
-
         <div class="infoRow">
-
-          <div class="label">
-            Väljaku tüüp
-          </div>
-
-          <div
-            id="detailType"
-            class="value"
-          ></div>
-
+          <div class="label">Väljaku tüüp</div>
+          <div id="detailType" class="value"></div>
         </div>
 
-
         <div class="infoRow">
-
-          <div class="label">
-            Hindamise liik
-          </div>
-
-          <div
-            id="detailInspection"
-            class="value"
-          ></div>
-
+          <div class="label">Hindamise liik</div>
+          <div id="detailInspection" class="value"></div>
         </div>
 
-
         <div class="infoRow">
-
-          <div class="label">
-            Tellija
-          </div>
-
-          <div
-            id="detailClient"
-            class="value"
-          ></div>
-
+          <div class="label">Tellija</div>
+          <div id="detailClient" class="value"></div>
         </div>
 
-
         <div class="infoRow">
-
-          <div class="label">
-            Staatus
-          </div>
-
-          <div
-            id="detailStatus"
-            class="value"
-          ></div>
-
+          <div class="label">Staatus</div>
+          <div id="detailStatus" class="value"></div>
         </div>
 
-
         <div class="infoRow">
-
-          <div class="label">
-            Aruande nr
-          </div>
-
-          <div
-            id="detailReport"
-            class="value"
-          ></div>
-
+          <div class="label">Aruande nr</div>
+          <div id="detailReport" class="value"></div>
         </div>
 
       </div>
-
 
       <button
         class="primaryButton"
@@ -539,9 +402,8 @@
 
 <script>
 
-
 /* =========================================================
-   PLAYSAFE API
+   API
    ========================================================= */
 
 const API_URL =
@@ -553,11 +415,9 @@ const API_URL =
    ========================================================= */
 
 let objektid = [];
-
 let aktiivneObjekt = null;
 
 let db = null;
-
 let syncTootab = false;
 
 
@@ -584,26 +444,21 @@ function openDB() {
     function(resolve, reject) {
 
       if (db) {
-
         resolve(db);
-
         return;
       }
 
-
-      const request =
+      const req =
         indexedDB.open(
           DB_NAME,
           DB_VERSION
         );
 
-
-      request.onupgradeneeded =
+      req.onupgradeneeded =
         function(event) {
 
           const database =
             event.target.result;
-
 
           if (
             !database.objectStoreNames
@@ -618,7 +473,6 @@ function openDB() {
             );
           }
 
-
           if (
             !database.objectStoreNames
               .contains(META_STORE)
@@ -631,11 +485,9 @@ function openDB() {
               }
             );
           }
-
         };
 
-
-      request.onsuccess =
+      req.onsuccess =
         function(event) {
 
           db =
@@ -644,15 +496,13 @@ function openDB() {
           resolve(db);
         };
 
-
-      request.onerror =
+      req.onerror =
         function() {
 
           reject(
-            request.error
+            req.error
           );
         };
-
     }
   );
 }
@@ -665,7 +515,6 @@ async function dbPut(
 
   await openDB();
 
-
   return new Promise(
     function(resolve, reject) {
 
@@ -675,30 +524,20 @@ async function dbPut(
           "readwrite"
         );
 
-
-      const request =
+      const req =
         tx
           .objectStore(storeName)
           .put(value);
 
-
-      request.onsuccess =
+      req.onsuccess =
         function() {
-
-          resolve(
-            request.result
-          );
+          resolve(req.result);
         };
 
-
-      request.onerror =
+      req.onerror =
         function() {
-
-          reject(
-            request.error
-          );
+          reject(req.error);
         };
-
     }
   );
 }
@@ -710,7 +549,6 @@ async function dbGetAll(
 
   await openDB();
 
-
   return new Promise(
     function(resolve, reject) {
 
@@ -720,30 +558,23 @@ async function dbGetAll(
           "readonly"
         );
 
-
-      const request =
+      const req =
         tx
           .objectStore(storeName)
           .getAll();
 
-
-      request.onsuccess =
+      req.onsuccess =
         function() {
 
           resolve(
-            request.result || []
+            req.result || []
           );
         };
 
-
-      request.onerror =
+      req.onerror =
         function() {
-
-          reject(
-            request.error
-          );
+          reject(req.error);
         };
-
     }
   );
 }
@@ -756,7 +587,6 @@ async function dbGet(
 
   await openDB();
 
-
   return new Promise(
     function(resolve, reject) {
 
@@ -766,81 +596,115 @@ async function dbGet(
           "readonly"
         );
 
-
-      const request =
+      const req =
         tx
           .objectStore(storeName)
           .get(key);
 
-
-      request.onsuccess =
+      req.onsuccess =
         function() {
 
           resolve(
-            request.result || null
+            req.result || null
           );
         };
 
-
-      request.onerror =
+      req.onerror =
         function() {
-
-          reject(
-            request.error
-          );
+          reject(req.error);
         };
-
     }
   );
 }
 
 
-async function dbClear(
-  storeName
+/*
+  Asendame objektide registri
+  ühe tehinguga.
+
+  Nii ei teki olukorda, kus vana
+  register kustutatakse, aga uue
+  salvestamine pooleli jääb.
+*/
+
+async function dbReplaceObjects(
+  objects
 ) {
 
   await openDB();
-
 
   return new Promise(
     function(resolve, reject) {
 
       const tx =
         db.transaction(
-          storeName,
+          OBJECT_STORE,
           "readwrite"
         );
 
+      const store =
+        tx.objectStore(
+          OBJECT_STORE
+        );
 
-      const request =
-        tx
-          .objectStore(storeName)
-          .clear();
+      store.clear();
 
+      objects.forEach(
+        function(objekt) {
 
-      request.onsuccess =
+          if (
+            objekt.nr === undefined ||
+            objekt.nr === null ||
+            objekt.nr === ""
+          ) {
+            return;
+          }
+
+          store.put(
+            objekt
+          );
+        }
+      );
+
+      tx.oncomplete =
         function() {
-
           resolve();
         };
 
-
-      request.onerror =
+      tx.onerror =
         function() {
-
-          reject(
-            request.error
-          );
+          reject(tx.error);
         };
 
+      tx.onabort =
+        function() {
+          reject(
+            tx.error ||
+            new Error(
+              "Andmebaasi tehing katkestati."
+            )
+          );
+        };
     }
   );
 }
 
 
 /* =========================================================
-   JSONP API
+   JSONP
    ========================================================= */
+
+/*
+  Apps Scripti lugemis-API tagastab näiteks:
+
+  playsafe_xxxxx({
+    ok: true,
+    data: {...}
+  });
+
+  Selleks loome ajutise globaalse
+  callback funktsiooni ja script elemendi.
+*/
 
 function apiSync() {
 
@@ -848,12 +712,17 @@ function apiSync() {
     function(resolve, reject) {
 
       const callbackName =
-        "playsafeCallback_" +
+        "playsafe_" +
         Date.now() +
         "_" +
-        Math.random()
-          .toString(36)
-          .slice(2);
+        Math.floor(
+          Math.random() *
+          1000000
+        );
+
+
+      let finished =
+        false;
 
 
       const script =
@@ -862,93 +731,91 @@ function apiSync() {
         );
 
 
-      let valmis = false;
+      function cleanup() {
+
+        if (
+          script &&
+          script.parentNode
+        ) {
+
+          script.parentNode
+            .removeChild(
+              script
+            );
+        }
 
 
-      const cleanup =
-        function() {
+        try {
 
-          try {
+          delete window[
+            callbackName
+          ];
 
-            delete window[
-              callbackName
-            ];
+        }
+        catch (error) {
 
-          }
-          catch (e) {
-
-            window[
-              callbackName
-            ] = undefined;
-          }
+          window[
+            callbackName
+          ] = undefined;
+        }
+      }
 
 
-          if (
-            script.parentNode
-          ) {
-
-            script.parentNode
-              .removeChild(
-                script
-              );
-          }
-        };
-
-
-      const timer =
+      const timeout =
         setTimeout(
           function() {
 
-            if (valmis) {
+            if (finished) {
               return;
             }
 
-            valmis = true;
+            finished = true;
 
             cleanup();
 
             reject(
               new Error(
-                "Server ei vastanud."
+                "API timeout — Apps Script ei vastanud 30 sekundi jooksul."
               )
             );
-
           },
-          20000
+          30000
         );
 
+
+      /*
+        Callback peab eksisteerima
+        ENNE script elemendi lisamist.
+      */
 
       window[
         callbackName
       ] =
-        function(result) {
+        function(response) {
 
-          if (valmis) {
+          if (finished) {
             return;
           }
 
-          valmis = true;
+          finished = true;
 
           clearTimeout(
-            timer
+            timeout
           );
 
-          cleanup();
 
+          /*
+            Kõigepealt kontrollime vastust,
+            alles seejärel eemaldame callbacki.
+          */
 
-          if (
-            !result ||
-            result.ok !== true
-          ) {
+          if (!response) {
+
+            cleanup();
 
             reject(
               new Error(
-                result &&
-                result.error
-                  ?
-                  result.error
-                  :
-                  "API viga."
+                "Apps Script tagastas tühja vastuse."
               )
             );
 
@@ -956,111 +823,144 @@ function apiSync() {
           }
 
 
+          if (
+            response.ok !== true
+          ) {
+
+            const message =
+              response.error
+              ?
+              String(
+                response.error
+              )
+              :
+              "Apps Script tagastas API vea.";
+
+            cleanup();
+
+            reject(
+              new Error(
+                message
+              )
+            );
+
+            return;
+          }
+
+
+          const data =
+            response.data;
+
+
+          cleanup();
+
           resolve(
-            result.data
+            data
           );
         };
+
+
+      script.async =
+        true;
 
 
       script.onerror =
         function() {
 
-          if (valmis) {
+          if (finished) {
             return;
           }
 
-          valmis = true;
+          finished = true;
 
           clearTimeout(
-            timer
+            timeout
           );
 
           cleanup();
 
           reject(
             new Error(
-              "API ühendus ebaõnnestus."
+              "JSONP skripti laadimine ebaõnnestus. Kontrolli Apps Scripti deployment'i ligipääsu."
             )
           );
         };
 
 
+      const params =
+        new URLSearchParams();
+
+      params.set(
+        "api",
+        "sync"
+      );
+
+      params.set(
+        "callback",
+        callbackName
+      );
+
+      /*
+        Cache vältimiseks.
+      */
+
+      params.set(
+        "_",
+        String(
+          Date.now()
+        )
+      );
+
+
       script.src =
         API_URL +
-        "?api=sync" +
-        "&callback=" +
-        encodeURIComponent(
-          callbackName
-        ) +
-        "&_=" +
-        Date.now();
+        "?" +
+        params.toString();
 
 
       document.head
         .appendChild(
           script
         );
-
     }
   );
 }
 
 
 /* =========================================================
-   OBJEKTIDE LOKAALNE LAADIMINE
+   KOHALIK REGISTER
    ========================================================= */
 
 async function laadiKohalikudObjektid() {
 
-  try {
+  objektid =
+    await dbGetAll(
+      OBJECT_STORE
+    );
 
-    objektid =
-      await dbGetAll(
-        OBJECT_STORE
+
+  objektid.sort(
+    function(a, b) {
+
+      return (
+        Number(b.nr || 0) -
+        Number(a.nr || 0)
       );
+    }
+  );
 
 
-    objektid.sort(
-      function(a, b) {
-
-        return (
-          Number(b.nr) -
-          Number(a.nr)
-        );
-      }
-    );
+  kuvaObjektid(
+    objektid
+  );
 
 
-    kuvaObjektid(
-      objektid
-    );
-
-
-    await kuvaSyncInfo();
-
-  }
-  catch (error) {
-
-    console.error(
-      error
-    );
-
-
-    document
-      .getElementById(
-        "objectList"
-      )
-      .innerHTML =
-
-      '<div class="empty">' +
-      'Kohalike objektide laadimine ebaõnnestus.' +
-      '</div>';
-  }
+  await kuvaSyncInfo();
 }
 
 
 /* =========================================================
-   SERVERIST SÜNKRONISEERIMINE
+   SÜNKRONISEERIMINE
    ========================================================= */
 
 async function sunkroniseeriObjektid(
@@ -1072,10 +972,12 @@ async function sunkroniseeriObjektid(
   }
 
 
+  peidaViga();
+
+
   if (!navigator.onLine) {
 
     updateConnection();
-
 
     if (kasutajaAlgatas) {
 
@@ -1088,7 +990,9 @@ async function sunkroniseeriObjektid(
   }
 
 
-  syncTootab = true;
+  syncTootab =
+    true;
+
 
   updateConnection();
 
@@ -1099,7 +1003,8 @@ async function sunkroniseeriObjektid(
     );
 
 
-  button.disabled = true;
+  button.disabled =
+    true;
 
   button.textContent =
     "Sünkroniseerin...";
@@ -1111,54 +1016,33 @@ async function sunkroniseeriObjektid(
       await apiSync();
 
 
-    const uuedObjektid =
-      (
-        data &&
-        Array.isArray(
-          data.objektid
-        )
+    if (
+      !data ||
+      !Array.isArray(
+        data.objektid
       )
-      ?
-      data.objektid
-      :
-      [];
+    ) {
+
+      throw new Error(
+        "API vastuses puudub objektide nimekiri."
+      );
+    }
 
 
-    /*
-      Registri kohalik koopia
-      asendatakse serveri värske
-      nimekirjaga.
-    */
+    const uuedObjektid =
+      data.objektid;
 
-    await dbClear(
-      OBJECT_STORE
+
+    console.log(
+      "Playsafe: serverist saadi",
+      uuedObjektid.length,
+      "objekti"
     );
 
 
-    for (
-      const objekt of uuedObjektid
-    ) {
-
-      /*
-        IndexedDB keyPath nr peab
-        alati olemas olema.
-      */
-
-      if (
-        objekt.nr === undefined ||
-        objekt.nr === null ||
-        objekt.nr === ""
-      ) {
-
-        continue;
-      }
-
-
-      await dbPut(
-        OBJECT_STORE,
-        objekt
-      );
-    }
+    await dbReplaceObjects(
+      uuedObjektid
+    );
 
 
     await dbPut(
@@ -1176,11 +1060,6 @@ async function sunkroniseeriObjektid(
       }
     );
 
-
-    /*
-      Elemenditüübid hoiame samuti
-      tulevase etapi jaoks lokaalselt.
-    */
 
     await dbPut(
       META_STORE,
@@ -1206,16 +1085,37 @@ async function sunkroniseeriObjektid(
     if (kasutajaAlgatas) {
 
       toast(
-        "Objektid sünkroniseeritud"
+        "Sünkroniseeritud: " +
+        objektid.length +
+        " objekti"
       );
     }
-
   }
   catch (error) {
 
     console.error(
+      "Playsafe sünkroniseerimise viga:",
       error
     );
+
+
+    naitaViga(
+      error &&
+      error.message
+      ?
+      error.message
+      :
+      String(error)
+    );
+
+
+    /*
+      Oluline:
+      vea korral jätame telefonis
+      oleva registri alles.
+    */
+
+    await laadiKohalikudObjektid();
 
 
     if (kasutajaAlgatas) {
@@ -1224,27 +1124,65 @@ async function sunkroniseeriObjektid(
         "Sünkroniseerimine ebaõnnestus"
       );
     }
-
-
-    /*
-      Serveri vea korral EI kustuta
-      lokaalseid objekte.
-    */
-
-    await laadiKohalikudObjektid();
-
   }
   finally {
 
-    syncTootab = false;
+    syncTootab =
+      false;
 
-    button.disabled = false;
+
+    button.disabled =
+      false;
 
     button.textContent =
       "↻ Sünkroniseeri";
 
+
     updateConnection();
   }
+}
+
+
+/* =========================================================
+   VEA KUVAMINE
+   ========================================================= */
+
+function naitaViga(
+  text
+) {
+
+  const box =
+    document.getElementById(
+      "errorBox"
+    );
+
+
+  box.textContent =
+    "Sünkroniseerimise viga: " +
+    text;
+
+
+  box.classList.add(
+    "show"
+  );
+}
+
+
+function peidaViga() {
+
+  const box =
+    document.getElementById(
+      "errorBox"
+    );
+
+
+  box.textContent =
+    "";
+
+
+  box.classList.remove(
+    "show"
+  );
 }
 
 
@@ -1262,7 +1200,8 @@ function kuvaObjektid(
     );
 
 
-  box.innerHTML = "";
+  box.innerHTML =
+    "";
 
 
   if (
@@ -1277,12 +1216,12 @@ function kuvaObjektid(
       (
         navigator.onLine
         ?
-        'Objekte ei ole veel telefoni sünkroniseeritud.'
+        "Objekte ei ole veel telefoni sünkroniseeritud."
         :
-        'Telefonis ei ole veel objektide nimekirja. Ühenda internetiga ja sünkroniseeri.'
+        "Telefonis pole veel objektide nimekirja. Ühenda internetiga ja sünkroniseeri."
       ) +
 
-      '</div>';
+      "</div>";
 
     return;
   }
@@ -1304,19 +1243,23 @@ function kuvaObjektid(
       el.innerHTML =
 
         '<div class="number">' +
-        'NR ' +
-        esc(o.nr) +
-        '</div>' +
+        "NR " +
+        esc(
+          o.nr
+        ) +
+        "</div>" +
 
         '<div class="objectName">' +
-        esc(o.objekt) +
-        '</div>' +
+        esc(
+          o.objekt
+        ) +
+        "</div>" +
 
         '<div class="address">' +
         esc(
           o.aadress || ""
         ) +
-        '</div>';
+        "</div>";
 
 
       el.onclick =
@@ -1331,7 +1274,6 @@ function kuvaObjektid(
       box.appendChild(
         el
       );
-
     }
   );
 }
@@ -1355,7 +1297,7 @@ document
           .trim();
 
 
-      const filtered =
+      const tulemused =
         objektid.filter(
           function(o) {
 
@@ -1382,16 +1324,14 @@ document
               )
                 .toLowerCase()
                 .includes(q)
-
             );
           }
         );
 
 
       kuvaObjektid(
-        filtered
+        tulemused
       );
-
     }
   );
 
@@ -1480,7 +1420,9 @@ function avaObjekt(o) {
    VAATED
    ========================================================= */
 
-function showView(id) {
+function showView(
+  id
+) {
 
   [
     "listView",
@@ -1519,19 +1461,19 @@ function tagasiObjektidesse() {
 
 
 /* =========================================================
-   PILDISTAMISE NUPP
+   PILDISTAMINE
    ========================================================= */
 
 function alustaPildistamist() {
 
   toast(
-    "Objektide offline-sünk töötab. Elementide ja fotode osa lisame järgmises etapis."
+    "Objektide offline osa töötab. Pildistamise lisame järgmises etapis."
   );
 }
 
 
 /* =========================================================
-   SÜNKRONISEERIMISE INFO
+   VIIMANE SÜNK
    ========================================================= */
 
 async function kuvaSyncInfo() {
@@ -1568,7 +1510,9 @@ async function kuvaSyncInfo() {
 
 
   el.textContent =
+
     "Viimane sünk: " +
+
     date.toLocaleString(
       "et-EE",
       {
@@ -1610,8 +1554,8 @@ function updateConnection() {
 
     status.textContent =
       "● Offline — kasutan telefoni andmeid";
-
   }
+
   else if (syncTootab) {
 
     status.className =
@@ -1619,8 +1563,8 @@ function updateConnection() {
 
     status.textContent =
       "↑ Sünkroniseerin registrit...";
-
   }
+
   else {
 
     status.className =
@@ -1636,7 +1580,9 @@ function updateConnection() {
    TOAST
    ========================================================= */
 
-function toast(text) {
+function toast(
+  text
+) {
 
   const el =
     document.getElementById(
@@ -1667,7 +1613,7 @@ function toast(text) {
 
 
 /* =========================================================
-   HTML ESCAPE
+   ESCAPE
    ========================================================= */
 
 function esc(v) {
@@ -1712,12 +1658,6 @@ window.addEventListener(
       "Internet taastatud"
     );
 
-
-    /*
-      Interneti taastumisel värskendame
-      registrit automaatselt.
-    */
-
     sunkroniseeriObjektid(
       false
     );
@@ -1755,6 +1695,18 @@ if (
         .register(
           "./service-worker.js"
         )
+        .then(
+          function(registration) {
+
+            /*
+              Kontrollime kohe,
+              kas GitHubis on uus versioon.
+            */
+
+            registration.update();
+
+          }
+        )
         .catch(
           function(error) {
 
@@ -1781,11 +1733,10 @@ if (
 
 
     /*
-      Kõigepealt kuvame ALATI
-      telefonis olemasolevad andmed.
+      1. Telefonis olev register
+      kuvatakse kohe.
 
-      See teeb külmkäivituse
-      offline-režiimis kiireks.
+      See töötab ka täiesti offline.
     */
 
     await laadiKohalikudObjektid();
@@ -1795,9 +1746,9 @@ if (
 
 
     /*
-      Kui internet on olemas,
-      küsime seejärel serverist
-      värske registri.
+      2. Interneti olemasolul
+      proovime Google registrit
+      värskendada.
     */
 
     if (
@@ -1808,7 +1759,6 @@ if (
         false
       );
     }
-
   }
   catch (error) {
 
@@ -1818,15 +1768,14 @@ if (
     );
 
 
-    document
-      .getElementById(
-        "objectList"
-      )
-      .innerHTML =
-
-      '<div class="empty">' +
-      'Rakenduse käivitamisel tekkis viga.' +
-      '</div>';
+    naitaViga(
+      error &&
+      error.message
+      ?
+      error.message
+      :
+      String(error)
+    );
   }
 
 })();
