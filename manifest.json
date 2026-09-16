@@ -1,0 +1,11 @@
+{
+  "name": "Playsafe",
+  "short_name": "Playsafe",
+  "description": "Playsafe mänguväljakute ohutuse hindamise rakendus",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5f5f7",
+  "theme_color": "#1d1d1f",
+  "lang": "et"
+}
