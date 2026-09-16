@@ -1466,8 +1466,39 @@ function tagasiObjektidesse() {
 
 function alustaPildistamist() {
 
-  toast(
-    "Objektide offline osa töötab. Pildistamise lisame järgmises etapis."
+  window.playsafeTest =
+    function(data) {
+
+      alert(
+        "JSONP TÖÖTAB!\n\n" +
+        "ok = " +
+        data.ok
+      );
+    };
+
+
+  const script =
+    document.createElement(
+      "script"
+    );
+
+
+  script.src =
+    "https://script.google.com/macros/s/AKfycbxMVDpbRFSi6RXIogv1qASAJJM4-GFtQ7RcKESiDOprNJN_rcVHbap8OUuPaniDvAgeAg/exec?api=sync&callback=playsafeTest&_=" +
+    Date.now();
+
+
+  script.onerror =
+    function() {
+
+      alert(
+        "JSONP EI LAADINUD"
+      );
+    };
+
+
+  document.head.appendChild(
+    script
   );
 }
 
