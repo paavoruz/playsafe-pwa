@@ -764,12 +764,14 @@ async function saveFiles(fileList){
     ? crypto.randomUUID()
     : "photo-" + Date.now() + "-" + Math.random().toString(36).slice(2);
 
+  const photoBytes=await file.arrayBuffer();
+
   await add("photos",{
    objectNr:currentObject.nr,
    localElementId:currentPhotoElement.localId,
    serverElementId:currentPhotoElement.serverId||null,
    uploadId:uploadId,
-   blob:file,
+   bytes:photoBytes,
    mimeType:file.type||"image/jpeg",
    originalName:file.name||"foto.jpg",
    createdAt:new Date().toISOString()
@@ -796,6 +798,51 @@ function blobToBase64(blob){
   reader.onerror=()=>reject(reader.error);
   reader.readAsDataURL(blob);
  });
+}
+
+function arrayBufferToBase64(buffer){
+ const bytes=new Uint8Array(buffer);
+ const chunkSize=0x8000;
+ let binary="";
+ for(let i=0;i<bytes.length;i+=chunkSize){
+  binary+=String.fromCharCode.apply(
+   null,
+   bytes.subarray(i,Math.min(i+chunkSize,bytes.length))
+  );
+ }
+ return btoa(binary);
+}
+
+async function photoToBase64(p){
+ // Uus iOS-kindlam formaat: foto binaarandmed on IndexedDB-s ArrayBufferina.
+ if(p.bytes){
+  let buffer=p.bytes;
+
+  if(ArrayBuffer.isView(buffer)){
+   buffer=buffer.buffer.slice(
+    buffer.byteOffset,
+    buffer.byteOffset+buffer.byteLength
+   );
+  }
+
+  if(buffer instanceof ArrayBuffer){
+   return arrayBufferToBase64(buffer);
+  }
+ }
+
+ // Fallback juba varem salvestatud Blob-fotode jaoks.
+ if(p.blob){
+  try{
+   return await blobToBase64(p.blob);
+  }catch(e){
+   throw new Error(
+    "Vana Blob-fotot ei saa iOS-is enam lugeda: "+
+    (e?.message||String(e))
+   );
+  }
+ }
+
+ throw new Error("Foto binaarandmeid ei leitud.");
 }
 
 async function ensureToken(){
@@ -985,8 +1032,8 @@ async function syncPending(){
      await put("photos",p);
     }
 
-    photoStage=`foto ${p.id}: blob -> base64`;
-    const base64=await blobToBase64(p.blob);
+    photoStage=`foto ${p.id}: fotoandmed -> base64`;
+    const base64=await photoToBase64(p);
 
     photoStage=`foto ${p.id}: Apps Script lisaFoto / kaust ${folderId}`;
     const result=await runScript("lisaFoto",[
