@@ -49,6 +49,8 @@ h1{font-size:30px;margin:0;font-weight:800}
 .workTitle{font-size:22px;font-weight:800;margin-bottom:4px}
 .workAddress{color:#777;margin-bottom:16px}
 .elementCard{background:#fff;border-radius:17px;padding:15px}
+.elementCard.hasPhotos{background:#eef8f0;border:1px solid #cfe8d4}
+.photoDone{font-size:12px;color:#21833d;font-weight:800;margin-top:5px}
 .elementTop{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
 .elementNumber{font-size:12px;color:#888;font-weight:800}
 .elementType{font-size:18px;font-weight:780;margin-top:3px}
@@ -391,7 +393,12 @@ function renderObjects(){
  const q=$("searchInput").value.trim().toLowerCase();
  const list=objektid.filter(o=>
   [o.nr,o.objekt,o.aadress,o.tellija].join(" ").toLowerCase().includes(q)
- );
+ ).sort((a,b)=>{
+  const an=Number(a.nr);
+  const bn=Number(b.nr);
+  if(Number.isFinite(an)&&Number.isFinite(bn))return bn-an;
+  return String(b.nr??"").localeCompare(String(a.nr??""),"et",{numeric:true});
+ });
 
  $("objectList").innerHTML="";
 
@@ -593,13 +600,14 @@ async function renderWork(){
   const total=Number(e.serverPhotoCount||0)+ownPending;
 
   const d=document.createElement("div");
-  d.className="elementCard";
+  d.className=total>0?"elementCard hasPhotos":"elementCard";
   d.innerHTML=`
    <div class="elementTop">
     <div>
      <div class="elementNumber">ELEMENT ${String(e.jarjekord).padStart(2,"0")}</div>
      <div class="elementType">${esc(e.tyyp)}</div>
      <div class="photoCount">${total} fotot</div>
+     ${total>0?`<div class="photoDone">✓ Fotod lisatud</div>`:""}
      ${(!e.serverId||ownPending)?`<div class="pending">↑ Ootel ${(!e.serverId?1:0)+ownPending}</div>`:""}
     </div>
    </div>
