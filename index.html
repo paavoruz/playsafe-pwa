@@ -394,10 +394,11 @@ function renderObjects(){
  const list=objektid.filter(o=>
   [o.nr,o.objekt,o.aadress,o.tellija].join(" ").toLowerCase().includes(q)
  ).sort((a,b)=>{
-  const an=Number(a.nr);
-  const bn=Number(b.nr);
-  if(Number.isFinite(an)&&Number.isFinite(bn))return bn-an;
-  return String(b.nr??"").localeCompare(String(a.nr??""),"et",{numeric:true});
+  const getNr=o=>{
+   const m=String(o.nr??"").match(/\d+/);
+   return m?parseInt(m[0],10):-1;
+  };
+  return getNr(b)-getNr(a);
  });
 
  $("objectList").innerHTML="";
