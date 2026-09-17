@@ -48,15 +48,16 @@ h1{font-size:30px;margin:0;font-weight:800}
 .summaryLabel{font-size:11px;color:#888;font-weight:700;margin-top:2px}
 .workTitle{font-size:22px;font-weight:800;margin-bottom:4px}
 .workAddress{color:#777;margin-bottom:16px}
-.elementCard{background:#fff;border-radius:17px;padding:15px}
-.elementCard.hasPhotos{background:#eef8f0;border:1px solid #cfe8d4}
+.elementCard{background:#f2f2f4;border:1px solid #dedee3;border-radius:17px;padding:15px}
+.elementCard.hasPhotos{background:#eef8f0;border:1px solid #cfe8d4;padding:7px 9px;border-radius:12px}
 .photoDone{font-size:12px;color:#21833d;font-weight:800;margin-top:5px}
-.elementCompact{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.elementCompactMain{min-width:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.elementCompactTitle{font-size:16px;font-weight:780;min-width:0}
-.elementCompactMeta{font-size:12px;color:#21833d;font-weight:750}
-.elementToggle{border:0;background:transparent;min-width:44px;min-height:44px;padding:6px;font-size:20px;color:#555;cursor:pointer}
-.elementDetails{margin-top:4px}
+.elementCompact{display:flex;align-items:center;justify-content:space-between;gap:6px;min-height:34px}
+.elementCompactMain{min-width:0;display:flex;align-items:center;gap:6px;flex-wrap:nowrap;overflow:hidden}
+.elementCompact .elementNumber{font-size:10px;white-space:nowrap;margin:0}
+.elementCompactTitle{font-size:14px;font-weight:760;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.elementCompactMeta{font-size:11px;color:#21833d;font-weight:750;white-space:nowrap}
+.elementToggle{border:0;background:transparent;min-width:34px;min-height:34px;padding:2px;font-size:17px;color:#555;cursor:pointer;flex:0 0 auto}
+.elementDetails{margin-top:6px;padding-top:4px}
 .elementTop{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
 .elementNumber{font-size:12px;color:#888;font-weight:800}
 .elementType{font-size:18px;font-weight:780;margin-top:3px}
@@ -607,7 +608,7 @@ async function renderWork(){
   const total=Number(e.serverPhotoCount||0)+ownPending;
 
   const d=document.createElement("div");
-  d.className=total>0?"elementCard hasPhotos":"elementCard";
+  d.className=total>0?"elementCard hasPhotos":"elementCard noPhotos";
 
   if(total>0){
    d.innerHTML=`
