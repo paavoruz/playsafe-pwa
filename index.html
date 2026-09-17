@@ -51,6 +51,12 @@ h1{font-size:30px;margin:0;font-weight:800}
 .elementCard{background:#fff;border-radius:17px;padding:15px}
 .elementCard.hasPhotos{background:#eef8f0;border:1px solid #cfe8d4}
 .photoDone{font-size:12px;color:#21833d;font-weight:800;margin-top:5px}
+.elementCompact{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.elementCompactMain{min-width:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.elementCompactTitle{font-size:16px;font-weight:780;min-width:0}
+.elementCompactMeta{font-size:12px;color:#21833d;font-weight:750}
+.elementToggle{border:0;background:transparent;min-width:44px;min-height:44px;padding:6px;font-size:20px;color:#555;cursor:pointer}
+.elementDetails{margin-top:4px}
 .elementTop{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
 .elementNumber{font-size:12px;color:#888;font-weight:800}
 .elementType{font-size:18px;font-weight:780;margin-top:3px}
@@ -602,21 +608,51 @@ async function renderWork(){
 
   const d=document.createElement("div");
   d.className=total>0?"elementCard hasPhotos":"elementCard";
-  d.innerHTML=`
-   <div class="elementTop">
-    <div>
-     <div class="elementNumber">ELEMENT ${String(e.jarjekord).padStart(2,"0")}</div>
-     <div class="elementType">${esc(e.tyyp)}</div>
-     <div class="photoCount">${total} fotot</div>
-     ${total>0?`<div class="photoDone">✓ Fotod lisatud</div>`:""}
-     ${(!e.serverId||ownPending)?`<div class="pending">↑ Ootel ${(!e.serverId?1:0)+ownPending}</div>`:""}
+
+  if(total>0){
+   d.innerHTML=`
+    <div class="elementCompact">
+     <div class="elementCompactMain">
+      <span class="elementNumber">ELEMENT ${String(e.jarjekord).padStart(2,"0")}</span>
+      <span class="elementCompactTitle">${esc(e.tyyp)}</span>
+      <span class="elementCompactMeta">✓ ${total} fotot</span>
+      ${(!e.serverId||ownPending)?`<span class="pending">↑ Ootel ${(!e.serverId?1:0)+ownPending}</span>`:""}
+     </div>
+     <button class="elementToggle" type="button" aria-expanded="false" aria-label="Ava elemendi sisu">⌄</button>
     </div>
-   </div>
-   <button class="btn photoButton">📷 Lisa fotod</button>
-   <div class="elementActions">
-    <button class="btn elementAction editElement">✏️ Muuda</button>
-    <button class="btn elementAction deleteAction deleteElement">🗑 Kustuta</button>
-   </div>`;
+    <div class="elementDetails" hidden>
+     <button class="btn photoButton">📷 Lisa fotod</button>
+     <div class="elementActions">
+      <button class="btn elementAction editElement">✏️ Muuda</button>
+      <button class="btn elementAction deleteAction deleteElement">🗑 Kustuta</button>
+     </div>
+    </div>`;
+
+   const toggle=d.querySelector(".elementToggle");
+   const details=d.querySelector(".elementDetails");
+   toggle.onclick=()=>{
+    const open=details.hidden;
+    details.hidden=!open;
+    toggle.textContent=open?"⌃":"⌄";
+    toggle.setAttribute("aria-expanded",String(open));
+    toggle.setAttribute("aria-label",open?"Sulge elemendi sisu":"Ava elemendi sisu");
+   };
+  }else{
+   d.innerHTML=`
+    <div class="elementTop">
+     <div>
+      <div class="elementNumber">ELEMENT ${String(e.jarjekord).padStart(2,"0")}</div>
+      <div class="elementType">${esc(e.tyyp)}</div>
+      <div class="photoCount">${total} fotot</div>
+      ${(!e.serverId||ownPending)?`<div class="pending">↑ Ootel ${(!e.serverId?1:0)+ownPending}</div>`:""}
+     </div>
+    </div>
+    <button class="btn photoButton">📷 Lisa fotod</button>
+    <div class="elementActions">
+     <button class="btn elementAction editElement">✏️ Muuda</button>
+     <button class="btn elementAction deleteAction deleteElement">🗑 Kustuta</button>
+    </div>`;
+  }
 
   d.querySelector(".photoButton").onclick=()=>openPhotoModal(e);
   d.querySelector(".editElement").onclick=()=>editElement(e);
