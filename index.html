@@ -426,15 +426,51 @@ async function loadServerElements(nr){
  if(!Array.isArray(server))return;
 
  const local=await localElementsFor(nr);
+ const pendingPhotos=await pendingPhotosFor(nr);
+ const serverIds=new Set(server.map(s=>String(s.id)));
+
+ // Kui serveris varem olnud element on Drive'ist kadunud:
+ // - ootel fotodega element tehakse uuesti sünkroniseeritavaks;
+ // - ilma ootel tööta element eemaldatakse telefoni cache'ist.
+ for(const e of local){
+  if(!e.serverId)continue;
+  if(serverIds.has(String(e.serverId)))continue;
+
+  const hasPending=pendingPhotos.some(
+   p=>p.localElementId===e.localId
+  );
+
+  if(hasPending){
+   e.serverId=null;
+   e.synced=false;
+   e.serverPhotoCount=0;
+   e.serverMissing=true;
+   await put("elements",e);
+
+   for(const p of pendingPhotos){
+    if(p.localElementId===e.localId){
+     p.serverElementId=null;
+     await put("photos",p);
+    }
+   }
+  }else{
+   await del("elements",e.localId);
+  }
+ }
+
+ const refreshedLocal=await localElementsFor(nr);
 
  for(const s of server){
-  const existing=local.find(e=>e.serverId===s.id);
+  const existing=refreshedLocal.find(
+   e=>String(e.serverId)===String(s.id)
+  );
 
   if(existing){
    existing.jarjekord=s.jarjekord;
    existing.tyyp=s.tyyp;
    existing.serverPhotoCount=s.fotodeArv||0;
    existing.synced=true;
+   existing.serverMissing=false;
    await put("elements",existing);
   }else{
    await put("elements",{
@@ -444,7 +480,8 @@ async function loadServerElements(nr){
     jarjekord:s.jarjekord,
     tyyp:s.tyyp,
     serverPhotoCount:s.fotodeArv||0,
-    synced:true
+    synced:true,
+    serverMissing:false
    });
   }
  }
@@ -664,6 +701,24 @@ async function syncPending(){
 
  try{
   await ensureToken();
+
+  // Enne üleslaadimist kontrollime serveri seisu ainult nende
+  // objektide puhul, kus telefonis on päriselt midagi ootel.
+  const allElementsBefore=await getAll("elements");
+  const allPhotosBefore=await getAll("photos");
+  const affectedObjectNrs=new Set();
+
+  for(const e of allElementsBefore){
+   if(!e.serverId)affectedObjectNrs.add(String(e.objectNr));
+  }
+
+  for(const p of allPhotosBefore){
+   affectedObjectNrs.add(String(p.objectNr));
+  }
+
+  for(const nr of affectedObjectNrs){
+   await loadServerElements(nr);
+  }
 
   const elements=(await getAll("elements"))
    .filter(e=>!e.serverId)
