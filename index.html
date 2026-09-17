@@ -55,6 +55,9 @@ h1{font-size:30px;margin:0;font-weight:800}
 .photoCount{font-size:13px;color:#777;margin-top:5px}
 .pending{font-size:12px;color:#ad5900;font-weight:700;margin-top:5px}
 .photoButton{width:100%;margin-top:12px;background:#e9e9ed}
+.elementActions{display:flex;gap:8px;margin-top:10px}
+.elementAction{flex:1;background:#f1f1f4}
+.deleteAction{color:#b42318}
 .addElement{margin:14px 0}
 .modalBackdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.42);z-index:1000;align-items:flex-end}
 .modal{background:#fff;width:100%;max-width:700px;margin:auto;border-radius:22px 22px 0 0;padding:18px;padding-bottom:calc(20px + env(safe-area-inset-bottom));max-height:85vh;overflow:auto}
@@ -434,6 +437,14 @@ async function loadServerElements(nr){
  // - ilma ootel tööta element eemaldatakse telefoni cache'ist.
  for(const e of local){
   if(!e.serverId)continue;
+
+  if(e.pendingDelete){
+   if(!serverIds.has(String(e.serverId))){
+    await del("elements",e.localId);
+   }
+   continue;
+  }
+
   if(serverIds.has(String(e.serverId)))continue;
 
   const hasPending=pendingPhotos.some(
@@ -467,7 +478,7 @@ async function loadServerElements(nr){
 
   if(existing){
    existing.jarjekord=s.jarjekord;
-   existing.tyyp=s.tyyp;
+   if(!existing.pendingRename)existing.tyyp=s.tyyp;
    existing.serverPhotoCount=s.fotodeArv||0;
    existing.synced=true;
    existing.serverMissing=false;
@@ -503,6 +514,7 @@ async function openWork(o){
 
 async function renderWork(){
  currentElements=(await localElementsFor(currentObject.nr))
+  .filter(e=>!e.pendingDelete)
   .sort((a,b)=>Number(a.jarjekord)-Number(b.jarjekord));
 
  const photos=await pendingPhotosFor(currentObject.nr);
@@ -552,12 +564,109 @@ async function renderWork(){
      ${(!e.serverId||ownPending)?`<div class="pending">↑ Ootel ${(!e.serverId?1:0)+ownPending}</div>`:""}
     </div>
    </div>
-   <button class="btn photoButton">📷 Lisa fotod</button>`;
+   <button class="btn photoButton">📷 Lisa fotod</button>
+   <div class="elementActions">
+    <button class="btn elementAction editElement">✏️ Muuda</button>
+    <button class="btn elementAction deleteAction deleteElement">🗑 Kustuta</button>
+   </div>`;
 
   d.querySelector(".photoButton").onclick=()=>openPhotoModal(e);
+  d.querySelector(".editElement").onclick=()=>editElement(e);
+  d.querySelector(".deleteElement").onclick=()=>deleteElement(e);
   container.appendChild(d);
  }
 }
+
+async function editElement(element){
+ const uusTyyp=prompt(
+  "Elemendi uus nimi / tüüp:",
+  element.tyyp||""
+ );
+
+ if(uusTyyp===null)return;
+
+ const clean=String(uusTyyp).trim();
+ if(!clean)return;
+
+ element.tyyp=clean;
+ await put("types",{name:clean});
+
+ if(element.serverId&&navigator.onLine){
+  try{
+   await ensureToken();
+
+   const result=await runScript("muudaElement",[
+    element.serverId,
+    clean
+   ]);
+
+   if(result){
+    element.tyyp=result.tyyp||clean;
+    element.jarjekord=result.jarjekord||element.jarjekord;
+    element.serverPhotoCount=Number(
+     result.fotodeArv??element.serverPhotoCount??0
+    );
+    element.synced=true;
+    element.pendingRename=false;
+   }
+  }catch(e){
+   console.warn(e);
+   element.pendingRename=true;
+  }
+ }else{
+  element.pendingRename=!!element.serverId;
+ }
+
+ await put("elements",element);
+ await renderWork();
+
+ if(element.pendingRename){
+  toast("Nime muutmine salvestatud telefoni");
+  if(navigator.onLine)syncPending();
+ }else{
+  toast("Elemendi nimi muudetud");
+ }
+}
+
+
+async function deleteElement(element){
+ const label=
+  `${String(element.jarjekord).padStart(2,"0")} – ${element.tyyp}`;
+
+ if(!confirm(
+  `Kas soovid kustutada elemendi ${label}?\n\n`+
+  "Kustutatakse ka kõik selle elemendi fotod."
+ ))return;
+
+ const allPhotos=await getAll("photos");
+ const ownPhotos=allPhotos.filter(
+  p=>p.localElementId===element.localId
+ );
+
+ // Ainult telefonis olev element saab kohe kaduda.
+ if(!element.serverId){
+  for(const p of ownPhotos)await del("photos",p.id);
+  await del("elements",element.localId);
+  await renderWork();
+  toast("Element kustutatud");
+  return;
+ }
+
+ // Serveris olev element: märgime kustutamise ootele.
+ // Ootel fotod eemaldatakse, sest kasutaja kinnitas kogu elemendi kustutamise.
+ for(const p of ownPhotos)await del("photos",p.id);
+
+ element.pendingDelete=true;
+ await put("elements",element);
+ await renderWork();
+
+ if(navigator.onLine){
+  await syncPending();
+ }else{
+  toast("Kustutamine salvestatud telefoni");
+ }
+}
+
 
 async function getTypes(){
  let types=(await getAll("types")).map(x=>x.name);
@@ -709,7 +818,9 @@ async function syncPending(){
   const affectedObjectNrs=new Set();
 
   for(const e of allElementsBefore){
-   if(!e.serverId)affectedObjectNrs.add(String(e.objectNr));
+   if(!e.serverId||e.pendingRename||e.pendingDelete){
+    affectedObjectNrs.add(String(e.objectNr));
+   }
   }
 
   for(const p of allPhotosBefore){
@@ -718,6 +829,44 @@ async function syncPending(){
 
   for(const nr of affectedObjectNrs){
    await loadServerElements(nr);
+  }
+
+  // Kõigepealt serveris olevate elementide ootel kustutamised.
+  const deletes=(await getAll("elements"))
+   .filter(e=>e.serverId&&e.pendingDelete);
+
+  for(const e of deletes){
+   await runScript("kustutaElement",[e.serverId]);
+
+   const queued=await getAll("photos");
+   for(const p of queued){
+    if(p.localElementId===e.localId)await del("photos",p.id);
+   }
+
+   await del("elements",e.localId);
+  }
+
+  // Seejärel offline'is tehtud ümbernimetamised.
+  const renames=(await getAll("elements"))
+   .filter(e=>e.serverId&&e.pendingRename&&!e.pendingDelete);
+
+  for(const e of renames){
+   const result=await runScript("muudaElement",[
+    e.serverId,
+    e.tyyp
+   ]);
+
+   if(result){
+    e.tyyp=result.tyyp||e.tyyp;
+    e.jarjekord=result.jarjekord||e.jarjekord;
+    e.serverPhotoCount=Number(
+     result.fotodeArv??e.serverPhotoCount??0
+    );
+   }
+
+   e.pendingRename=false;
+   e.synced=true;
+   await put("elements",e);
   }
 
   const elements=(await getAll("elements"))
