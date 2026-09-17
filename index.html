@@ -898,15 +898,22 @@ async function syncPending(){
   const photos=(await getAll("photos")).sort((a,b)=>Number(a.id)-Number(b.id));
 
   for(const p of photos){
-   let folderId=p.serverElementId;
+   // Elemendi kirje on serverId osas autoriteetne.
+   // Foto enda serverElementId võib viidata vanale/kustutatud Drive'i kaustale.
+   const els=await getAll("elements");
+   const el=els.find(e=>e.localId===p.localElementId);
 
-   if(!folderId){
-    const els=await getAll("elements");
-    const el=els.find(e=>e.localId===p.localElementId);
-    folderId=el?.serverId;
-   }
+   if(!el||el.pendingDelete)continue;
+
+   const folderId=el.serverId;
 
    if(!folderId)continue;
+
+   // Hoia foto kirjes samuti värske kausta ID.
+   if(p.serverElementId!==folderId){
+    p.serverElementId=folderId;
+    await put("photos",p);
+   }
 
    if(!p.uploadId){
     p.uploadId="legacy-"+p.id;
