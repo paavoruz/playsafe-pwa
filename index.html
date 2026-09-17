@@ -1286,15 +1286,14 @@ async function start(){
 
   const ready=await waitGoogle();
 
-  // Taasta eelmine veel kehtiv Google access token pärast PWA sulgemist.
-  const restored=await restoreSavedToken();
+  // Taasta eelmine veel kehtiv Google access token, kui see on olemas.
+  // Kui tokenit pole, ei näita käivitamisel kollast Google'i kasti:
+  // autoriseerimine küsitakse alles siis, kui kasutaja vajutab Sünkroniseeri.
+  await restoreSavedToken();
+  $("authBox").style.display="none";
 
-  if(navigator.onLine){
-   if(ready){
-    $("authBox").style.display=restored?"none":"block";
-   }else{
-    showError("Google'i sisselogimisteenust ei õnnestunud laadida.");
-   }
+  if(navigator.onLine&&!ready){
+   showError("Google'i sisselogimisteenust ei õnnestunud laadida.");
   }
  }
  catch(e){
