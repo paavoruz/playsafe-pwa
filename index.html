@@ -612,10 +612,16 @@ async function saveFiles(fileList){
  for(const file of Array.from(fileList)){
   if(!file.type.startsWith("image/"))continue;
 
+  const uploadId =
+   (crypto.randomUUID)
+    ? crypto.randomUUID()
+    : "photo-" + Date.now() + "-" + Math.random().toString(36).slice(2);
+
   await add("photos",{
    objectNr:currentObject.nr,
    localElementId:currentPhotoElement.localId,
    serverElementId:currentPhotoElement.serverId||null,
+   uploadId:uploadId,
    blob:file,
    mimeType:file.type||"image/jpeg",
    originalName:file.name||"foto.jpg",
@@ -698,13 +704,19 @@ async function syncPending(){
 
    if(!folderId)continue;
 
+   if(!p.uploadId){
+    p.uploadId="legacy-"+p.id;
+    await put("photos",p);
+   }
+
    const base64=await blobToBase64(p.blob);
 
    const result=await runScript("lisaFoto",[
     folderId,
     base64,
     p.mimeType,
-    p.originalName
+    p.originalName,
+    p.uploadId
    ]);
 
    if(result){
