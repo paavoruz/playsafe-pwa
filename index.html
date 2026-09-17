@@ -1,3 +1,139 @@
+
+1705D19D-CB84-420F-9098-4A943CE2722C.png
+
+fb73ad4c-3d42-4606-bbe6-570c3f566568.png
+
+f4d2b509-8fd1-4325-b282-97e257ecef83.png
+
+e3ee5be9-538f-4f8a-9dd8-1e36db58cdfb.png
+
+4017bea0-812b-49d7-b23b-fb8f7f2ab4c8.png
+
+Nüüd on põhjus palju selgem — foto üleslaadimine ise töötab. Logi ütleb:
+
+KAUST LEITUD ... nimi=07_Jõupink
+→ õige Drive'i elemendikaust leitakse.
+
+FAIL LOODUD ... nimi=01.jpg ... kaust=07_Jõupink
+→ 01.jpg loodi Drive'i edukalt.
+
+UPLOAD ID SALVESTATUD | legacy-22
+→ duplikaadikaitse ID salvestati.
+
+LISAFOTO VALMIS | fotodeArv=1
+→ Apps Script näeb selles kaustas ühte fotot.
+
+Seega foto on Drive'is olemas, täpselt kaustas 07_Jõupink. Kui sa Drive'i kasutajaliideses seda ei näe, tasub seda kausta värskendada — logis on isegi konkreetne loodud faili ID.
+
+Aga punane “The object can not be found here.” tuleb järelikult pärast edukat lisaFoto käivitust, mitte foto üleslaadimisest. Lisaks on meil nüüd oluline tõend, et legacy-22 on serveris salvestatud: sama foto uuesti saatmine ei tohiks duplikaati tekitada.
+
+Järgmine parandus tuleb teha PWA syncPending() lõpuosas. Seal on pärast edukat foto üleslaadimist veel kohaliku IndexedDB elemendi uuendamine, foto järjekorrast eemaldamine ja loadServerElements() reconciliation. Viga on selles järeltöötluses.
+
+Ma teeks nüüd selle osa diagnostika/paranduse, mitte ei puutuks enam lisaFoto() backend'i.
+
+
+mingisugune sync error on ikka, see jõupinkide asi on teine kaust, minu pildid ei lae üles ka teise objekti kaustas
+
+Jah — sul on õigus. Ma sidusin 07_Jõupink ekslikult sinu praeguse testobjektiga.
+
+Tegelikult näitab logi midagi olulisemat: PWA üritab sünkroniseerida vana järjekorras olevat fotot legacy-22, mis kuulub elemendile 07_Jõupink mingis teises objektis. See upload õnnestub, kuid kogu sünkroniseerimine jookseb seejärel mõne teise vana/lõhkise järjekorrakirje otsa veaga “The object can not be found here.”. Kuna syncPending() katkeb esimese vea juures, ei jõua ta sinu praeguse objekti fotodeni.
+
+See seletab ka, miks probleem ilmneb teistel objektidel.
+
+Meil on vaja muuta sünkroniseerimise põhimõtet: üks vigane vana element või foto ei tohi blokeerida kogu Playsafe'i järjekorda. Iga foto/element peab sünkroniseeruma eraldi; vigane jääb ootele koos veaga, aga järgmiste fotode üleslaadimine jätkub.
+
+Lisaks on praeguses lahenduses teine probleem: globaalne syncPending() töötleb kõigi objektide ootel kirjeid. Seetõttu tuli sul praegu ette hoopis vana 07_Jõupink, kuigi töötasid teise objektiga.
+
+Teen järgmise paranduse nii, et Sünkroniseeri töötleb kõik ootel tööd, kuid ühe objekti/foto viga ei peata ülejäänuid, ning veateade ütleb lõpuks konkreetselt, mitu kirjet jäi vigaseks. See on õigem lahendus kui hakata 07_Jõupink kausta eraldi parandama.
+
+
+jah palun
+
+Valmis. Muutsin nüüd sünkroniseerimise loogika robustsemaks.
+
+Laadi parandatud index.html alla
+
+Oluline muudatus: üks vana vigane objekt või foto ei katkesta enam kogu sünkroniseerimist. Playsafe proovib iga elementi ja fotot eraldi, edukad lähevad Drive'i ning probleemsed jäävad ootele. Veateade näitab nüüd ka konkreetsemalt näiteks Objekt 123, foto 22: ....
+
+Nüüd tee:
+
+asenda GitHubis index.html;
+
+commit;
+
+tõsta service-worker.js cache jälle ühe võrra, nt v9 → v10;
+
+commit;
+
+sulge iPhone'is Playsafe täielikult ja ava uuesti;
+
+vajuta Sünkroniseeri.
+
+Seejärel saada mulle ekraanipilt tulemusest. Uus veateade peaks nüüd näitama, milline objekt/foto on probleemne, samal ajal peaksid teiste objektide korras fotod Drive'i jõudma. 
+
+
+
+index_resilient_sync.html
+HTML
+
+
+index_resilient_sync.html
+
+
+
+
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
 <!DOCTYPE html>
 <html lang="et">
 <head>
@@ -50,1053 +186,3 @@ h1{font-size:30px;margin:0;font-weight:800}
 .workAddress{color:#777;margin-bottom:16px}
 .elementCard{background:#fff;border-radius:17px;padding:15px}
 .elementTop{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
-.elementNumber{font-size:12px;color:#888;font-weight:800}
-.elementType{font-size:18px;font-weight:780;margin-top:3px}
-.photoCount{font-size:13px;color:#777;margin-top:5px}
-.pending{font-size:12px;color:#ad5900;font-weight:700;margin-top:5px}
-.photoButton{width:100%;margin-top:12px;background:#e9e9ed}
-.elementActions{display:flex;gap:8px;margin-top:10px}
-.elementAction{flex:1;background:#f1f1f4}
-.deleteAction{color:#b42318}
-.addElement{margin:14px 0}
-.modalBackdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.42);z-index:1000;align-items:flex-end}
-.modal{background:#fff;width:100%;max-width:700px;margin:auto;border-radius:22px 22px 0 0;padding:18px;padding-bottom:calc(20px + env(safe-area-inset-bottom));max-height:85vh;overflow:auto}
-.modalTitle{font-size:21px;font-weight:800;margin-bottom:14px}
-.typeButton{width:100%;border:0;background:#f1f1f4;border-radius:13px;padding:14px;text-align:left;margin-bottom:8px;font-weight:650}
-.customRow{display:flex;gap:8px;margin-top:12px}
-.customInput{flex:1;min-width:0;border:1px solid #ddd;border-radius:12px;padding:13px}
-.cancel{width:100%;margin-top:12px;background:#eee}
-.photoChoice{width:100%;margin-bottom:10px;padding:16px}
-.toast{display:none;position:fixed;z-index:2000;left:50%;bottom:calc(25px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#1d1d1f;color:#fff;padding:12px 18px;border-radius:13px;max-width:88%;text-align:center}
-.empty{background:#fff;border-radius:16px;padding:25px;text-align:center;color:#777}
-</style>
-
-<script src="https://accounts.google.com/gsi/client" async defer></script>
-</head>
-
-<body>
-
-<header class="header">
-  <div class="brand">PLAYSAFE</div>
-  <h1 id="pageTitle">Objektid</h1>
-</header>
-
-<main class="content">
-
-<section id="listView">
-  <input id="searchInput" class="search" type="search" placeholder="Otsi objekti või aadressi...">
-
-  <div class="statusCard">
-    <div id="connectionStatus" class="connection">Kontrollin...</div>
-    <button id="syncButton" class="btn btnGray">↻ Sünkroniseeri</button>
-  </div>
-
-  <div id="syncInfo" class="syncInfo"></div>
-
-  <div id="authBox" class="authBox">
-    <b>Google'i ühendus vajalik</b>
-    <div class="muted" style="margin:6px 0 10px">Sünkroniseerimiseks ühenda Playsafe Google'iga.</div>
-    <button id="googleButton" class="btn btnDark">Ühenda Google</button>
-  </div>
-
-  <div id="errorBox" class="errorBox"></div>
-  <div id="objectList" class="objectList"></div>
-</section>
-
-<section id="detailView" style="display:none"></section>
-<section id="workView" style="display:none"></section>
-
-</main>
-
-<div id="elementModal" class="modalBackdrop">
-  <div class="modal">
-    <div class="modalTitle">Lisa element</div>
-    <div id="typeList"></div>
-
-    <div class="customRow">
-      <input id="customType" class="customInput" placeholder="Muu elemendi tüüp">
-      <button id="addCustomType" class="btn btnDark">Lisa</button>
-    </div>
-
-    <button id="cancelElement" class="btn cancel">Loobu</button>
-  </div>
-</div>
-
-<div id="photoModal" class="modalBackdrop">
-  <div class="modal">
-    <div class="modalTitle">Lisa fotod</div>
-
-    <button id="cameraChoice" class="btn btnDark photoChoice">📷 Pildista</button>
-    <button id="galleryChoice" class="btn btnGray photoChoice">🖼 Vali mitu fotot</button>
-    <button id="cancelPhoto" class="btn cancel">Loobu</button>
-
-    <input id="cameraInput" type="file" accept="image/*" capture="environment" hidden>
-    <input id="galleryInput" type="file" accept="image/*" multiple hidden>
-  </div>
-</div>
-
-<div id="toast" class="toast"></div>
-
-<script>
-const CLIENT_ID =
-"127555248023-80bisfnfcjj0dsh61fjn0ofa3lj8mli1.apps.googleusercontent.com";
-
-const SCRIPT_ID =
-"AKfycbxaB2LDck7cQBhwVrevU3_3NbiIlCck9qieD-26Z6jlzcDC0nQJ8SviTh5TPaxd_Ci05A";
-
-const SCOPES =
-"https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/spreadsheets";
-
-const DEFAULT_TYPES = [
-"Kombineeritud mänguvahend","Kiik","Liumägi","Ronimisvahend",
-"Vedrukiik","Karussell","Tasakaaluvahend","Liivakast"
-];
-
-let db;
-let objektid=[];
-let currentObject=null;
-let currentElements=[];
-let currentPhotoElement=null;
-let accessToken=null;
-let tokenClient=null;
-let gisReady=false;
-let syncing=false;
-
-const $=id=>document.getElementById(id);
-
-/* ================= DATABASE ================= */
-
-function openDB(){
- return new Promise((resolve,reject)=>{
-  const r=indexedDB.open("PlaysafePWA",2);
-
-  r.onupgradeneeded=e=>{
-   const d=e.target.result;
-
-   if(!d.objectStoreNames.contains("objects"))
-    d.createObjectStore("objects",{keyPath:"nr"});
-
-   if(!d.objectStoreNames.contains("meta"))
-    d.createObjectStore("meta",{keyPath:"key"});
-
-   if(!d.objectStoreNames.contains("elements"))
-    d.createObjectStore("elements",{keyPath:"localId"});
-
-   if(!d.objectStoreNames.contains("photos"))
-    d.createObjectStore("photos",{keyPath:"id",autoIncrement:true});
-
-   if(!d.objectStoreNames.contains("types"))
-    d.createObjectStore("types",{keyPath:"name"});
-  };
-
-  r.onsuccess=()=>{db=r.result;resolve()};
-  r.onerror=()=>reject(r.error);
- });
-}
-
-function getAll(store){
- return new Promise((resolve,reject)=>{
-  const r=db.transaction(store,"readonly").objectStore(store).getAll();
-  r.onsuccess=()=>resolve(r.result||[]);
-  r.onerror=()=>reject(r.error);
- });
-}
-
-function put(store,value){
- return new Promise((resolve,reject)=>{
-  const r=db.transaction(store,"readwrite").objectStore(store).put(value);
-  r.onsuccess=()=>resolve(r.result);
-  r.onerror=()=>reject(r.error);
- });
-}
-
-function add(store,value){
- return new Promise((resolve,reject)=>{
-  const r=db.transaction(store,"readwrite").objectStore(store).add(value);
-  r.onsuccess=()=>resolve(r.result);
-  r.onerror=()=>reject(r.error);
- });
-}
-
-function del(store,key){
- return new Promise((resolve,reject)=>{
-  const r=db.transaction(store,"readwrite").objectStore(store).delete(key);
-  r.onsuccess=()=>resolve();
-  r.onerror=()=>reject(r.error);
- });
-}
-
-function clearStore(store){
- return new Promise((resolve,reject)=>{
-  const r=db.transaction(store,"readwrite").objectStore(store).clear();
-  r.onsuccess=()=>resolve();
-  r.onerror=()=>reject(r.error);
- });
-}
-
-async function replaceObjects(items){
- await clearStore("objects");
- for(const o of items) if(o.nr!==""&&o.nr!=null) await put("objects",o);
-}
-
-async function setMeta(key,value){await put("meta",{key,value})}
-
-async function getMeta(key){
- const all=await getAll("meta");
- const x=all.find(v=>v.key===key);
- return x?x.value:null;
-}
-
-/* ================= GOOGLE ================= */
-
-function initGoogle(){
- if(!window.google?.accounts?.oauth2)return false;
-
- tokenClient=google.accounts.oauth2.initTokenClient({
-  client_id:CLIENT_ID,
-  scope:SCOPES,
-  callback:()=>{}
- });
-
- gisReady=true;
- return true;
-}
-
-function waitGoogle(){
- return new Promise(resolve=>{
-  let n=0;
-  const t=setInterval(()=>{
-   n++;
-   if(initGoogle()){clearInterval(t);resolve(true)}
-   else if(n>=40){clearInterval(t);resolve(false)}
-  },200);
- });
-}
-
-function getToken(){
- return new Promise((resolve,reject)=>{
-  if(!navigator.onLine)return reject(new Error("Internetiühendus puudub."));
-  if(!gisReady)return reject(new Error("Google'i teenus pole valmis."));
-
-  tokenClient.callback=r=>{
-   if(r.error)return reject(new Error(r.error_description||r.error));
-   accessToken=r.access_token;
-   $("authBox").style.display="none";
-   resolve(accessToken);
-  };
-
-  tokenClient.requestAccessToken({prompt:accessToken?"":"consent"});
- });
-}
-
-async function runScript(fn,parameters=[]){
- if(!accessToken)throw new Error("Google'i autoriseerimine on vajalik.");
-
- const res=await fetch(
-  `https://script.googleapis.com/v1/scripts/${encodeURIComponent(SCRIPT_ID)}:run`,
-  {
-   method:"POST",
-   headers:{
-    Authorization:`Bearer ${accessToken}`,
-    "Content-Type":"application/json"
-   },
-   body:JSON.stringify({function:fn,parameters})
-  }
- );
-
- const data=await res.json();
-
- if(res.status===401){
-  accessToken=null;
-  throw new Error("Google'i sisselogimine aegus.");
- }
-
- if(!res.ok)throw new Error(data?.error?.message||`Google API viga ${res.status}`);
-
- if(data.error){
-  const detail=data.error.details?.[0];
-  throw new Error(detail?.errorMessage||"Apps Scripti viga.");
- }
-
- return data.response?.result;
-}
-
-/* ================= OBJECTS ================= */
-
-async function syncObjects(){
- const result=await runScript("getObjektid");
- if(!Array.isArray(result))throw new Error("Objektide nimekirja ei saadud.");
-
- await replaceObjects(result);
- objektid=result;
- await setMeta("lastSync",new Date().toISOString());
-
- try{
-  const types=await runScript("getElemendiTyypid");
-  if(Array.isArray(types)){
-   for(const name of types)await put("types",{name});
-  }
- }catch(e){console.warn(e)}
-
- renderObjects();
- await updateSyncInfo();
-}
-
-function objectName(o){return o.objekt||o.nimi||"Nimetu objekt"}
-function esc(v){
- return String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;")
- .replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;");
-}
-
-function renderObjects(){
- const q=$("searchInput").value.trim().toLowerCase();
- const list=objektid.filter(o=>
-  [o.nr,o.objekt,o.aadress,o.tellija].join(" ").toLowerCase().includes(q)
- );
-
- $("objectList").innerHTML="";
-
- if(!list.length){
-  $("objectList").innerHTML='<div class="empty">Objekte ei leitud.</div>';
-  return;
- }
-
- list.forEach(o=>{
-  const d=document.createElement("div");
-  d.className="card objectCard";
-  d.innerHTML=`<div class="small">NR ${esc(o.nr)}</div>
-  <div class="objectName">${esc(objectName(o))}</div>
-  <div class="muted">${esc(o.aadress||"")}</div>`;
-  d.onclick=()=>showObject(o);
-  $("objectList").appendChild(d);
- });
-}
-
-function detailRow(label,value){
- if(value==null||value==="")return "";
- return `<div class="row"><div class="label">${esc(label)}</div>
- <div class="value">${esc(value)}</div></div>`;
-}
-
-function showObject(o){
- currentObject=o;
- $("listView").style.display="none";
- $("workView").style.display="none";
- $("detailView").style.display="block";
- $("pageTitle").textContent="Objekt";
-
- $("detailView").innerHTML=`
- <button class="back" id="detailBack">‹ Tagasi objektidesse</button>
- <div class="card">
-  <div class="detailTitle">${esc(objectName(o))}</div>
-  ${detailRow("Jrk nr",o.nr)}
-  ${detailRow("Aadress",o.aadress)}
-  ${detailRow("Väljaku tüüp",o.valjakuTyyp)}
-  ${detailRow("Hindamise liik",o.hindamiseLiik)}
-  ${detailRow("Tellija",o.tellija)}
-  ${detailRow("Staatus",o.staatus)}
-  ${detailRow("Aruande nr",o.aruandeNr)}
-  <button id="startWork" class="btn btnDark btnFull">Alusta pildistamist</button>
- </div>`;
-
- $("detailBack").onclick=showList;
- $("startWork").onclick=()=>openWork(o);
-}
-
-function showList(){
- $("detailView").style.display="none";
- $("workView").style.display="none";
- $("listView").style.display="block";
- $("pageTitle").textContent="Objektid";
-}
-
-/* ================= ELEMENTS ================= */
-
-async function localElementsFor(nr){
- const all=await getAll("elements");
- return all.filter(e=>String(e.objectNr)===String(nr));
-}
-
-async function pendingPhotosFor(nr){
- const all=await getAll("photos");
- return all.filter(p=>String(p.objectNr)===String(nr));
-}
-
-async function loadServerElements(nr){
- if(!navigator.onLine||!accessToken)return;
-
- const server=await runScript("getElemendid",[nr]);
- if(!Array.isArray(server))return;
-
- const local=await localElementsFor(nr);
- const pendingPhotos=await pendingPhotosFor(nr);
- const serverIds=new Set(server.map(s=>String(s.id)));
-
- // Kui serveris varem olnud element on Drive'ist kadunud:
- // - ootel fotodega element tehakse uuesti sünkroniseeritavaks;
- // - ilma ootel tööta element eemaldatakse telefoni cache'ist.
- for(const e of local){
-  if(!e.serverId)continue;
-
-  if(e.pendingDelete){
-   if(!serverIds.has(String(e.serverId))){
-    await del("elements",e.localId);
-   }
-   continue;
-  }
-
-  if(serverIds.has(String(e.serverId)))continue;
-
-  const hasPending=pendingPhotos.some(
-   p=>p.localElementId===e.localId
-  );
-
-  if(hasPending){
-   e.serverId=null;
-   e.synced=false;
-   e.serverPhotoCount=0;
-   e.serverMissing=true;
-   await put("elements",e);
-
-   for(const p of pendingPhotos){
-    if(p.localElementId===e.localId){
-     p.serverElementId=null;
-     await put("photos",p);
-    }
-   }
-  }else{
-   await del("elements",e.localId);
-  }
- }
-
- const refreshedLocal=await localElementsFor(nr);
-
- for(const s of server){
-  const existing=refreshedLocal.find(
-   e=>String(e.serverId)===String(s.id)
-  );
-
-  if(existing){
-   existing.jarjekord=s.jarjekord;
-   if(!existing.pendingRename)existing.tyyp=s.tyyp;
-   existing.serverPhotoCount=s.fotodeArv||0;
-   existing.synced=true;
-   existing.serverMissing=false;
-   await put("elements",existing);
-  }else{
-   await put("elements",{
-    localId:`server-${s.id}`,
-    objectNr:nr,
-    serverId:s.id,
-    jarjekord:s.jarjekord,
-    tyyp:s.tyyp,
-    serverPhotoCount:s.fotodeArv||0,
-    synced:true,
-    serverMissing:false
-   });
-  }
- }
-}
-
-async function openWork(o){
- currentObject=o;
- $("detailView").style.display="none";
- $("listView").style.display="none";
- $("workView").style.display="block";
- $("pageTitle").textContent="Hindamine";
-
- if(navigator.onLine&&accessToken){
-  try{await loadServerElements(o.nr)}catch(e){console.warn(e)}
- }
-
- await renderWork();
-}
-
-async function renderWork(){
- currentElements=(await localElementsFor(currentObject.nr))
-  .filter(e=>!e.pendingDelete)
-  .sort((a,b)=>Number(a.jarjekord)-Number(b.jarjekord));
-
- const photos=await pendingPhotosFor(currentObject.nr);
-
- let photoTotal=photos.length;
- for(const e of currentElements)photoTotal+=Number(e.serverPhotoCount||0);
-
- const pendingElements=currentElements.filter(e=>!e.serverId).length;
- const pendingCount=pendingElements+photos.length;
-
- $("workView").innerHTML=`
- <button class="back" id="workBack">‹ Tagasi objekti juurde</button>
- <div class="workTitle">${esc(objectName(currentObject))}</div>
- <div class="workAddress">${esc(currentObject.aadress||"")}</div>
-
- <div class="summary">
-  <div class="summaryBox"><div class="summaryNumber">${currentElements.length}</div><div class="summaryLabel">ELEMENTE</div></div>
-  <div class="summaryBox"><div class="summaryNumber">${photoTotal}</div><div class="summaryLabel">FOTOSID</div></div>
-  <div class="summaryBox"><div class="summaryNumber">${pendingCount}</div><div class="summaryLabel">OOTEL</div></div>
- </div>
-
- <button id="newElement" class="btn btnDark btnFull addElement">+ Lisa element</button>
- <div id="elementsHere" class="elementList"></div>`;
-
- $("workBack").onclick=()=>showObject(currentObject);
- $("newElement").onclick=openElementModal;
-
- const container=$("elementsHere");
-
- if(!currentElements.length){
-  container.innerHTML='<div class="empty">Lisa esimene mänguväljaku element.</div>';
-  return;
- }
-
- for(const e of currentElements){
-  const ownPending=photos.filter(p=>p.localElementId===e.localId).length;
-  const total=Number(e.serverPhotoCount||0)+ownPending;
-
-  const d=document.createElement("div");
-  d.className="elementCard";
-  d.innerHTML=`
-   <div class="elementTop">
-    <div>
-     <div class="elementNumber">ELEMENT ${String(e.jarjekord).padStart(2,"0")}</div>
-     <div class="elementType">${esc(e.tyyp)}</div>
-     <div class="photoCount">${total} fotot</div>
-     ${(!e.serverId||ownPending)?`<div class="pending">↑ Ootel ${(!e.serverId?1:0)+ownPending}</div>`:""}
-    </div>
-   </div>
-   <button class="btn photoButton">📷 Lisa fotod</button>
-   <div class="elementActions">
-    <button class="btn elementAction editElement">✏️ Muuda</button>
-    <button class="btn elementAction deleteAction deleteElement">🗑 Kustuta</button>
-   </div>`;
-
-  d.querySelector(".photoButton").onclick=()=>openPhotoModal(e);
-  d.querySelector(".editElement").onclick=()=>editElement(e);
-  d.querySelector(".deleteElement").onclick=()=>deleteElement(e);
-  container.appendChild(d);
- }
-}
-
-async function editElement(element){
- const uusTyyp=prompt(
-  "Elemendi uus nimi / tüüp:",
-  element.tyyp||""
- );
-
- if(uusTyyp===null)return;
-
- const clean=String(uusTyyp).trim();
- if(!clean)return;
-
- element.tyyp=clean;
- await put("types",{name:clean});
-
- if(element.serverId&&navigator.onLine){
-  try{
-   await ensureToken();
-
-   const result=await runScript("muudaElement",[
-    element.serverId,
-    clean
-   ]);
-
-   if(result){
-    element.tyyp=result.tyyp||clean;
-    element.jarjekord=result.jarjekord||element.jarjekord;
-    element.serverPhotoCount=Number(
-     result.fotodeArv??element.serverPhotoCount??0
-    );
-    element.synced=true;
-    element.pendingRename=false;
-   }
-  }catch(e){
-   console.warn(e);
-   element.pendingRename=true;
-  }
- }else{
-  element.pendingRename=!!element.serverId;
- }
-
- await put("elements",element);
- await renderWork();
-
- if(element.pendingRename){
-  toast("Nime muutmine salvestatud telefoni");
-  if(navigator.onLine)syncPending();
- }else{
-  toast("Elemendi nimi muudetud");
- }
-}
-
-
-async function deleteElement(element){
- const label=
-  `${String(element.jarjekord).padStart(2,"0")} – ${element.tyyp}`;
-
- if(!confirm(
-  `Kas soovid kustutada elemendi ${label}?\n\n`+
-  "Kustutatakse ka kõik selle elemendi fotod."
- ))return;
-
- const allPhotos=await getAll("photos");
- const ownPhotos=allPhotos.filter(
-  p=>p.localElementId===element.localId
- );
-
- // Ainult telefonis olev element saab kohe kaduda.
- if(!element.serverId){
-  for(const p of ownPhotos)await del("photos",p.id);
-  await del("elements",element.localId);
-  await renderWork();
-  toast("Element kustutatud");
-  return;
- }
-
- // Serveris olev element: märgime kustutamise ootele.
- // Ootel fotod eemaldatakse, sest kasutaja kinnitas kogu elemendi kustutamise.
- for(const p of ownPhotos)await del("photos",p.id);
-
- element.pendingDelete=true;
- await put("elements",element);
- await renderWork();
-
- if(navigator.onLine){
-  await syncPending();
- }else{
-  toast("Kustutamine salvestatud telefoni");
- }
-}
-
-
-async function getTypes(){
- let types=(await getAll("types")).map(x=>x.name);
-
- if(!types.length){
-  for(const name of DEFAULT_TYPES)await put("types",{name});
-  types=[...DEFAULT_TYPES];
- }
-
- return types.sort((a,b)=>a.localeCompare(b,"et"));
-}
-
-async function openElementModal(){
- const types=await getTypes();
- $("typeList").innerHTML="";
-
- types.forEach(type=>{
-  const b=document.createElement("button");
-  b.className="typeButton";
-  b.textContent=type;
-  b.onclick=()=>createLocalElement(type);
-  $("typeList").appendChild(b);
- });
-
- $("customType").value="";
- $("elementModal").style.display="flex";
-}
-
-async function createLocalElement(type){
- type=String(type||"").trim();
- if(!type)return;
-
- const existing=await localElementsFor(currentObject.nr);
- const max=existing.length?Math.max(...existing.map(e=>Number(e.jarjekord)||0)):0;
-
- const element={
-  localId:`local-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-  objectNr:currentObject.nr,
-  serverId:null,
-  jarjekord:max+1,
-  tyyp:type,
-  serverPhotoCount:0,
-  synced:false,
-  createdAt:new Date().toISOString()
- };
-
- await put("elements",element);
- await put("types",{name:type});
-
- $("elementModal").style.display="none";
- await renderWork();
- toast("Element lisatud");
-
- if(navigator.onLine)syncPending();
-}
-
-$("addCustomType").onclick=()=>createLocalElement($("customType").value);
-$("cancelElement").onclick=()=>{$("elementModal").style.display="none"};
-
-/* ================= PHOTOS ================= */
-
-function openPhotoModal(element){
- currentPhotoElement=element;
- $("photoModal").style.display="flex";
-}
-
-$("cancelPhoto").onclick=()=>{$("photoModal").style.display="none"};
-
-$("cameraChoice").onclick=()=>{
- $("photoModal").style.display="none";
- $("cameraInput").value="";
- $("cameraInput").click();
-};
-
-$("galleryChoice").onclick=()=>{
- $("photoModal").style.display="none";
- $("galleryInput").value="";
- $("galleryInput").click();
-};
-
-$("cameraInput").onchange=e=>saveFiles(e.target.files);
-$("galleryInput").onchange=e=>saveFiles(e.target.files);
-
-async function saveFiles(fileList){
- if(!currentPhotoElement||!fileList?.length)return;
-
- let count=0;
-
- for(const file of Array.from(fileList)){
-  if(!file.type.startsWith("image/"))continue;
-
-  const uploadId =
-   (crypto.randomUUID)
-    ? crypto.randomUUID()
-    : "photo-" + Date.now() + "-" + Math.random().toString(36).slice(2);
-
-  await add("photos",{
-   objectNr:currentObject.nr,
-   localElementId:currentPhotoElement.localId,
-   serverElementId:currentPhotoElement.serverId||null,
-   uploadId:uploadId,
-   blob:file,
-   mimeType:file.type||"image/jpeg",
-   originalName:file.name||"foto.jpg",
-   createdAt:new Date().toISOString()
-  });
-
-  count++;
- }
-
- await renderWork();
- toast(`${count} fotot salvestatud telefoni`);
-
- if(navigator.onLine)syncPending();
-}
-
-/* ================= OFFLINE SYNC ================= */
-
-function blobToBase64(blob){
- return new Promise((resolve,reject)=>{
-  const reader=new FileReader();
-  reader.onload=()=>{
-   const value=String(reader.result||"");
-   resolve(value.includes(",")?value.split(",").pop():value);
-  };
-  reader.onerror=()=>reject(reader.error);
-  reader.readAsDataURL(blob);
- });
-}
-
-async function ensureToken(){
- if(accessToken)return;
- await getToken();
-}
-
-async function syncPending(){
- if(syncing||!navigator.onLine)return;
-
- syncing=true;
- updateConnection();
-
- try{
-  await ensureToken();
-
-  // Enne üleslaadimist kontrollime serveri seisu ainult nende
-  // objektide puhul, kus telefonis on päriselt midagi ootel.
-  const allElementsBefore=await getAll("elements");
-  const allPhotosBefore=await getAll("photos");
-  const affectedObjectNrs=new Set();
-
-  for(const e of allElementsBefore){
-   if(!e.serverId||e.pendingRename||e.pendingDelete){
-    affectedObjectNrs.add(String(e.objectNr));
-   }
-  }
-
-  for(const p of allPhotosBefore){
-   affectedObjectNrs.add(String(p.objectNr));
-  }
-
-  for(const nr of affectedObjectNrs){
-   await loadServerElements(nr);
-  }
-
-  // Kõigepealt serveris olevate elementide ootel kustutamised.
-  const deletes=(await getAll("elements"))
-   .filter(e=>e.serverId&&e.pendingDelete);
-
-  for(const e of deletes){
-   await runScript("kustutaElement",[e.serverId]);
-
-   const queued=await getAll("photos");
-   for(const p of queued){
-    if(p.localElementId===e.localId)await del("photos",p.id);
-   }
-
-   await del("elements",e.localId);
-  }
-
-  // Seejärel offline'is tehtud ümbernimetamised.
-  const renames=(await getAll("elements"))
-   .filter(e=>e.serverId&&e.pendingRename&&!e.pendingDelete);
-
-  for(const e of renames){
-   const result=await runScript("muudaElement",[
-    e.serverId,
-    e.tyyp
-   ]);
-
-   if(result){
-    e.tyyp=result.tyyp||e.tyyp;
-    e.jarjekord=result.jarjekord||e.jarjekord;
-    e.serverPhotoCount=Number(
-     result.fotodeArv??e.serverPhotoCount??0
-    );
-   }
-
-   e.pendingRename=false;
-   e.synced=true;
-   await put("elements",e);
-  }
-
-  const elements=(await getAll("elements"))
-   .filter(e=>!e.serverId)
-   .sort((a,b)=>new Date(a.createdAt||0)-new Date(b.createdAt||0));
-
-  for(const e of elements){
-   const server=await runScript("lisaElement",[
-    e.objectNr,e.tyyp,e.jarjekord
-   ]);
-
-   if(!server?.id)throw new Error("Elemendi loomine Drive'is ebaõnnestus.");
-
-   e.serverId=server.id;
-   e.jarjekord=server.jarjekord;
-   e.tyyp=server.tyyp;
-   e.synced=true;
-   await put("elements",e);
-
-   const photos=await getAll("photos");
-   for(const p of photos){
-    if(p.localElementId===e.localId){
-     p.serverElementId=e.serverId;
-     await put("photos",p);
-    }
-   }
-  }
-
-  const photos=(await getAll("photos")).sort((a,b)=>Number(a.id)-Number(b.id));
-
-  for(const p of photos){
-   // Elemendi kirje on serverId osas autoriteetne.
-   // Foto enda serverElementId võib viidata vanale/kustutatud Drive'i kaustale.
-   const els=await getAll("elements");
-   const el=els.find(e=>e.localId===p.localElementId);
-
-   if(!el||el.pendingDelete)continue;
-
-   const folderId=el.serverId;
-
-   if(!folderId)continue;
-
-   // Hoia foto kirjes samuti värske kausta ID.
-   if(p.serverElementId!==folderId){
-    p.serverElementId=folderId;
-    await put("photos",p);
-   }
-
-   if(!p.uploadId){
-    p.uploadId="legacy-"+p.id;
-    await put("photos",p);
-   }
-
-   const base64=await blobToBase64(p.blob);
-
-   const result=await runScript("lisaFoto",[
-    folderId,
-    base64,
-    p.mimeType,
-    p.originalName,
-    p.uploadId
-   ]);
-
-   if(result){
-    const els=await getAll("elements");
-    const el=els.find(e=>e.localId===p.localElementId);
-
-    if(el){
-     el.serverPhotoCount=Number(result.fotodeArv||((el.serverPhotoCount||0)+1));
-     await put("elements",el);
-    }
-
-    await del("photos",p.id);
-   }
-  }
-
-  if(currentObject){
-   try{await loadServerElements(currentObject.nr)}catch(e){}
-   if($("workView").style.display!=="none")await renderWork();
-  }
-
-  toast("Ootel tööd sünkroniseeritud");
- }
- catch(e){
-  console.error(e);
-  if(String(e.message).includes("aegus"))accessToken=null;
-  showError("Sünkroniseerimise viga: "+e.message);
- }
- finally{
-  syncing=false;
-  updateConnection();
- }
-}
-
-/* ================= MAIN SYNC ================= */
-
-async function synchronize(){
- if(!navigator.onLine){
-  toast("Offline — töö on telefonis");
-  return;
- }
-
- hideError();
- $("syncButton").disabled=true;
- $("syncButton").textContent="Sünkroniseerin...";
-
- try{
-  await ensureToken();
-  await syncObjects();
-  await syncPending();
-  $("authBox").style.display="none";
-  toast("Sünkroniseeritud");
- }
- catch(e){
-  console.error(e);
-  showError("Sünkroniseerimise viga: "+e.message);
-  if(!accessToken)$("authBox").style.display="block";
- }
- finally{
-  $("syncButton").disabled=false;
-  $("syncButton").textContent="↻ Sünkroniseeri";
-  updateConnection();
- }
-}
-
-/* ================= UI ================= */
-
-function updateConnection(){
- if(syncing){
-  $("connectionStatus").textContent="↑ Sünkroniseerin Drive'i...";
-  $("connectionStatus").className="connection online";
- }else if(navigator.onLine){
-  $("connectionStatus").textContent="✓ Ühendus olemas";
-  $("connectionStatus").className="connection online";
- }else{
-  $("connectionStatus").textContent="● Offline — töö salvestatakse telefoni";
-  $("connectionStatus").className="connection offline";
- }
-}
-
-async function updateSyncInfo(){
- const last=await getMeta("lastSync");
- $("syncInfo").textContent=last
- ? `Telefonis ${objektid.length} objekti • viimati sünkroniseeritud ${new Date(last).toLocaleString("et-EE")}`
- : "Seda telefoni pole veel registriga sünkroniseeritud.";
-}
-
-function showError(message){
- $("errorBox").textContent=message;
- $("errorBox").style.display="block";
-}
-
-function hideError(){
- $("errorBox").style.display="none";
-}
-
-function toast(message){
- const t=$("toast");
- t.textContent=message;
- t.style.display="block";
- clearTimeout(toast.timer);
- toast.timer=setTimeout(()=>t.style.display="none",3000);
-}
-
-$("searchInput").oninput=renderObjects;
-$("syncButton").onclick=synchronize;
-
-$("googleButton").onclick=async()=>{
- try{
-  hideError();
-  await getToken();
-  await synchronize();
- }catch(e){
-  showError("Google'i ühenduse viga: "+e.message);
- }
-};
-
-window.addEventListener("online",()=>{
- updateConnection();
- toast("Internetiühendus taastatud");
-});
-
-window.addEventListener("offline",()=>{
- updateConnection();
- toast("Offline — töö jääb telefoni");
-});
-
-/* ================= SERVICE WORKER ================= */
-
-if("serviceWorker" in navigator){
- window.addEventListener("load",()=>{
-  navigator.serviceWorker.register("./service-worker.js")
-   .then(r=>r.update())
-   .catch(console.error);
- });
-}
-
-/* ================= START ================= */
-
-async function start(){
- try{
-  await openDB();
-
-  objektid=await getAll("objects");
-
-  for(const name of DEFAULT_TYPES){
-   const existing=(await getAll("types")).some(x=>x.name===name);
-   if(!existing)await put("types",{name});
-  }
-
-  renderObjects();
-  await updateSyncInfo();
-  updateConnection();
-
-  const ready=await waitGoogle();
-
-  if(navigator.onLine){
-   if(ready){
-    $("authBox").style.display="block";
-   }else{
-    showError("Google'i sisselogimisteenust ei õnnestunud laadida.");
-   }
-  }
- }
- catch(e){
-  showError("Rakenduse käivitamise viga: "+e.message);
- }
-}
-
-start();
-</script>
-</body>
-</html>
