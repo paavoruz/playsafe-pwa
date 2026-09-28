@@ -89,6 +89,21 @@ h1{font-size:30px;margin:0;font-weight:800}
 .formInput{width:100%;border:1px solid #ddd;border-radius:12px;padding:13px;background:#fff;font-size:16px}
 .formGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 @media(max-width:520px){.formGrid{grid-template-columns:1fr}}
+
+.quoteNav{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.quoteNav .active{background:#1d1d1f;color:#fff}
+.quoteService{display:flex;gap:12px;align-items:flex-start;background:#fff;border-radius:15px;padding:14px;margin-bottom:8px}
+.quoteService input{width:22px;height:22px;margin-top:2px;flex:0 0 auto}
+.quoteServiceMain{flex:1;min-width:0}
+.quoteServiceName{font-weight:780;font-size:16px}
+.quoteServiceDesc{font-size:12px;color:#777;margin-top:4px;line-height:1.35}
+.quoteServicePrice{font-weight:800;white-space:nowrap}
+.quoteTotals{background:#fff;border-radius:17px;padding:16px;margin-top:14px}
+.quoteTotalRow{display:flex;justify-content:space-between;gap:12px;padding:6px 0}
+.quoteGrand{font-size:20px;font-weight:850;border-top:1px solid #eee;margin-top:5px;padding-top:12px}
+.quoteActions{display:flex;gap:8px;margin-top:14px}
+.quoteActions .btn{flex:1}
+
 </style>
 
 <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -105,6 +120,7 @@ h1{font-size:30px;margin:0;font-weight:800}
 
 <section id="listView">
   <button id="newObjectButton" class="btn btnDark btnFull newObjectButton">＋ Uus objekt</button>
+  <button id="openQuotesButton" class="btn btnGray btnFull" style="margin-bottom:12px">Hinnapakkumised</button>
   <input id="searchInput" class="search" type="search" placeholder="Otsi objekti või aadressi...">
 
   <div class="statusCard">
@@ -122,6 +138,71 @@ h1{font-size:30px;margin:0;font-weight:800}
 
   <div id="errorBox" class="errorBox"></div>
   <div id="objectList" class="objectList"></div>
+</section>
+
+
+<section id="quoteView" style="display:none">
+  <div class="quoteNav">
+    <button id="objectsTab" class="btn btnGray">Objektid</button>
+    <button id="quotesTab" class="btn btnDark active">Hinnapakkumised</button>
+  </div>
+
+  <div class="card">
+    <div class="detailTitle">Uus hinnapakkumine</div>
+
+    <div class="formGrid">
+      <div class="formGroup">
+        <label class="formLabel" for="quoteCustomer">Tellija *</label>
+        <input id="quoteCustomer" class="formInput" autocomplete="organization">
+      </div>
+      <div class="formGroup">
+        <label class="formLabel" for="quoteObject">Objekt *</label>
+        <input id="quoteObject" class="formInput">
+      </div>
+    </div>
+
+    <div class="formGroup">
+      <label class="formLabel" for="quoteAddress">Aadress</label>
+      <input id="quoteAddress" class="formInput" autocomplete="street-address">
+    </div>
+
+    <div class="formGrid">
+      <div class="formGroup">
+        <label class="formLabel" for="quoteAssessment">Hindamisliik</label>
+        <select id="quoteAssessment" class="formInput">
+          <option value="kasutuseelne ülevaatus">kasutuseelne ülevaatus</option>
+          <option value="aastane põhiülevaatus">aastane põhiülevaatus</option>
+          <option value="muu">muu</option>
+        </select>
+      </div>
+      <div class="formGroup">
+        <label class="formLabel" for="quoteDate">Kuupäev</label>
+        <input id="quoteDate" class="formInput" type="date">
+      </div>
+    </div>
+  </div>
+
+  <div style="height:12px"></div>
+  <div class="workTitle">Teenused</div>
+  <div id="quoteServices"></div>
+
+  <div class="card" style="margin-top:10px">
+    <div class="formGroup" style="margin:0">
+      <label class="formLabel" for="quoteTransport">Transport, €</label>
+      <input id="quoteTransport" class="formInput" type="number" min="0" step="0.01" value="0">
+    </div>
+  </div>
+
+  <div class="quoteTotals">
+    <div class="quoteTotalRow"><span>Summa km-ta</span><b id="quoteNet">0,00 €</b></div>
+    <div class="quoteTotalRow"><span>KM 24%</span><b id="quoteVat">0,00 €</b></div>
+    <div class="quoteTotalRow quoteGrand"><span>Kokku</span><span id="quoteGross">0,00 €</span></div>
+  </div>
+
+  <div class="quoteActions">
+    <button id="reloadPrices" class="btn btnGray">↻ Hinnakiri</button>
+    <button id="saveQuote" class="btn btnDark">Salvesta pakkumine</button>
+  </div>
 </section>
 
 <section id="detailView" style="display:none"></section>
@@ -231,6 +312,8 @@ let accessToken=null;
 let tokenClient=null;
 let gisReady=false;
 let syncing=false;
+let hinnakiri=[];
+let selectedQuoteServices=new Set();
 
 const $=id=>document.getElementById(id);
 
@@ -1364,6 +1447,150 @@ async function syncPending(){
   updateConnection();
  }
 }
+
+
+
+/* ================= QUOTATIONS ================= */
+
+function euro(v){
+ return Number(v||0).toLocaleString("et-EE",{minimumFractionDigits:2,maximumFractionDigits:2})+" €";
+}
+
+async function loadHinnakiri(){
+ await ensureToken();
+ const result=await runScript("getHinnakiri");
+ if(!Array.isArray(result))throw new Error("Hinnakirja ei saadud.");
+ hinnakiri=result.filter(x=>String(x.aktiivne||"JAH").toUpperCase()!=="EI");
+ renderQuoteServices();
+}
+
+function renderQuoteServices(){
+ const box=$("quoteServices");
+ box.innerHTML="";
+
+ if(!hinnakiri.length){
+  box.innerHTML='<div class="empty">Hinnakiri on tühi.</div>';
+  calculateQuote();
+  return;
+ }
+
+ hinnakiri.forEach(s=>{
+  const id=String(s.id||"");
+  const d=document.createElement("label");
+  d.className="quoteService";
+  d.innerHTML=`
+   <input type="checkbox" value="${esc(id)}" ${selectedQuoteServices.has(id)?"checked":""}>
+   <div class="quoteServiceMain">
+    <div class="quoteServiceName">${esc(s.nimetus||s.apiNimetus||id)}</div>
+    <div class="quoteServiceDesc">${esc(s.kirjeldus||s.wordiKirjeldus||"")}</div>
+   </div>
+   <div class="quoteServicePrice">${euro(s.hind)}</div>`;
+  const cb=d.querySelector("input");
+  cb.onchange=()=>{
+   if(cb.checked)selectedQuoteServices.add(id);
+   else selectedQuoteServices.delete(id);
+   calculateQuote();
+  };
+  box.appendChild(d);
+ });
+ calculateQuote();
+}
+
+function calculateQuote(){
+ let net=0;
+ for(const id of selectedQuoteServices){
+  const s=hinnakiri.find(x=>String(x.id)===String(id));
+  if(s)net+=Number(s.hind||0);
+ }
+ net+=Math.max(0,Number($("quoteTransport")?.value||0));
+ const vat=net*0.24;
+ $("quoteNet").textContent=euro(net);
+ $("quoteVat").textContent=euro(vat);
+ $("quoteGross").textContent=euro(net+vat);
+ return {net,vat,gross:net+vat};
+}
+
+async function openQuotes(){
+ $("listView").style.display="none";
+ $("detailView").style.display="none";
+ $("workView").style.display="none";
+ $("quoteView").style.display="block";
+ $("pageTitle").textContent="Hinnapakkumised";
+ $("quoteDate").value=$("quoteDate").value||localDateISO();
+
+ try{
+  hideError();
+  if(!hinnakiri.length)await loadHinnakiri();
+ }catch(e){
+  console.error(e);
+  showError("Hinnakirja laadimise viga: "+e.message);
+ }
+}
+
+async function saveQuote(){
+ const tellija=$("quoteCustomer").value.trim();
+ const objekt=$("quoteObject").value.trim();
+ if(!tellija){toast("Sisesta tellija");return}
+ if(!objekt){toast("Sisesta objekt");return}
+ if(!selectedQuoteServices.size && Number($("quoteTransport").value||0)<=0){
+  toast("Vali vähemalt üks teenus");
+  return;
+ }
+
+ const chosen=[...selectedQuoteServices].map(id=>hinnakiri.find(x=>String(x.id)===String(id))).filter(Boolean);
+ const totals=calculateQuote();
+ const button=$("saveQuote");
+ button.disabled=true;
+ button.textContent="Salvestan...";
+
+ try{
+  await ensureToken();
+  const result=await runScript("lisaHinnapakkumine",[{
+   kuupaev:$("quoteDate").value||localDateISO(),
+   tellija,
+   objekt,
+   aadress:$("quoteAddress").value.trim(),
+   hindamisliik:$("quoteAssessment").value,
+   teenused:chosen.map(s=>({
+    id:s.id,
+    nimetus:s.nimetus||s.apiNimetus||s.id,
+    kirjeldus:s.kirjeldus||s.wordiKirjeldus||"",
+    hind:Number(s.hind||0),
+    uhik:s.uhik||"tk"
+   })),
+   transport:Number($("quoteTransport").value||0),
+   summa:totals.net,
+   km:totals.vat,
+   kokku:totals.gross
+  }]);
+
+  toast(result?.pakkumiseNr?`Pakkumine ${result.pakkumiseNr} salvestatud`:"Pakkumine salvestatud");
+  selectedQuoteServices.clear();
+  $("quoteCustomer").value="";
+  $("quoteObject").value="";
+  $("quoteAddress").value="";
+  $("quoteTransport").value="0";
+  renderQuoteServices();
+ }catch(e){
+  console.error(e);
+  showError("Pakkumise salvestamise viga: "+e.message);
+ }finally{
+  button.disabled=false;
+  button.textContent="Salvesta pakkumine";
+ }
+}
+
+$("openQuotesButton").onclick=openQuotes;
+$("objectsTab").onclick=showList;
+$("quotesTab").onclick=openQuotes;
+$("quoteTransport").oninput=calculateQuote;
+$("reloadPrices").onclick=async()=>{
+ try{
+  await loadHinnakiri();
+  toast("Hinnakiri värskendatud");
+ }catch(e){showError("Hinnakirja laadimise viga: "+e.message)}
+};
+$("saveQuote").onclick=saveQuote;
 
 
 /* ================= MAIN SYNC ================= */
