@@ -1630,12 +1630,14 @@ async function saveQuote(){
   if(result?.pakkumiseNr){
 
     toast(`Pakkumine ${result.pakkumiseNr} salvestatud`);
-alert("TEST: dokumendi API kutse käivitub");
+
     try{
-      await runScript(
-        "looHinnapakkumiseDokument",
-        [result.pakkumiseNr]
-      );
+     const docResult = await runScript(
+  "looHinnapakkumiseDokument",
+  [result.pakkumiseNr]
+);
+
+alert("DOKUMENDI VASTUS:\n" + JSON.stringify(docResult));
 
       toast(`Pakkumine ${result.pakkumiseNr} ja dokument loodud`);
 
