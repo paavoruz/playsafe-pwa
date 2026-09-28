@@ -1627,7 +1627,31 @@ async function saveQuote(){
    kokku:totals.gross
   }]);
 
-  toast(result?.pakkumiseNr?`Pakkumine ${result.pakkumiseNr} salvestatud`:"Pakkumine salvestatud");
+  if(result?.pakkumiseNr){
+
+    toast(`Pakkumine ${result.pakkumiseNr} salvestatud`);
+
+    try{
+      await runScript(
+        "looHinnapakkumiseDokument",
+        [result.pakkumiseNr]
+      );
+
+      toast(`Pakkumine ${result.pakkumiseNr} ja dokument loodud`);
+
+    }catch(docError){
+      console.error("Dokumendi loomise viga:",docError);
+
+      showError(
+        `Pakkumine ${result.pakkumiseNr} salvestati, kuid dokumendi loomine ebaõnnestus: ` +
+        docError.message
+      );
+    }
+
+  }else{
+    toast("Pakkumine salvestatud");
+  }
+
   selectedQuoteServices.clear();
    quoteServiceValues.clear();
   $("quoteCustomer").value="";
