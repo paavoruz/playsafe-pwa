@@ -98,6 +98,11 @@ h1{font-size:30px;margin:0;font-weight:800}
 .quoteServiceName{font-weight:780;font-size:16px}
 .quoteServiceDesc{font-size:12px;color:#777;margin-top:4px;line-height:1.35}
 .quoteServicePrice{font-weight:800;white-space:nowrap}
+.quoteLineFields{display:grid;grid-template-columns:90px 130px 1fr;gap:8px;align-items:end;margin-top:10px}
+.quoteLineField label{display:block;font-size:11px;color:#777;font-weight:700;margin-bottom:4px}
+.quoteLineInput{width:100%;border:1px solid #d8d8dd;border-radius:10px;padding:9px;background:#fff;font-size:15px}
+.quoteLineSum{text-align:right;font-weight:800;padding:9px 0;white-space:nowrap}
+@media(max-width:520px){.quoteLineFields{grid-template-columns:72px 112px 1fr;gap:6px}.quoteLineInput{padding:8px 6px;font-size:14px}.quoteLineSum{font-size:14px}}
 .quoteTotals{background:#fff;border-radius:17px;padding:16px;margin-top:14px}
 .quoteTotalRow{display:flex;justify-content:space-between;gap:12px;padding:6px 0}
 .quoteGrand{font-size:20px;font-weight:850;border-top:1px solid #eee;margin-top:5px;padding-top:12px}
@@ -314,6 +319,7 @@ let gisReady=false;
 let syncing=false;
 let hinnakiri=[];
 let selectedQuoteServices=new Set();
+let quoteServiceValues=new Map();
 
 const $=id=>document.getElementById(id);
 
@@ -1464,33 +1470,53 @@ async function loadHinnakiri(){
  renderQuoteServices();
 }
 
+function quoteLineValue(id,s){
+ const existing=quoteServiceValues.get(id);
+ if(existing)return existing;
+ const value={kogus:1,uhikuhind:Number(s.hind||0)};
+ quoteServiceValues.set(id,value);
+ return value;
+}
+
 function renderQuoteServices(){
  const box=$("quoteServices");
  box.innerHTML="";
-
  if(!hinnakiri.length){
   box.innerHTML='<div class="empty">Hinnakiri on tühi.</div>';
-  calculateQuote();
-  return;
+  calculateQuote(); return;
  }
-
  hinnakiri.forEach(s=>{
   const id=String(s.id||"");
-  const d=document.createElement("label");
+  const selected=selectedQuoteServices.has(id);
+  const line=quoteLineValue(id,s);
+  const d=document.createElement("div");
   d.className="quoteService";
   d.innerHTML=`
-   <input type="checkbox" value="${esc(id)}" ${selectedQuoteServices.has(id)?"checked":""}>
+   <input class="quoteServiceCheck" type="checkbox" value="${esc(id)}" ${selected?"checked":""}>
    <div class="quoteServiceMain">
     <div class="quoteServiceName">${esc(s.nimetus||s.apiNimetus||id)}</div>
     <div class="quoteServiceDesc">${esc(s.kirjeldus||s.wordiKirjeldus||"")}</div>
-   </div>
-   <div class="quoteServicePrice">${euro(s.hind)}</div>`;
-  const cb=d.querySelector("input");
+    <div class="quoteLineFields" ${selected?"":"hidden"}>
+     <div class="quoteLineField"><label>Kogus</label><input class="quoteLineInput quoteQty" type="number" min="0.01" step="1" inputmode="decimal" value="${esc(line.kogus)}"></div>
+     <div class="quoteLineField"><label>Ühikuhind, €</label><input class="quoteLineInput quotePrice" type="number" min="0" step="0.01" inputmode="decimal" value="${esc(line.uhikuhind)}"></div>
+     <div><label style="display:block;font-size:11px;color:#777;font-weight:700;margin-bottom:4px">Rea summa</label><div class="quoteLineSum">${euro(Number(line.kogus||0)*Number(line.uhikuhind||0))}</div></div>
+    </div>
+   </div>`;
+  const cb=d.querySelector(".quoteServiceCheck"), fields=d.querySelector(".quoteLineFields");
+  const qty=d.querySelector(".quoteQty"), price=d.querySelector(".quotePrice"), sum=d.querySelector(".quoteLineSum");
+  function updateLine(){
+   const kogus=Math.max(0,Number(qty.value||0));
+   const uhikuhind=Math.max(0,Number(price.value||0));
+   quoteServiceValues.set(id,{kogus,uhikuhind});
+   sum.textContent=euro(kogus*uhikuhind);
+   calculateQuote();
+  }
   cb.onchange=()=>{
-   if(cb.checked)selectedQuoteServices.add(id);
-   else selectedQuoteServices.delete(id);
+   if(cb.checked){selectedQuoteServices.add(id);fields.hidden=false}
+   else{selectedQuoteServices.delete(id);fields.hidden=true}
    calculateQuote();
   };
+  qty.oninput=updateLine; price.oninput=updateLine;
   box.appendChild(d);
  });
  calculateQuote();
@@ -1500,7 +1526,9 @@ function calculateQuote(){
  let net=0;
  for(const id of selectedQuoteServices){
   const s=hinnakiri.find(x=>String(x.id)===String(id));
-  if(s)net+=Number(s.hind||0);
+  if(!s)continue;
+  const line=quoteLineValue(id,s);
+  net+=Math.max(0,Number(line.kogus||0))*Math.max(0,Number(line.uhikuhind||0));
  }
  net+=Math.max(0,Number($("quoteTransport")?.value||0));
  const vat=net*0.24;
@@ -1551,13 +1579,21 @@ async function saveQuote(){
    objekt,
    aadress:$("quoteAddress").value.trim(),
    hindamisliik:$("quoteAssessment").value,
-   teenused:chosen.map(s=>({
-    id:s.id,
-    nimetus:s.nimetus||s.apiNimetus||s.id,
-    kirjeldus:s.kirjeldus||s.wordiKirjeldus||"",
-    hind:Number(s.hind||0),
-    uhik:s.uhik||"tk"
-   })),
+   teenused:chosen.map(s=>{
+     const line=quoteLineValue(String(s.id),s);
+     const kogus=Math.max(0,Number(line.kogus||0));
+     const uhikuhind=Math.max(0,Number(line.uhikuhind||0));
+     return {
+      id:s.id,
+      nimetus:s.nimetus||s.apiNimetus||s.id,
+      kirjeldus:s.kirjeldus||s.wordiKirjeldus||"",
+      kogus,
+      uhikuhind,
+      reaSumma:kogus*uhikuhind,
+      hind:kogus*uhikuhind,
+      uhik:s.uhik||"tk"
+     };
+    }),
    transport:Number($("quoteTransport").value||0),
    summa:totals.net,
    km:totals.vat,
@@ -1566,6 +1602,7 @@ async function saveQuote(){
 
   toast(result?.pakkumiseNr?`Pakkumine ${result.pakkumiseNr} salvestatud`:"Pakkumine salvestatud");
   selectedQuoteServices.clear();
+   quoteServiceValues.clear();
   $("quoteCustomer").value="";
   $("quoteObject").value="";
   $("quoteAddress").value="";
