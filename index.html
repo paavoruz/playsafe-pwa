@@ -1630,7 +1630,7 @@ async function saveQuote(){
   if(result?.pakkumiseNr){
 
     toast(`Pakkumine ${result.pakkumiseNr} salvestatud`);
-
+alert("TEST: dokumendi API kutse käivitub");
     try{
       await runScript(
         "looHinnapakkumiseDokument",
