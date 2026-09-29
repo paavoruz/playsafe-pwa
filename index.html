@@ -1836,7 +1836,7 @@ async function start(){
   // Kui tokenit pole, ei näita käivitamisel kollast Google'i kasti:
   // autoriseerimine küsitakse alles siis, kui kasutaja vajutab Sünkroniseeri.
   await clearSavedToken();
-  $("authBox").style.display="none";
+$("authBox").style.display="block";
 
   if(navigator.onLine&&!ready){
    showError("Google'i sisselogimisteenust ei õnnestunud laadida.");
