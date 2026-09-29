@@ -510,16 +510,14 @@ function getToken(){
 
   // Ära küsi iga kord uut consent'i. Kui kasutaja on loa juba andnud,
   // kasutab Google olemasolevat sessiooni nii sujuvalt kui brauser lubab.
-  tokenClient.requestAccessToken({prompt:"consent"});
+  tokenClient.requestAccessToken({prompt:""});
  });
 }
 
 async function runScript(fn,parameters=[]){
  if(!accessToken)throw new Error("Google'i autoriseerimine on vajalik.");
 
- alert("API START: " + fn);
-
- const res=await fetch(
+const res=await fetch(
   `https://script.googleapis.com/v1/scripts/${encodeURIComponent(SCRIPT_ID)}:run`,
   {
    method:"POST",
@@ -531,14 +529,7 @@ async function runScript(fn,parameters=[]){
   }
  );
 
- alert("API FETCH VALMIS: " + fn + " / status " + res.status);
-
- const raw = await res.text();
-
-alert(
-  "API TEXT VALMIS: " + fn + "\n\n" +
-  raw.substring(0, 500)
-);
+const raw = await res.text();
 
 let data;
 
@@ -549,8 +540,6 @@ try {
     "Google API vastust ei õnnestunud JSON-ina lugeda: " + e.message
   );
 }
-
-alert("API JSON VALMIS: " + fn);
 
 if (res.status === 401) {
   await clearSavedToken();
@@ -1664,8 +1653,6 @@ async function saveQuote(){
   [result.pakkumiseNr]
 );
 
-alert("DOKUMENDI VASTUS:\n" + JSON.stringify(docResult));
-
       toast(`Pakkumine ${result.pakkumiseNr} ja dokument loodud`);
 
     }catch(docError){
@@ -1835,8 +1822,8 @@ async function start(){
   // Taasta eelmine veel kehtiv Google access token, kui see on olemas.
   // Kui tokenit pole, ei näita käivitamisel kollast Google'i kasti:
   // autoriseerimine küsitakse alles siis, kui kasutaja vajutab Sünkroniseeri.
-  await clearSavedToken();
-$("authBox").style.display="block";
+  await restoreSavedToken();
+  $("authBox").style.display="none";
 
   if(navigator.onLine&&!ready){
    showError("Google'i sisselogimisteenust ei õnnestunud laadida.");
