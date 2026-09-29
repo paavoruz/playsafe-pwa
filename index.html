@@ -517,6 +517,8 @@ function getToken(){
 async function runScript(fn,parameters=[]){
  if(!accessToken)throw new Error("Google'i autoriseerimine on vajalik.");
 
+ alert("API START: " + fn);
+
  const res=await fetch(
   `https://script.googleapis.com/v1/scripts/${encodeURIComponent(SCRIPT_ID)}:run`,
   {
@@ -528,6 +530,8 @@ async function runScript(fn,parameters=[]){
    body:JSON.stringify({function:fn,parameters})
   }
  );
+
+ alert("API FETCH VALMIS: " + fn + " / status " + res.status);
 
  const data=await res.json();
 
