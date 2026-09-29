@@ -533,21 +533,44 @@ async function runScript(fn,parameters=[]){
 
  alert("API FETCH VALMIS: " + fn + " / status " + res.status);
 
- const data=await res.json();
+ const raw = await res.text();
 
- if(res.status===401){
+alert(
+  "API TEXT VALMIS: " + fn + "\n\n" +
+  raw.substring(0, 500)
+);
+
+let data;
+
+try {
+  data = JSON.parse(raw);
+} catch (e) {
+  throw new Error(
+    "Google API vastust ei õnnestunud JSON-ina lugeda: " + e.message
+  );
+}
+
+alert("API JSON VALMIS: " + fn);
+
+if (res.status === 401) {
   await clearSavedToken();
   throw new Error("Google'i sisselogimine aegus.");
- }
+}
 
- if(!res.ok)throw new Error(data?.error?.message||`Google API viga ${res.status}`);
+if (!res.ok) {
+  throw new Error(
+    data?.error?.message || `Google API viga ${res.status}`
+  );
+}
 
- if(data.error){
-  const detail=data.error.details?.[0];
-  throw new Error(detail?.errorMessage||"Apps Scripti viga.");
- }
+if (data.error) {
+  const detail = data.error.details?.[0];
+  throw new Error(
+    detail?.errorMessage || "Apps Scripti viga."
+  );
+}
 
- return data.response?.result;
+return data.response?.result;
 }
 
 /* ================= OBJECTS ================= */
