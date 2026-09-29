@@ -510,7 +510,7 @@ function getToken(){
 
   // Ära küsi iga kord uut consent'i. Kui kasutaja on loa juba andnud,
   // kasutab Google olemasolevat sessiooni nii sujuvalt kui brauser lubab.
-  tokenClient.requestAccessToken({prompt:""});
+  tokenClient.requestAccessToken({prompt:"consent"});
  });
 }
 
