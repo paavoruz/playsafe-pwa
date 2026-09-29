@@ -1835,7 +1835,7 @@ async function start(){
   // Taasta eelmine veel kehtiv Google access token, kui see on olemas.
   // Kui tokenit pole, ei näita käivitamisel kollast Google'i kasti:
   // autoriseerimine küsitakse alles siis, kui kasutaja vajutab Sünkroniseeri.
-  await restoreSavedToken();
+  await clearSavedToken();
   $("authBox").style.display="none";
 
   if(navigator.onLine&&!ready){
