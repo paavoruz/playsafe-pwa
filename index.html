@@ -219,10 +219,17 @@ h1{font-size:30px;margin:0;font-weight:800}
   <div id="quoteServices"></div>
 
   <div class="card" style="margin-top:10px">
-    <div class="formGroup" style="margin:0">
-      <label class="formLabel" for="quoteTransport">Transport, €</label>
-      <input id="quoteTransport" class="formInput" type="number" min="0" step="0.01" value="0">
+    <div class="formGrid">
+      <div class="formGroup" style="margin-bottom:0">
+        <label class="formLabel" for="quoteTransportKm">Transport, km</label>
+        <input id="quoteTransportKm" class="formInput" type="number" min="0" step="1" inputmode="decimal" value="0">
+      </div>
+      <div class="formGroup" style="margin-bottom:0">
+        <label class="formLabel" for="quoteTransportPrice">Hind, €/km</label>
+        <input id="quoteTransportPrice" class="formInput" type="number" min="0" step="0.01" inputmode="decimal" value="0.50">
+      </div>
     </div>
+    <div class="muted" id="quoteTransportPreview" style="margin-top:10px"></div>
   </div>
 
   <div class="quoteTotals">
@@ -1573,7 +1580,15 @@ function calculateQuote(){
   const line=quoteLineValue(id,s);
   net+=Math.max(0,Number(line.kogus||0))*Math.max(0,Number(line.uhikuhind||0));
  }
- net+=Math.max(0,Number($("quoteTransport")?.value||0));
+ const transportKm=Math.max(0,Number($("quoteTransportKm")?.value||0));
+ const transportKmHind=Math.max(0,Number($("quoteTransportPrice")?.value||0));
+ const transportSumma=transportKm*transportKmHind;
+ net+=transportSumma;
+ const aadress=$("quoteAddress")?.value.trim()||"objekti aadress";
+ const preview=$("quoteTransportPreview");
+ if(preview) preview.textContent=transportKm>0
+  ? `Transport (Tallinn – ${aadress} – Tallinn): ${transportKm} km × ${euro(transportKmHind)}/km = ${euro(transportSumma)}`
+  : "";
  const vat=net*0.24;
  $("quoteNet").textContent=euro(net);
  $("quoteVat").textContent=euro(vat);
@@ -1603,8 +1618,10 @@ async function saveQuote(){
  const objekt=$("quoteObject").value.trim();
  if(!tellija){toast("Sisesta tellija");return}
  if(!objekt){toast("Sisesta objekt");return}
- if(!selectedQuoteServices.size && Number($("quoteTransport").value||0)<=0){
-  toast("Vali vähemalt üks teenus");
+ const transportKm=Math.max(0,Number($("quoteTransportKm")?.value||0));
+ const transportKmHind=Math.max(0,Number($("quoteTransportPrice")?.value||0));
+ if(!selectedQuoteServices.size && transportKm*transportKmHind<=0){
+  toast("Vali vähemalt üks teenus või sisesta transport");
   return;
  }
 
@@ -1637,7 +1654,9 @@ async function saveQuote(){
       uhik:s.uhik||"tk"
      };
     }),
-   transport:Number($("quoteTransport").value||0),
+   transportKm:transportKm,
+   transportKmHind:transportKmHind,
+   transport:transportKm*transportKmHind,
    summa:totals.net,
    km:totals.vat,
    kokku:totals.gross
@@ -1673,7 +1692,9 @@ async function saveQuote(){
   $("quoteCustomer").value="";
   $("quoteObject").value="";
   $("quoteAddress").value="";
-  $("quoteTransport").value="0";
+  $("quoteTransportKm").value="0";
+  $("quoteTransportPrice").value="0.50";
+  $("quoteTransportPreview").textContent="";
   renderQuoteServices();
  }catch(e){
   console.error(e);
@@ -1687,7 +1708,9 @@ async function saveQuote(){
 $("openQuotesButton").onclick=openQuotes;
 $("objectsTab").onclick=showList;
 $("quotesTab").onclick=openQuotes;
-$("quoteTransport").oninput=calculateQuote;
+$("quoteTransportKm").oninput=calculateQuote;
+$("quoteTransportPrice").oninput=calculateQuote;
+$("quoteAddress").oninput=calculateQuote;
 $("reloadPrices").onclick=async()=>{
  try{
   await loadHinnakiri();
