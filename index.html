@@ -194,6 +194,13 @@ h1{font-size:30px;margin:0;font-weight:800}
     </div>
 
     <div class="formGroup">
+      <label class="formLabel" for="quoteFieldType">Väljaku tüüp *</label>
+      <select id="quoteFieldType" class="formInput">
+        <option value="">Vali väljaku tüüp</option>
+      </select>
+    </div>
+
+    <div class="formGroup">
       <label class="formLabel" for="quoteAddress">Aadress</label>
       <input id="quoteAddress" class="formInput" autocomplete="street-address">
     </div>
@@ -1596,6 +1603,38 @@ function calculateQuote(){
  return {net,vat,gross:net+vat};
 }
 
+async function loadValjakuTyypid(){
+ const tyypid=await runScript("getValjakuTyypid",[]);
+ const values=Array.isArray(tyypid)?tyypid:[];
+
+ const quoteSelect=$("quoteFieldType");
+ if(quoteSelect){
+  const current=quoteSelect.value;
+  quoteSelect.innerHTML='<option value="">Vali väljaku tüüp</option>';
+  values.forEach(v=>{
+   const opt=document.createElement("option");
+   opt.value=v;
+   opt.textContent=v;
+   quoteSelect.appendChild(opt);
+  });
+  if(values.includes(current))quoteSelect.value=current;
+ }
+
+ const objectSelect=$("newObjectType");
+ if(objectSelect){
+  const current=objectSelect.value;
+  objectSelect.innerHTML="";
+  values.forEach(v=>{
+   const opt=document.createElement("option");
+   opt.value=v;
+   opt.textContent=v;
+   objectSelect.appendChild(opt);
+  });
+  if(values.includes(current))objectSelect.value=current;
+ }
+ return values;
+}
+
 async function openQuotes(){
  $("listView").style.display="none";
  $("detailView").style.display="none";
@@ -1607,6 +1646,7 @@ async function openQuotes(){
  try{
   hideError();
   if(!hinnakiri.length)await loadHinnakiri();
+  await loadValjakuTyypid();
  }catch(e){
   console.error(e);
   showError("Hinnakirja laadimise viga: "+e.message);
@@ -1616,8 +1656,10 @@ async function openQuotes(){
 async function saveQuote(){
  const tellija=$("quoteCustomer").value.trim();
  const objekt=$("quoteObject").value.trim();
+ const valjakuTyyp=$("quoteFieldType").value.trim();
  if(!tellija){toast("Sisesta tellija");return}
  if(!objekt){toast("Sisesta objekt");return}
+ if(!valjakuTyyp){toast("Vali väljaku tüüp");return}
  const transportKm=Math.max(0,Number($("quoteTransportKm")?.value||0));
  const transportKmHind=Math.max(0,Number($("quoteTransportPrice")?.value||0));
  if(!selectedQuoteServices.size && transportKm*transportKmHind<=0){
@@ -1637,6 +1679,7 @@ async function saveQuote(){
    kuupaev:$("quoteDate").value||localDateISO(),
    tellija,
    objekt,
+   valjakuTyyp,
    aadress:$("quoteAddress").value.trim(),
    hindamisliik:$("quoteAssessment").value,
    teenused:chosen.map(s=>{
@@ -1691,6 +1734,7 @@ async function saveQuote(){
    quoteServiceValues.clear();
   $("quoteCustomer").value="";
   $("quoteObject").value="";
+  $("quoteFieldType").value="";
   $("quoteAddress").value="";
   $("quoteTransportKm").value="0";
   $("quoteTransportPrice").value="0.50";
