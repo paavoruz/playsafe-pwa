@@ -114,11 +114,11 @@ h1{font-size:30px;margin:0;font-weight:800}
 .quoteLineFields{display:grid;grid-template-columns:90px 130px 1fr;gap:8px;align-items:end;margin-top:10px}
 .quoteLineField label{display:block;font-size:11px;color:#777;font-weight:700;margin-bottom:4px}
 .quoteLineInput{width:100%;border:1px solid #d8d8dd;border-radius:10px;padding:9px;background:#fff;font-size:15px}
-.quoteLineSum{text-align:right;font-weight:800;padding:9px 0;white-space:nowrap}
+.quoteLineSum{text-align:right;font-weight:800;padding:9px 4px;white-space:nowrap;max-width:100%;box-sizing:border-box;overflow:hidden;text-overflow:ellipsis}
 @media(max-width:900px){
   .quoteLineFields{
     display:grid;
-    grid-template-columns:80px 120px minmax(85px,1fr);
+    grid-template-columns:76px 112px minmax(92px,1fr);
     gap:6px;
     width:100%;
     align-items:end;
@@ -137,10 +137,14 @@ h1{font-size:30px;margin:0;font-weight:800}
 
   .quoteLineSum{
     min-width:0;
+    max-width:100%;
     text-align:right;
-    font-size:14px;
-    padding:9px 0;
+    font-size:13px;
+    padding:9px 3px;
     white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    box-sizing:border-box;
   }
 }
 .quoteTotals{background:#fff;border-radius:17px;padding:16px;margin-top:14px}
