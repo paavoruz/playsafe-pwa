@@ -97,6 +97,11 @@ h1{font-size:30px;margin:0;font-weight:800}
 .quoteServiceGroupHeader{width:100%;border:0;background:#fff;padding:15px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;font:inherit;text-align:left;cursor:pointer}
 .quoteServiceGroupTitle{font-size:17px;font-weight:820}
 .quoteServiceGroupMeta{font-size:12px;color:#777;font-weight:700}
+.quoteServiceGroupStatus{display:flex;align-items:center;gap:6px}
+.quoteServiceGroupDot{width:9px;height:9px;border-radius:50%;background:#28a745;display:none;box-shadow:0 0 0 2px rgba(40,167,69,.12)}
+.quoteServiceGroupCount{display:none;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#e8f5eb;color:#19732d;font-size:11px;font-weight:850;align-items:center;justify-content:center}
+.quoteServiceGroup.hasSelection .quoteServiceGroupDot{display:inline-block}
+.quoteServiceGroup.hasSelection .quoteServiceGroupCount{display:inline-flex}
 .quoteServiceGroupChevron{font-size:18px;transition:transform .18s ease}
 .quoteServiceGroup.open .quoteServiceGroupChevron{transform:rotate(180deg)}
 .quoteServiceGroupBody{display:none;padding:0 10px 10px}
@@ -1587,10 +1592,23 @@ function renderQuoteServices(){
     <div class="quoteServiceGroupTitle">${esc(category)}</div>
     <div class="quoteServiceGroupMeta">${services.length} valikut</div>
    </div>
-   <div class="quoteServiceGroupChevron">⌄</div>`;
+   <div class="quoteServiceGroupStatus">
+    <span class="quoteServiceGroupDot"></span>
+    <span class="quoteServiceGroupCount">0</span>
+    <span class="quoteServiceGroupChevron">⌄</span>
+   </div>`;
 
   const body=document.createElement("div");
   body.className="quoteServiceGroupBody";
+  const countEl=header.querySelector(".quoteServiceGroupCount");
+
+  function updateGroupStatus(){
+   const count=services.filter(s=>selectedQuoteServices.has(String(s.id||""))).length;
+   group.classList.toggle("hasSelection",count>0);
+   if(countEl)countEl.textContent=String(count);
+  }
+
+  updateGroupStatus();
 
   header.onclick=()=>{
    group.classList.toggle("open");
@@ -1656,6 +1674,7 @@ function renderQuoteServices(){
      selectedQuoteServices.delete(id);
      fields.hidden=true;
     }
+    updateGroupStatus();
     calculateQuote();
    };
 
