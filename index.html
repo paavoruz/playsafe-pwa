@@ -93,6 +93,19 @@ h1{font-size:30px;margin:0;font-weight:800}
 .quoteNav{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
 .quoteNav .active{background:#1d1d1f;color:#fff}
 .quoteService{display:flex;gap:12px;align-items:flex-start;background:#fff;border-radius:15px;padding:14px;margin-bottom:8px}
+.quoteServiceGroup{background:#fff;border-radius:17px;margin-bottom:10px;overflow:hidden}
+.quoteServiceGroupHeader{width:100%;border:0;background:#fff;padding:15px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;font:inherit;text-align:left;cursor:pointer}
+.quoteServiceGroupTitle{font-size:17px;font-weight:820}
+.quoteServiceGroupMeta{font-size:12px;color:#777;font-weight:700}
+.quoteServiceGroupChevron{font-size:18px;transition:transform .18s ease}
+.quoteServiceGroup.open .quoteServiceGroupChevron{transform:rotate(180deg)}
+.quoteServiceGroupBody{display:none;padding:0 10px 10px}
+.quoteServiceGroup.open .quoteServiceGroupBody{display:block}
+.quoteServiceGroup .quoteService{background:#f7f7f9;border:1px solid #ededf1;margin-bottom:7px}
+.quoteServiceGroup .quoteService:last-child{margin-bottom:0}
+.quoteServiceVolume{font-weight:780;font-size:16px}
+.quoteServiceSub{font-size:12px;color:#777;margin-top:3px;line-height:1.35}
+.quoteServiceDefaultPrice{font-size:13px;font-weight:800;margin-top:5px}
 .quoteService input{width:22px;height:22px;margin-top:2px;flex:0 0 auto}
 .quoteServiceMain{flex:1;min-width:0}
 .quoteServiceName{font-weight:780;font-size:16px}
@@ -1538,47 +1551,122 @@ function quoteLineValue(id,s){
 function renderQuoteServices(){
  const box=$("quoteServices");
  box.innerHTML="";
+
  if(!hinnakiri.length){
   box.innerHTML='<div class="empty">Hinnakiri on tühi.</div>';
-  calculateQuote(); return;
+  calculateQuote();
+  return;
  }
+
+ // Grupeerime teenused Hinnakiri lehe Kategooria järgi.
+ // Uus kategooria või uus hinnatase Sheetis ilmub siia automaatselt.
+ const groups=new Map();
+
  hinnakiri.forEach(s=>{
-  const id=String(s.id||"");
-  const selected=selectedQuoteServices.has(id);
-  const line=quoteLineValue(id,s);
-  const d=document.createElement("div");
-  d.className="quoteService";
-  d.innerHTML=`
-   <input class="quoteServiceCheck" type="checkbox" value="${esc(id)}" ${selected?"checked":""}>
-   <div class="quoteServiceMain">
-    <div class="quoteServiceName">${esc(s.nimetus||s.apiNimetus||id)}</div>
-    <div class="quoteServiceDesc">${esc(s.kirjeldus||s.wordiKirjeldus||"")}</div>
-    <div class="quoteLineFields" ${selected?"":"hidden"}>
-     <div class="quoteLineField"><label>Kogus</label><input class="quoteLineInput quoteQty" type="number" min="0.01" step="1" inputmode="decimal" value="${esc(line.kogus)}"></div>
-     <div class="quoteLineField"><label>Ühikuhind, €</label><input class="quoteLineInput quotePrice" type="number" min="0" step="0.01" inputmode="decimal" value="${esc(line.uhikuhind)}"></div>
-     <div><label style="display:block;font-size:11px;color:#777;font-weight:700;margin-bottom:4px">Rea summa</label><div class="quoteLineSum">${euro(Number(line.kogus||0)*Number(line.uhikuhind||0))}</div></div>
-    </div>
-   </div>`;
-  const cb=d.querySelector(".quoteServiceCheck"), fields=d.querySelector(".quoteLineFields");
-  const qty=d.querySelector(".quoteQty"), price=d.querySelector(".quotePrice"), sum=d.querySelector(".quoteLineSum");
-  function updateLine(){
-   const kogus=Math.max(0,Number(qty.value||0));
-   const uhikuhind=Math.max(0,Number(price.value||0));
-   quoteServiceValues.set(id,{kogus,uhikuhind});
-   sum.textContent=euro(kogus*uhikuhind);
-   calculateQuote();
-  }
-  cb.onchange=()=>{
-   if(cb.checked){selectedQuoteServices.add(id);fields.hidden=false}
-   else{selectedQuoteServices.delete(id);fields.hidden=true}
-   calculateQuote();
-  };
-  qty.oninput=updateLine; price.oninput=updateLine;
-  box.appendChild(d);
+  const category=String(s.kategooria||"Muud teenused").trim()||"Muud teenused";
+  if(!groups.has(category))groups.set(category,[]);
+  groups.get(category).push(s);
  });
+
+ groups.forEach((services,category)=>{
+  const group=document.createElement("div");
+  group.className="quoteServiceGroup";
+
+  const hasSelected=services.some(s=>selectedQuoteServices.has(String(s.id||"")));
+  if(hasSelected)group.classList.add("open");
+
+  const header=document.createElement("button");
+  header.type="button";
+  header.className="quoteServiceGroupHeader";
+  header.innerHTML=`
+   <div>
+    <div class="quoteServiceGroupTitle">${esc(category)}</div>
+    <div class="quoteServiceGroupMeta">${services.length} valikut</div>
+   </div>
+   <div class="quoteServiceGroupChevron">⌄</div>`;
+
+  const body=document.createElement("div");
+  body.className="quoteServiceGroupBody";
+
+  header.onclick=()=>{
+   group.classList.toggle("open");
+  };
+
+  services.forEach(s=>{
+   const id=String(s.id||"");
+   const selected=selectedQuoteServices.has(id);
+   const line=quoteLineValue(id,s);
+
+   const maht=String(s.maht||"").trim();
+   const nimetus=String(s.nimetus||s.apiNimetus||id).trim();
+   const kirjeldus=String(s.kirjeldus||s.wordiKirjeldus||"").trim();
+   const rowTitle=maht||nimetus;
+   const unit=String(s.uhik||"tk").trim()||"tk";
+
+   const d=document.createElement("div");
+   d.className="quoteService";
+   d.innerHTML=`
+    <input class="quoteServiceCheck" type="checkbox" value="${esc(id)}" ${selected?"checked":""}>
+    <div class="quoteServiceMain">
+     <div class="quoteServiceVolume">${esc(rowTitle)}</div>
+     ${maht && nimetus && nimetus!==maht ? `<div class="quoteServiceSub">${esc(nimetus)}</div>` : ""}
+     ${kirjeldus ? `<div class="quoteServiceDesc">${esc(kirjeldus)}</div>` : ""}
+     <div class="quoteServiceDefaultPrice">${euro(Number(s.hind||0))} / ${esc(unit)}</div>
+
+     <div class="quoteLineFields" ${selected?"":"hidden"}>
+      <div class="quoteLineField">
+       <label>Kogus</label>
+       <input class="quoteLineInput quoteQty" type="number" min="0.01" step="1" inputmode="decimal" value="${esc(line.kogus)}">
+      </div>
+      <div class="quoteLineField">
+       <label>Ühikuhind, €</label>
+       <input class="quoteLineInput quotePrice" type="number" min="0" step="0.01" inputmode="decimal" value="${esc(line.uhikuhind)}">
+      </div>
+      <div>
+       <label style="display:block;font-size:11px;color:#777;font-weight:700;margin-bottom:4px">Rea summa</label>
+       <div class="quoteLineSum">${euro(Number(line.kogus||0)*Number(line.uhikuhind||0))}</div>
+      </div>
+     </div>
+    </div>`;
+
+   const cb=d.querySelector(".quoteServiceCheck");
+   const fields=d.querySelector(".quoteLineFields");
+   const qty=d.querySelector(".quoteQty");
+   const price=d.querySelector(".quotePrice");
+   const sum=d.querySelector(".quoteLineSum");
+
+   function updateLine(){
+    const kogus=Math.max(0,Number(qty.value||0));
+    const uhikuhind=Math.max(0,Number(price.value||0));
+    quoteServiceValues.set(id,{kogus,uhikuhind});
+    sum.textContent=euro(kogus*uhikuhind);
+    calculateQuote();
+   }
+
+   cb.onchange=()=>{
+    if(cb.checked){
+     selectedQuoteServices.add(id);
+     fields.hidden=false;
+     group.classList.add("open");
+    }else{
+     selectedQuoteServices.delete(id);
+     fields.hidden=true;
+    }
+    calculateQuote();
+   };
+
+   qty.oninput=updateLine;
+   price.oninput=updateLine;
+   body.appendChild(d);
+  });
+
+  group.appendChild(header);
+  group.appendChild(body);
+  box.appendChild(group);
+ });
+
  calculateQuote();
 }
-
 function calculateQuote(){
  let net=0;
  for(const id of selectedQuoteServices){
