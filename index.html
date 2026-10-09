@@ -697,10 +697,7 @@ async function deleteObject(o, triggerButton=null){
   if(!navigator.onLine){toast("Objekti kustutamiseks on vaja internetti");return;}
   const nimi=objectName(o);
   const nr=String(o.nr);
-  if(!confirm(`Kas soovid kustutada objekti nr ${nr} – ${nimi}?\n\nKogu objekti Drive'i kaust (sh fotod ja aruanded) liigub prügikasti ning registririda kustutatakse.`))return;
-  const sisestatud=prompt(`TEINE KINNITUS\n\nKustutamise kinnitamiseks kirjuta objekti täpne nimi:\n${nimi}`);
-  if(sisestatud===null)return;
-  if(sisestatud.trim()!==nimi){toast("Nimi ei ühti. Kustutamine katkestatud.");return;}
+  if(!confirm(`Kas oled kindel, et soovid kustutada objekti nr ${nr} – ${nimi}?\n\nObjekt eemaldatakse registrist ning kogu selle Drive'i kaust (sh fotod ja aruanded) liigub prügikasti.`))return;
   const button=triggerButton || $("deleteObject");
   if(button){button.disabled=true;button.dataset.originalText=button.textContent;button.textContent="…";}
   try{
