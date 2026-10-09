@@ -684,7 +684,8 @@ function showObject(o){
   ${detailRow("Tellija",o.tellija)}
   ${detailRow("Staatus",o.staatus)}
   ${detailRow("Aruande nr",o.aruandeNr)}
-  <button id="startWork" class="btn btnDark btnFull">Alusta pildistamist</button>\n   <button id="deleteObject" class="btn btnFull" style="margin-top:12px;background:#fff0ee;color:#b42318">🗑 Kustuta objekt</button>
+  <button id="startWork" class="btn btnDark btnFull">Alusta pildistamist</button>
+   <button id="deleteObject" class="btn btnFull" style="margin-top:12px;background:#fff0ee;color:#b42318">🗑 Kustuta objekt</button>
  </div>`;
 
  $("detailBack").onclick=showList;
@@ -696,12 +697,6 @@ async function deleteObject(o, triggerButton=null){
   if(!navigator.onLine){toast("Objekti kustutamiseks on vaja internetti");return;}
   const nimi=objectName(o);
   const nr=String(o.nr);
-  const local=await localElementsFor(o.nr);
-  const pending=await pendingPhotosFor(o.nr);
-  if(local.some(e=>!e.serverId||e.pendingRename||e.pendingDelete)||pending.length){
-    toast("Objektil on sünkroniseerimata töid. Sünkroniseeri esmalt.");
-    return;
-  }
   if(!confirm(`Kas soovid kustutada objekti nr ${nr} – ${nimi}?\n\nKogu objekti Drive'i kaust (sh fotod ja aruanded) liigub prügikasti ning registririda kustutatakse.`))return;
   const sisestatud=prompt(`TEINE KINNITUS\n\nKustutamise kinnitamiseks kirjuta objekti täpne nimi:\n${nimi}`);
   if(sisestatud===null)return;
@@ -709,6 +704,12 @@ async function deleteObject(o, triggerButton=null){
   const button=triggerButton || $("deleteObject");
   if(button){button.disabled=true;button.dataset.originalText=button.textContent;button.textContent="…";}
   try{
+    const local=await localElementsFor(o.nr);
+    const pending=await pendingPhotosFor(o.nr);
+    if(local.some(e=>!e.serverId||e.pendingRename||e.pendingDelete)||pending.length){
+      toast("Objektil on sünkroniseerimata töid. Sünkroniseeri esmalt.");
+      return;
+    }
     await ensureToken();
     const tulemus=await runScript("kustutaObjekt",[o.nr,nimi]);
     if(!tulemus?.ok)throw new Error("Server ei kinnitanud kustutamist.");
