@@ -689,6 +689,7 @@ function showObject(o){
 
  $("detailBack").onclick=showList;
  $("startWork").onclick=()=>openWork(o);
+ $("deleteObject").onclick=()=>deleteObject(o,$("deleteObject"));
 }
 
 async function deleteObject(o, triggerButton=null){
