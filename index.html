@@ -24,7 +24,7 @@ button,input,select{font:inherit}
 #pageTitle{padding-right:140px}
 .brand{font-size:13px;font-weight:800;letter-spacing:4px;color:#51426e;margin-bottom:7px}
 h1{font-size:30px;margin:0;font-weight:800}
-.content{padding:16px;max-width:800px;margin:auto;padding-bottom:calc(40px + env(safe-area-inset-bottom))}
+.content{padding:16px;max-width:800px;margin:auto;padding-bottom:calc(95px + env(safe-area-inset-bottom))}
 .search{width:100%;border:1px solid #ddd;border-radius:15px;padding:16px;background:#fff;font-size:17px;margin-bottom:12px}
 .statusCard{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#fff;border-radius:15px;padding:12px 14px;margin-bottom:8px}
 .connection{font-weight:700}
@@ -175,6 +175,23 @@ h1{font-size:30px;margin:0;font-weight:800}
 .quoteActions{display:flex;gap:8px;margin-top:14px}
 .quoteActions .btn{flex:1}
 
+
+.todoNav{position:fixed;bottom:0;left:0;right:0;display:flex;background:#fff;border-top:1px solid #e5e1ed;padding:9px 12px calc(9px + env(safe-area-inset-bottom));z-index:110;gap:10px}
+.todoNav button{flex:1;border:0;background:transparent;padding:10px;border-radius:12px;color:#777;font-weight:750}
+.todoNav button.active{background:#eee4ff;color:#5c35a1}
+.todoTop{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:16px}
+.todoColumns{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.todoColumn{background:#eeedf2;border-radius:16px;padding:10px;min-height:170px}
+.todoColumn h3{font-size:14px;margin:4px 3px 12px}
+.todoCard{background:white;border-radius:12px;padding:12px;margin-bottom:9px;overflow-wrap:anywhere;box-shadow:0 1px 3px #0000000a}
+.todoCard p{margin:0 0 10px;font-size:14px}
+.todoCardActions{display:flex;gap:5px;flex-wrap:wrap}
+.todoCardActions button{font-size:12px;border:0;border-radius:8px;padding:7px;background:#eee4ff;color:#50318b}
+.todoSwitch{display:none;gap:5px;margin-bottom:12px}
+.todoSwitch button{flex:1;border:0;padding:11px 3px;border-radius:10px;background:#e9e9ef;font-size:12px;font-weight:700}
+.todoSwitch button.active{background:#dac7ff}
+.todoInput{width:100%;border:1px solid #d6d1e2;border-radius:12px;padding:13px;font-size:16px}
+@media(max-width:580px){.todoColumns{display:block}.todoColumn{display:none}.todoColumn.active{display:block}.todoSwitch{display:flex}}
 </style>
 
 <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -292,10 +309,23 @@ h1{font-size:30px;margin:0;font-weight:800}
   </div>
 </section>
 
+<section id="todoView" style="display:none">
+ <div class="todoTop"><b>Minu ülesanded</b><button id="todoAdd" class="btn" style="background:#ddf8df;color:#188344">+ Lisa ülesanne</button></div>
+ <div id="todoEditor" style="display:none;background:white;padding:14px;border-radius:14px;margin-bottom:14px">
+  <input id="todoText" class="todoInput" maxlength="300" placeholder="Kirjuta ülesanne...">
+  <div style="display:flex;gap:8px;margin-top:10px"><button id="todoSave" class="btn btnDark">Salvesta</button><button id="todoCancel" class="btn btnGray">Tühista</button></div>
+ </div>
+ <div class="todoSwitch" id="todoSwitch"></div>
+ <div class="todoColumns" id="todoColumns"></div>
+</section>
 <section id="detailView" style="display:none"></section>
 <section id="workView" style="display:none"></section>
 
 </main>
+<nav id="todoNav" class="todoNav" aria-label="Vahelehed">
+ <button id="tabRegister" class="active" type="button">▤ Register</button>
+ <button id="tabTodo" type="button">☑ Ülesanded</button>
+</nav>
 
 <div id="objectModal" class="modalBackdrop">
   <div class="modal">
@@ -713,6 +743,7 @@ function editableDetailRow(field,o){
 }
 function showObject(o){
   $("headerActions").style.display="none";
+  $("todoNav").style.display="none";
  currentObject=o;
  $("listView").style.display="none";
  $("workView").style.display="none";
@@ -857,6 +888,9 @@ async function refreshObjectsOnReturn(){
 
 function showList(refreshOnReturn=true){
   $("headerActions").style.display="flex";
+  $("todoView").style.display="none";
+  $("todoNav").style.display="flex";
+  setActiveTab("register");
   const returningFromObject=$("detailView").style.display!=="none";
   $("detailView").style.display="none";
   $("workView").style.display="none";
@@ -1152,6 +1186,7 @@ async function loadServerElements(nr){
 
 async function openWork(o){
   $("headerActions").style.display="none";
+  $("todoNav").style.display="none";
  currentObject=o;
  $("detailView").style.display="none";
  $("listView").style.display="none";
@@ -2066,6 +2101,7 @@ async function loadValjakuTyypid(){
 
 async function openQuotes(){
   $("headerActions").style.display="none";
+  $("todoNav").style.display="none";
  $("listView").style.display="none";
  $("detailView").style.display="none";
  $("workView").style.display="none";
@@ -2286,6 +2322,85 @@ window.addEventListener("offline",()=>{
  updateConnection();
  toast("Offline — töö jääb telefoni");
 });
+
+
+/* =============== TELEFONI ÜLESANDED =============== */
+const TODO_KEY="playsafe_todo_v1";
+const TODO_STATES=["Tegemata","Töös","Tehtud"];
+let todoItems=[];
+let todoActive=0;
+let todoEditing=null;
+try{const saved=JSON.parse(localStorage.getItem(TODO_KEY)||"[]");if(Array.isArray(saved))todoItems=saved;}catch(e){}
+function saveTodoLocal(){
+ try{localStorage.setItem(TODO_KEY,JSON.stringify(todoItems));return true;}
+ catch(e){toast("Ülesannete salvestamine ebaõnnestus");return false;}
+}
+function setActiveTab(tab){
+ $("tabRegister").classList.toggle("active",tab==="register");
+ $("tabTodo").classList.toggle("active",tab==="todo");
+}
+function openTodo(){
+ ["listView","detailView","workView","quoteView"].forEach(id=>$(id).style.display="none");
+ $("todoView").style.display="block";
+ $("todoNav").style.display="flex";
+ $("headerActions").style.display="none";
+ $("pageTitle").textContent="Ülesanded";
+ setActiveTab("todo");
+ renderTodo();
+}
+function renderTodo(){
+ const tabs=$("todoSwitch"),columns=$("todoColumns");
+ tabs.replaceChildren();columns.replaceChildren();
+ TODO_STATES.forEach((state,i)=>{
+  const tab=document.createElement("button");
+  tab.textContent=state+" ("+todoItems.filter(t=>t.status===state).length+")";
+  tab.className=i===todoActive?"active":"";
+  tab.onclick=()=>{todoActive=i;renderTodo();};
+  tabs.appendChild(tab);
+  const col=document.createElement("div");
+  col.className="todoColumn"+(i===todoActive?" active":"");
+  const title=document.createElement("h3");title.textContent=state;col.appendChild(title);
+  todoItems.filter(t=>t.status===state).forEach(item=>{
+   const card=document.createElement("div");card.className="todoCard";
+   const text=document.createElement("p");text.textContent=item.text;card.appendChild(text);
+   const actions=document.createElement("div");actions.className="todoCardActions";
+   const makeBtn=(label,action)=>{
+    const b=document.createElement("button");b.type="button";b.textContent=label;b.onclick=action;actions.appendChild(b);
+   };
+   if(i>0)makeBtn("←",()=>moveTodo(item,-1));
+   if(i<2)makeBtn("→",()=>moveTodo(item,1));
+   makeBtn("Muuda",()=>editTodo(item));
+   makeBtn("Kustuta",()=>{if(confirm("Kas kustutada see ülesanne?")){todoItems=todoItems.filter(t=>t.id!==item.id);saveTodoLocal();renderTodo();}});
+   card.appendChild(actions);col.appendChild(card);
+  });
+  columns.appendChild(col);
+ });
+}
+function moveTodo(item,step){
+ item.status=TODO_STATES[TODO_STATES.indexOf(item.status)+step];
+ saveTodoLocal();renderTodo();
+}
+function editTodo(item){
+ todoEditing=item?item.id:null;
+ $("todoText").value=item?item.text:"";
+ $("todoEditor").style.display="block";
+ $("todoText").focus();
+}
+$("tabRegister").onclick=()=>showList(false);
+$("tabTodo").onclick=openTodo;
+$("todoAdd").onclick=()=>editTodo(null);
+$("todoCancel").onclick=()=>$("todoEditor").style.display="none";
+$("todoSave").onclick=()=>{
+ const value=$("todoText").value.trim();
+ if(!value){toast("Sisesta ülesande tekst");return;}
+ if(todoEditing!==null){
+  const item=todoItems.find(t=>t.id===todoEditing);
+  if(item)item.text=value;
+ }else{
+  todoItems.unshift({id:String(Date.now())+"_"+Math.random().toString(36).slice(2),text:value,status:TODO_STATES[todoActive]});
+ }
+ saveTodoLocal();$("todoEditor").style.display="none";renderTodo();
+};
 
 /* ================= SERVICE WORKER ================= */
 
