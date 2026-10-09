@@ -33,7 +33,9 @@ h1{font-size:30px;margin:0;font-weight:800}
 .errorBox{display:none;background:#fff0ee;color:#98251d;border:1px solid #ffc4bd;border-radius:14px;padding:13px;margin-bottom:13px}
 .objectList,.elementList{display:flex;flex-direction:column;gap:10px}
 .card{background:#fff;border-radius:17px;padding:16px}
-.objectCard{cursor:pointer}
+.objectCard{cursor:pointer;position:relative;padding-right:60px}
+.objectDeleteIcon{position:absolute;top:13px;right:13px;width:38px;height:38px;border:0;border-radius:11px;background:#fff0ee;color:#b42318;font-size:19px;cursor:pointer}
+.objectDeleteIcon:disabled{opacity:.5;cursor:wait}
 .small{font-size:12px;color:#888;font-weight:700}
 .objectName{font-size:19px;font-weight:780;margin:4px 0}
 .muted{font-size:14px;color:#777}
@@ -647,8 +649,13 @@ function renderObjects(){
   d.className="card objectCard";
   d.innerHTML=`<div class="small">NR ${esc(o.nr)}</div>
   <div class="objectName">${esc(objectName(o))}</div>
-  <div class="muted">${esc(o.aadress||"")}</div>`;
+  <div class="muted">${esc(o.aadress||"")}</div>
+  <button type="button" class="objectDeleteIcon" aria-label="Kustuta objekt ${esc(objectName(o))}" title="Kustuta objekt">🗑</button>`;
   d.onclick=()=>showObject(o);
+  d.querySelector(".objectDeleteIcon").onclick=e=>{
+   e.stopPropagation();
+   deleteObject(o,e.currentTarget);
+  };
   $("objectList").appendChild(d);
  });
 }
@@ -684,7 +691,7 @@ function showObject(o){
  $("startWork").onclick=()=>openWork(o);
 }
 
-async function deleteObject(o){
+async function deleteObject(o, triggerButton=null){
   if(!navigator.onLine){toast("Objekti kustutamiseks on vaja internetti");return;}
   const nimi=objectName(o);
   const nr=String(o.nr);
@@ -694,13 +701,12 @@ async function deleteObject(o){
     toast("Objektil on sünkroniseerimata töid. Sünkroniseeri esmalt.");
     return;
   }
-  if(!confirm(`Kas soovid kustutada objekti nr ${nr} – ${nimi}?\\n\\nKogu objekti Drive'i kaust (sh fotod ja aruanded) liigub prügikasti ning registririda kustutatakse.`))return;
-  const sisestatud=prompt(`TEINE KINNITUS\\n\\nKustutamise kinnitamiseks kirjuta objekti täpne nimi:\\n${nimi}`);
+  if(!confirm(`Kas soovid kustutada objekti nr ${nr} – ${nimi}?\n\nKogu objekti Drive'i kaust (sh fotod ja aruanded) liigub prügikasti ning registririda kustutatakse.`))return;
+  const sisestatud=prompt(`TEINE KINNITUS\n\nKustutamise kinnitamiseks kirjuta objekti täpne nimi:\n${nimi}`);
   if(sisestatud===null)return;
   if(sisestatud.trim()!==nimi){toast("Nimi ei ühti. Kustutamine katkestatud.");return;}
-  const button=$("deleteObject");
-  button.disabled=true;
-  button.textContent="Kustutan...";
+  const button=triggerButton || $("deleteObject");
+  if(button){button.disabled=true;button.dataset.originalText=button.textContent;button.textContent="…";}
   try{
     await ensureToken();
     const tulemus=await runScript("kustutaObjekt",[o.nr,nimi]);
@@ -717,7 +723,7 @@ async function deleteObject(o){
     showError("Objekti kustutamise viga: "+e.message);
     toast("Kustutamine ebaõnnestus");
   }finally{
-    if(button.isConnected){button.disabled=false;button.textContent="🗑 Kustuta objekt";}
+    if(button?.isConnected){button.disabled=false;button.textContent=button.dataset.originalText||"🗑";}
   }
 }
 
