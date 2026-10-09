@@ -373,7 +373,7 @@ h1{font-size:30px;margin:0;font-weight:800}
 
 <section id="psDatabaseView" style="display:none">
  <div class="card">
-  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap"><div class="detailTitle">Asutused ja väljakud</div><button class="btn btnGray" id="psDbBack" type="button">← Register</button></div>
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap"><div class="detailTitle">Asutused ja väljakud</div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btnDark" id="psDbQuoteBack" type="button" style="display:none">← Tagasi pakkumise juurde</button><button class="btn btnGray" id="psDbBack" type="button">← Register</button></div></div>
   <div class="quoteNav" style="margin:12px 0"><button class="btn btnDark" id="psAsutusedTab" type="button">Asutused</button><button class="btn btnGray" id="psValjakudTab" type="button">Väljakud</button></div>
   <input id="psDbSearch" class="formInput" placeholder="Otsi nime või aadressi järgi" style="width:100%;margin-bottom:10px">
   <button class="btn btnDark" id="psDbNew" type="button">+ Lisa asutus</button>
@@ -2188,8 +2188,9 @@ function crmEsc(x){return String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":
 function crmRenderQuotes(){
  const q=($('quoteSearch').value||'').toLowerCase();
  const items=crmQuoteCache.filter(x=>[x.nr,x.tellija,x.objekt].some(y=>String(y||'').toLowerCase().includes(q)));
- $('quoteListContent').innerHTML=items.length?items.map(x=>`<div class="card" style="border:1px solid #ddd;margin:8px 0"><b>${crmEsc(x.nr)}</b> · ${crmEsc(x.kuupaev)}<div>${crmEsc(x.tellija)} — ${crmEsc(x.objekt)}</div><div><b>${crmEsc(x.kokku)} €</b></div><select class="formInput crmStatus" data-nr="${crmEsc(x.nr)}" style="margin-top:8px"><option ${x.staatus==='Koostatud'?'selected':''}>Koostatud</option><option ${x.staatus==='Saadetud'?'selected':''}>Saadetud</option><option ${x.staatus==='Aktsepteeritud'?'selected':''}>Aktsepteeritud</option><option ${x.staatus==='Tagasi lükatud'?'selected':''}>Tagasi lükatud</option></select>${/^https:\/\//.test(x.pdf)?`<a target="_blank" rel="noopener" href="${crmEsc(x.pdf)}">Ava PDF</a>`:''}${x.staatus==='Aktsepteeritud'?` <button type="button" class="btn btnDark psWorkOpen" data-nr="${crmEsc(x.nr)}" style="margin-top:8px">Loo tööd</button>`:''}</div>`).join(''):'Pakkumisi ei leitud.';
+ $('quoteListContent').innerHTML=items.length?items.map(x=>`<div class="card" style="border:1px solid #ddd;margin:8px 0;position:relative;padding-right:48px"><div style="position:absolute;top:10px;right:10px">${/^https:\/\//.test(x.pdf)?`<a target="_blank" rel="noopener" href="${crmEsc(x.pdf)}" title="Ava pakkumise PDF" aria-label="Ava pakkumise PDF" style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border:1px solid #ddd;border-radius:9px;color:#c43b3b;text-decoration:none;background:white"><svg xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M7 16h10"/><path d="M7 13h10"/></svg></a>`:''}</div><b>${crmEsc(x.nr)}</b> · ${crmEsc(x.kuupaev)}<div>${crmEsc(x.tellija)} — ${crmEsc(x.objekt)}</div><div><b>${crmEsc(x.kokku)} €</b></div><select class="formInput crmStatus" data-nr="${crmEsc(x.nr)}" style="margin-top:8px"><option ${x.staatus==='Koostatud'?'selected':''}>Koostatud</option><option ${x.staatus==='Saadetud'?'selected':''}>Saadetud</option><option ${x.staatus==='Aktsepteeritud'?'selected':''}>Aktsepteeritud</option><option ${x.staatus==='Tagasi lükatud'?'selected':''}>Tagasi lükatud</option></select>${x.staatus==='Aktsepteeritud'?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button type="button" class="btn btnDark psQuoteSites" data-nr="${crmEsc(x.nr)}">Lisa väljakud</button><button type="button" class="btn btnGray psWorkOpen" data-nr="${crmEsc(x.nr)}">Loo tööd</button></div>`:''}</div>`).join(''):'Pakkumisi ei leitud.';
  document.querySelectorAll('.psWorkOpen').forEach(b=>b.onclick=()=>psOpenWork(b.dataset.nr));
+ document.querySelectorAll('.psQuoteSites').forEach(b=>b.onclick=()=>psOpenQuoteSites(b.dataset.nr));
  document.querySelectorAll('.crmStatus').forEach(el=>el.onchange=async()=>{
  const item=crmQuoteCache.find(x=>x.nr===el.dataset.nr);if(!item)return;
  const old=item.staatus;
@@ -2798,7 +2799,18 @@ async function psDbSave(){
   $('psDbEditor').style.display='none';toast('Salvestatud');await psDbLoad();
  }catch(e){alert('Salvestamine ebaõnnestus: '+e.message);}finally{btn.disabled=false;}
 }
+let psQuoteSitesReturnNr='';
+async function psOpenQuoteSites(quoteNr){
+ const q=crmQuoteCache.find(x=>String(x.nr)===String(quoteNr));
+ if(!q)return;
+ const institutions=await runScript('psGetAsutused',[]);
+ const a=institutions.find(x=>String(x.nimi||'').trim().toLocaleLowerCase('et-EE')===String(q.tellija||'').trim().toLocaleLowerCase('et-EE'));
+ if(!a){alert('Pakkumise tellijale vastavat asutust ei leitud. Kontrolli asutuste registrit.');return;}
+ await psOpenAcceptedSites(quoteNr,a.id);
+}
 async function psOpenAcceptedSites(quoteNr,asutuseId){
+ psQuoteSitesReturnNr=quoteNr;
+ $('psDbQuoteBack').style.display='inline-block';
  if(!asutuseId){alert('Asutuse ID puudub. Kontrolli, kas asutus loodi.');return;}
  psDbTab='valjakud';
  $('psDbSearch').value='';
@@ -2810,12 +2822,22 @@ async function psOpenAcceptedSites(quoteNr,asutuseId){
  $('psDbEditorTitle').textContent='Lisa pakkumise '+quoteNr+' väljak';
 }
 function psDbOpen(){
+ if(!psQuoteSitesReturnNr)$('psDbQuoteBack').style.display='none';
  ['listView','detailView','workView','quoteView','todoView'].forEach(id=>$(id).style.display='none');
  $('psDatabaseView').style.display='block';$('todoNav').style.display='none';$('headerActions').style.display='none';$('pageTitle').textContent='Asutused ja väljakud';
  psDbLoad();
 }
 $('openDatabaseButton').onclick=psDbOpen;
-$('psDbBack').onclick=()=>{ $('psDatabaseView').style.display='none';showList(false); };
+$('psDbBack').onclick=()=>{ psQuoteSitesReturnNr='';$('psDbQuoteBack').style.display='none';$('psDatabaseView').style.display='none';showList(false); };
+$('psDbQuoteBack').onclick=async()=>{
+ const nr=psQuoteSitesReturnNr;
+ psQuoteSitesReturnNr='';
+ $('psDbQuoteBack').style.display='none';
+ $('psDatabaseView').style.display='none';
+ await openQuotes();
+ crmSwitchTab(true);
+ toast('Väljakud salvestatud. Vali pakkumise juures „Loo tööd”.');
+};
 $('psAsutusedTab').onclick=()=>{psDbTab='asutused';$('psDbEditor').style.display='none';psDbRender();};
 $('psValjakudTab').onclick=()=>{psDbTab='valjakud';$('psDbEditor').style.display='none';psDbRender();};
 $('psDbSearch').oninput=psDbRender;
