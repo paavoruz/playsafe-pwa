@@ -293,6 +293,7 @@ h1{font-size:30px;margin:0;font-weight:800}
         <select id="newObjectType" class="formInput" disabled>
           <option value="">Laadin väljaku tüüpe...</option>
         </select>
+        <button type="button" class="addRegistryChoice" onclick="addRegistryChoice('valjakuTyyp')" style="margin-top:8px;background:transparent;border:0;color:#1663bb;font-weight:600;padding:5px 0;cursor:pointer">＋ Lisa uus valik</button>
       </div>
 
       <div class="formGroup">
@@ -300,6 +301,7 @@ h1{font-size:30px;margin:0;font-weight:800}
         <select id="newAssessmentType" class="formInput" disabled>
           <option value="">Laadin hindamise liike...</option>
         </select>
+        <button type="button" class="addRegistryChoice" onclick="addRegistryChoice('hindamiseLiik')" style="margin-top:8px;background:transparent;border:0;color:#1663bb;font-weight:600;padding:5px 0;cursor:pointer">＋ Lisa uus valik</button>
       </div>
     </div>
 
@@ -1736,6 +1738,29 @@ function calculateQuote(){
  $("quoteVat").textContent=euro(vat);
  $("quoteGross").textContent=euro(net+vat);
  return {net,vat,gross:net+vat};
+}
+
+
+async function addRegistryChoice(kind){
+ const isField=kind==="valjakuTyyp";
+ const title=isField?"väljaku tüüp":"hindamise liik";
+ const select=$(isField?"newObjectType":"newAssessmentType");
+ const name=prompt("Sisesta uus " + title + ":");
+ if(name===null)return;
+ const value=name.trim();
+ if(!value){toast("Sisesta nimetus");return;}
+ if(value.length>100 || /[\r\n]/.test(value)){toast("Nimetus peab olema kuni 100 tähemärki ühel real");return;}
+ const buttons=document.querySelectorAll(".addRegistryChoice");
+ buttons.forEach(b=>b.disabled=true);
+ try{
+  await ensureToken();
+  const result=await runScript("lisaRegistriValik",[kind,value]);
+  if(isField)await loadValjakuTyypid();
+  else await loadHindamiseLiigid();
+  select.value=result.nimi;
+  toast(result.lisatud?"Uus valik lisatud Google Sheeti":"Valik on juba olemas");
+ }catch(e){console.error(e);showError("Valiku lisamine ebaõnnestus: "+e.message);toast("Valikut ei õnnestunud lisada");}
+ finally{buttons.forEach(b=>b.disabled=false);}
 }
 
 async function loadHindamiseLiigid(){
