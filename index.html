@@ -2202,7 +2202,7 @@ function crmRenderQuotes(){
  const q=($('quoteSearch').value||'').toLowerCase();
  const items=crmQuoteCache.filter(x=>[x.nr,x.tellija,x.objekt].some(y=>String(y||'').toLowerCase().includes(q)));
  $('quoteListContent').innerHTML=items.length?items.map(x=>`<div class="card" style="border:1px solid #ddd;margin:8px 0;position:relative;padding-right:48px"><div style="position:absolute;top:10px;right:10px">${/^https:\/\//.test(x.pdf)?`<a target="_blank" rel="noopener" href="${crmEsc(x.pdf)}" title="Ava pakkumise PDF" aria-label="Ava pakkumise PDF" style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border:1px solid #ddd;border-radius:9px;color:#c43b3b;text-decoration:none;background:white"><svg xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M7 16h10"/><path d="M7 13h10"/></svg></a>`:''}</div><b>${crmEsc(x.nr)}</b> · ${crmEsc(x.kuupaev)}<div>${crmEsc(x.tellija)} — ${crmEsc(x.objekt)}</div><div><b>${crmEsc(x.kokku)} €</b></div><select class="formInput crmStatus" data-nr="${crmEsc(x.nr)}" style="margin-top:8px"><option ${x.staatus==='Koostatud'?'selected':''}>Koostatud</option><option ${x.staatus==='Saadetud'?'selected':''}>Saadetud</option><option ${x.staatus==='Aktsepteeritud'?'selected':''}>Aktsepteeritud</option><option ${x.staatus==='Tagasi lükatud'?'selected':''}>Tagasi lükatud</option></select><div style="margin-top:8px"><button type="button" class="btn btnGray psMailOpen" data-nr="${crmEsc(x.nr)}">✉ Saada pakkumine</button></div>${x.staatus==='Aktsepteeritud'?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button type="button" class="btn btnDark psQuoteSites" data-nr="${crmEsc(x.nr)}">Lisa väljakud</button><button type="button" class="btn btnGray psWorkOpen" data-nr="${crmEsc(x.nr)}">Loo tööd</button></div>`:''}</div>`).join(''):'Pakkumisi ei leitud.';
- document.querySelectorAll('.psMailOpen').forEach(b=>b.onclick=()=>psOpenMail(b.dataset.nr));
+
  document.querySelectorAll('.psWorkOpen').forEach(b=>b.onclick=()=>psOpenWork(b.dataset.nr));
  document.querySelectorAll('.psQuoteSites').forEach(b=>b.onclick=()=>psOpenQuoteSites(b.dataset.nr));
  document.querySelectorAll('.crmStatus').forEach(el=>el.onchange=async()=>{
@@ -2921,11 +2921,23 @@ $('psDbCancel').onclick=()=>{$('psDbEditor').style.display='none';};
 </div>
 <script>
 
+document.addEventListener('click',function(event){
+ const b=event.target.closest('.psMailOpen');
+ if(b){event.preventDefault();psOpenMail(b.dataset.nr);}
+});
 let psMailCurrentNr='';
 async function psOpenMail(nr){
+ psMailCurrentNr=nr;
+ $('psMailModal').style.display='block';
+ $('psMailInfo').textContent='Laadin pakkumise andmeid…';
+ $('psMailFrom').value='info@playsafe.ee';
+ $('psMailTo').value='';
+ $('psMailSubject').value='';
+ $('psMailBody').value='';
+ $('psMailAttachment').textContent='';
+ $('psMailSend').disabled=true;
  try{
   const p=await runScript('psPakkumiseKirjaEelvaade',[nr]);
-  psMailCurrentNr=nr;
   $('psMailFrom').value=p.sender;
   $('psMailTo').value=p.recipient;
   $('psMailSubject').value=p.subject;
@@ -2933,8 +2945,9 @@ async function psOpenMail(nr){
   $('psMailAttachment').textContent='📎 '+p.pdfName+' (PDF manus)';
   $('psMailInfo').textContent=p.permitted?'Vaata kiri üle enne saatmist.':'Saatja info@playsafe.ee ei ole veel selle Google konto lubatud saatjate hulgas.';
   $('psMailSend').disabled=!p.permitted;
-  $('psMailModal').style.display='block';
- }catch(e){showError('Kirja avamine ebaõnnestus: '+e.message);}
+ }catch(e){
+  $('psMailInfo').textContent='Andmete laadimise viga: '+(e&&e.message?e.message:String(e));
+ }
 }
 $('psMailClose').onclick=()=>$('psMailModal').style.display='none';
 $('psMailSend').onclick=async()=>{
