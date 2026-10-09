@@ -356,7 +356,8 @@ h1{font-size:30px;margin:0;font-weight:800}
  <div class="detailTitle" id="psWorkTitle">Loo tööd</div>
  <p class="muted">Vali olemasolev väljak ja teenused. Iga teenus luuakse eraldi tööna.</p>
  <label class="formLabel" for="psWorkSite">Mänguväljak</label>
- <select class="formInput" id="psWorkSite"></select>
+ <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;margin:6px 0"><span class="muted">Vali üks või mitu väljakut</span><label style="white-space:nowrap"><input type="checkbox" id="psWorkAll"> Vali kõik</label></div>
+ <div id="psWorkSites" style="max-height:260px;overflow-y:auto;border:1px solid #ddd;border-radius:10px;padding:10px"></div>
  <label class="formLabel" for="psWorkDate" style="margin-top:12px">Töö kuupäev (määrab ka aasta)</label>
  <input class="formInput" id="psWorkDate" type="date">
  <div style="margin-top:12px"><label><input id="psWorkInspection" type="checkbox" checked> Inspekteerimine</label></div>
@@ -366,6 +367,7 @@ h1{font-size:30px;margin:0;font-weight:800}
   <button class="btn btnDark" id="psWorkSave" type="button">Loo valitud tööd</button>
   <button class="btn btnGray" id="psWorkClose" type="button">Sulge</button>
  </div>
+ <div id="psWorkFeedback" role="status" aria-live="polite" style="margin-top:12px"></div>
  <div id="psWorkExisting" class="muted" style="margin-top:12px"></div>
 </div>
 </section>
@@ -2234,7 +2236,10 @@ async function psOpenWork(nr){
   $('psWorkHic').dataset.liik=hic||'';
   $('psWorkHic').title=hic?'':'HIC-mõõtmise jaoks lisa see valik tööde registri E-veeru rippmenüüsse.';
   const sites=await runScript('psGetValjakud',[]);
-  $('psWorkSite').innerHTML=sites.map(v=>`<option value="${crmEsc(v.id)}">${crmEsc(v.nimi)} · ${crmEsc(v.aadress)}</option>`).join('');
+  $('psWorkSites').innerHTML=sites.map(v=>`<label style="display:flex;align-items:flex-start;gap:9px;padding:7px 3px;border-bottom:1px solid #eee"><input class="psWorkSiteCheck" type="checkbox" value="${crmEsc(v.id)}" style="margin-top:3px"><span>${crmEsc(v.nimi)} <span class="muted">· ${crmEsc(v.aadress)}</span></span></label>`).join('');
+  $('psWorkAll').checked=false;
+  $('psWorkFeedback').innerHTML='';
+  $('psWorkSites').querySelectorAll('.psWorkSiteCheck').forEach(c=>c.onchange=()=>{const a=[...document.querySelectorAll('.psWorkSiteCheck')];$('psWorkAll').checked=a.length>0&&a.every(x=>x.checked);});
   if(!sites.length)$('psWorkExisting').textContent='Väljakuid pole veel lisatud. Lisa need vaates „Asutused ja väljakud”.';
   else await psRefreshWork();
  }catch(e){showError('Väljakute laadimise viga: '+e.message);}
@@ -2245,23 +2250,44 @@ async function psRefreshWork(){
 }
 $('psWorkClose').onclick=()=>{$('psWorkPanel').style.display='none';};
 $('psWorkInspection').onchange=()=>{$('psWorkInspectionType').disabled=!$('psWorkInspection').checked;};
+$('psWorkAll').onchange=()=>document.querySelectorAll('.psWorkSiteCheck').forEach(x=>x.checked=$('psWorkAll').checked);
 $('psWorkSave').onclick=async()=>{
- const nr=psCurrentWorkQuote,id=$('psWorkSite').value,paev=$('psWorkDate').value;
+ const nr=psCurrentWorkQuote,ids=[...document.querySelectorAll('.psWorkSiteCheck:checked')].map(x=>x.value),paev=$('psWorkDate').value;
  const types=[];
  if($('psWorkInspection').checked)types.push($('psWorkInspectionType').value);
  if($('psWorkHic').checked)types.push($('psWorkHic').dataset.liik);
- if(!nr||!id||!paev||!types.length){showError('Vali väljak, kuupäev ja vähemalt üks teenus.');return;}
- if(!confirm(`Kas luua ${types.length} tööd valitud väljakule?`))return;
+ const feedback=$('psWorkFeedback');
+ if(!nr||!ids.length||!paev||!types.length){feedback.textContent='Vali vähemalt üks väljak, kuupäev ja teenus.';return;}
+ const count=ids.length*types.length;
+ if(!confirm(`Kas töödelda ${count} tööd (${ids.length} väljakut × ${types.length} teenust)?`))return;
  const btn=$('psWorkSave');btn.disabled=true;
- let ok=0;
+ let created=[],existing=[],failed=[];
+ feedback.textContent='Töötlen '+count+' tööd...';
  try{
-  for(const liik of types){
-   await runScript('psLooPakkumiseToo',[{pakkumiseNr:nr,valjakuId:id,liik:liik,kuupaev:paev}]);
-   ok++;
+  for(const id of ids){
+   const label=document.querySelectorAll('.psWorkSiteCheck');
+   const selected=[...label].find(x=>x.value===id);
+   const siteName=selected?.parentElement?.innerText?.trim()||id;
+   for(const liik of types){
+    try{
+     const r=await runScript('psLooPakkumiseToo',[{pakkumiseNr:nr,valjakuId:id,liik,kuupaev:paev}]);
+     if(r&&r.alreadyExists)existing.push(`${siteName} · ${liik}${r.tooNr?' · nr '+r.tooNr:''}`);
+     else if(r&&r.ok)created.push(`${siteName} · ${liik}${r.tooNr?' · nr '+r.tooNr:''}`);
+     else failed.push(`${siteName} · ${liik}: ootamatu vastus`);
+    }catch(e){
+     const msg=String(e.message||e);
+     if(/juba registreeritud|topelttöö/i.test(msg))existing.push(`${siteName} · ${liik}`);
+     else failed.push(`${siteName} · ${liik}: ${msg}`);
+    }
+   }
   }
-  toast('Loodud '+ok+' tööd');
- }catch(e){showError('Loodud '+ok+' tööd. Edasi tekkis viga: '+e.message);}
- finally{btn.disabled=false;try{await psRefreshWork();}catch(e){showError(e.message);}}
+  const esc=x=>crmEsc(x);
+  feedback.innerHTML=`<div style="border:1px solid #ddd;border-radius:10px;padding:12px"><b>Tööde loomise tulemus</b>
+   <div style="margin-top:8px">✅ Loodud: <b>${created.length}</b> · ℹ️ Juba olemas: <b>${existing.length}</b> · ❌ Vigu: <b>${failed.length}</b></div>
+   ${created.length?'<div style="margin-top:8px"><b>Uued tööd</b><div>'+created.map(x=>'<div>'+esc(x)+'</div>').join('')+'</div></div>':''}
+   ${existing.length?'<div style="margin-top:8px"><b>Juba olemas (uut kannet ei loodud)</b><div>'+existing.map(x=>'<div>'+esc(x)+'</div>').join('')+'</div></div>':''}
+   ${failed.length?'<div style="margin-top:8px"><b>Vead</b><div>'+failed.map(x=>'<div>'+esc(x)+'</div>').join('')+'</div></div>':''}</div>`;
+ }finally{btn.disabled=false;try{await psRefreshWork();}catch(e){showError(e.message);}}
 };
 
 async function openQuotes(){
