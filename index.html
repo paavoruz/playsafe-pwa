@@ -233,9 +233,12 @@ h1{font-size:30px;margin:0;font-weight:800}
 @media(max-width:520px){.headerActions{right:10px;gap:5px}.headerAction{width:46px;height:48px;border-radius:12px}.headerActionIcon{font-size:9px}.headerActionIcon svg{width:21px;height:21px}.headerActionQuote svg{width:21px;height:21px}}
 /* Pakkumiste vaates ei dubleeri päise HP ikooni */
 body:has(#quoteView[style*="display: block"]) #openQuotesButton{display:none!important}
-/* Ühtne navigatsioon igas vaates */
+/* Ühtne navigatsioon igas vaates; kerimisel peituv alumine riba */
 #headerActions{display:flex!important}
 #todoNav{display:flex!important}
+.todoNav{transition:transform .28s ease,opacity .28s ease;will-change:transform,opacity}
+.todoNav.navHidden{transform:translate(-50%,calc(100% + 28px + env(safe-area-inset-bottom)));opacity:0;pointer-events:none}
+@media(prefers-reduced-motion:reduce){.todoNav{transition:none}}
 </style>
 
 <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -2563,6 +2566,23 @@ async function loadTodoSheet(){
  catch(e){toast('Ülesannete laadimine ebaõnnestus: '+e.message);}
 }
 async function saveTodoSheet(item){await runScript('psSalvestaUlesanne',[item]);await loadTodoSheet();}
+/* Peida navigatsioon alla kerides ja näita üles kerides. */
+(function setupAutoHideNavigation(){
+ let previousY=Math.max(0,window.scrollY),ticking=false;
+ const nav=document.getElementById('todoNav');
+ if(!nav)return;
+ window.addEventListener('scroll',()=>{
+  if(ticking)return;
+  ticking=true;
+  requestAnimationFrame(()=>{
+   const y=Math.max(0,window.scrollY),delta=y-previousY;
+   if(y<45||delta< -7)nav.classList.remove('navHidden');
+   else if(delta>7&&y>90)nav.classList.add('navHidden');
+   previousY=y;ticking=false;
+  });
+ },{passive:true});
+ nav.addEventListener('click',()=>nav.classList.remove('navHidden'));
+})();
 function setActiveTab(tab){
  $("tabRegister").classList.toggle("active",tab==="register");
  $("tabTodo").classList.toggle("active",tab==="todo");
