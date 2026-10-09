@@ -36,6 +36,9 @@ h1{font-size:30px;margin:0;font-weight:800}
 .objectCard{cursor:pointer;position:relative;padding-right:60px}
 .objectDeleteIcon{position:absolute;top:13px;right:13px;width:38px;height:38px;border:0;border-radius:11px;background:#fff0ee;color:#b42318;font-size:19px;cursor:pointer}
 .objectDeleteIcon:disabled{opacity:.5;cursor:wait}
+.objectReady{position:absolute;right:13px;top:18px;background:#e3f6e9;color:#18743a;border-radius:10px;padding:7px 11px;font-size:13px;font-weight:800}
+.statusReady{display:inline-block;background:#e3f6e9;color:#18743a;border-radius:9px;padding:6px 11px;font-weight:800}
+.objectActions{display:grid;gap:9px;margin-top:14px}
 .small{font-size:12px;color:#888;font-weight:700}
 .objectName{font-size:19px;font-weight:780;margin:4px 0}
 .muted{font-size:14px;color:#777}
@@ -282,7 +285,7 @@ h1{font-size:30px;margin:0;font-weight:800}
 
 <div id="objectModal" class="modalBackdrop">
   <div class="modal">
-    <div class="modalTitle">Uus objekt</div>
+    <div class="modalTitle" id="objectModalTitle">Uus objekt</div>
 
     <div class="formGroup">
       <label class="formLabel" for="newObjectName">Objekt *</label>
@@ -322,6 +325,11 @@ h1{font-size:30px;margin:0;font-weight:800}
       <input id="newObjectDate" class="formInput" type="date">
     </div>
 
+    <div id="editExtraFields" style="display:none">
+      <div class="formGroup"><label class="formLabel" for="editConfirmationDate">Töö kinnitamise kuupäev</label><input id="editConfirmationDate" class="formInput" type="date"></div>
+      <div class="formGroup"><label class="formLabel" for="editReportNumber">Aruande nr</label><input id="editReportNumber" class="formInput"></div>
+      <div class="formGroup"><label class="formLabel" for="editNotes">Märkused</label><textarea id="editNotes" class="formInput" rows="3"></textarea></div>
+    </div>
     <button id="saveNewObject" class="btn btnDark btnFull">Loo objekt</button>
     <button id="cancelNewObject" class="btn cancel">Loobu</button>
   </div>
@@ -383,6 +391,7 @@ let syncing=false;
 let hinnakiri=[];
 let selectedQuoteServices=new Set();
 let quoteServiceValues=new Map();
+let editingObjectNr=null;
 
 const $=id=>document.getElementById(id);
 
@@ -620,6 +629,7 @@ async function syncObjects(){
 }
 
 function objectName(o){return o.objekt||o.nimi||"Nimetu objekt"}
+function isReady(o){return String(o?.staatus||"").trim().toLocaleLowerCase("et-EE")==="valmis"}
 function esc(v){
  return String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;")
  .replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;");
@@ -650,11 +660,12 @@ function renderObjects(){
   d.innerHTML=`<div class="small">NR ${esc(o.nr)}</div>
   <div class="objectName">${esc(objectName(o))}</div>
   <div class="muted">${esc(o.aadress||"")}</div>
-  <button type="button" class="objectDeleteIcon" aria-label="Kustuta objekt ${esc(objectName(o))}" title="Kustuta objekt">🗑</button>`;
+  ${isReady(o)?'<span class="objectReady">Valmis</span>':`<button type="button" class="objectDeleteIcon" aria-label="Kustuta objekt ${esc(objectName(o))}" title="Kustuta objekt">🗑</button>`}`;
   d.onclick=()=>showObject(o);
-  d.querySelector(".objectDeleteIcon").onclick=e=>{
-   e.stopPropagation();
-   deleteObject(o,e.currentTarget);
+   const trash=d.querySelector(".objectDeleteIcon");
+   if(trash)trash.onclick=e=>{
+    e.stopPropagation();
+    deleteObject(o,e.currentTarget);
   };
   $("objectList").appendChild(d);
  });
@@ -682,18 +693,26 @@ function showObject(o){
   ${detailRow("Väljaku tüüp",o.valjakuTyyp)}
   ${detailRow("Hindamise liik",o.hindamiseLiik)}
   ${detailRow("Tellija",o.tellija)}
-  ${detailRow("Staatus",o.staatus)}
-  ${detailRow("Aruande nr",o.aruandeNr)}
-  <button id="startWork" class="btn btnDark btnFull">Alusta pildistamist</button>
-   <button id="deleteObject" class="btn btnFull" style="margin-top:12px;background:#fff0ee;color:#b42318">🗑 Kustuta objekt</button>
+     <div class="row"><div class="label">Staatus</div><div class="value">${isReady(o)?'<span class="statusReady">Valmis</span>':esc(o.staatus||"Töös")}</div></div>
+   ${detailRow("Töö kuupäev",formatObjectDate(o.tooKuupaev))}
+   ${detailRow("Töö kinnitamise kuupäev",formatObjectDate(o.kinnitamiseKuupaev))}
+   ${detailRow("Aruande nr",o.aruandeNr)}
+   ${detailRow("Märkused",o.markused)}
+   <div class="objectActions">
+    ${isReady(o)?'<button id="changeStatus" class="btn btnGray btnFull">↩ Võta uuesti töösse</button>':`<button id="editObject" class="btn btnGray btnFull">✏️ Muuda objekti andmeid</button><button id="changeStatus" class="btn btnBlue btnFull">✓ Märgi valmis</button><button id="deleteObject" class="btn btnFull" style="background:#fff0ee;color:#b42318">🗑 Kustuta objekt</button>`}
+    <button id="startWork" class="btn btnDark btnFull">${isReady(o)?"Vaata elemente ja fotosid":"Alusta pildistamist"}</button>
+   </div>
  </div>`;
 
  $("detailBack").onclick=showList;
  $("startWork").onclick=()=>openWork(o);
- $("deleteObject").onclick=()=>deleteObject(o,$("deleteObject"));
+   if($("deleteObject"))$("deleteObject").onclick=()=>deleteObject(o,$("deleteObject"));
+  if($("editObject"))$("editObject").onclick=()=>openEditObject(o);
+  $("changeStatus").onclick=()=>changeObjectStatus(o);
 }
 
 async function deleteObject(o, triggerButton=null){
+  if(isReady(o)){toast("Valmis objekti ei saa kustutada");return;}
   if(!navigator.onLine){toast("Objekti kustutamiseks on vaja internetti");return;}
   const nimi=objectName(o);
   const nr=String(o.nr);
@@ -744,6 +763,10 @@ function localDateISO(){
 }
 
 async function openObjectModal(){
+  editingObjectNr=null;
+  $("objectModalTitle").textContent="Uus objekt";
+  $("saveNewObject").textContent="Loo objekt";
+  $("editExtraFields").style.display="none";
  if(!navigator.onLine){
   toast("Uue objekti lisamiseks on vaja internetiühendust");
   return;
@@ -777,7 +800,59 @@ async function openObjectModal(){
  }
 }
 
+function formatObjectDate(v){
+ if(!v)return "";
+ if(/^\d{4}-\d{2}-\d{2}$/.test(String(v)))return String(v);
+ const d=new Date(v);
+ if(!isNaN(d.getTime()))return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+ return String(v);
+}
+async function openEditObject(o){
+ if(isReady(o)){toast("Valmis objekt tuleb esmalt uuesti töösse võtta");return;}
+ if(!navigator.onLine){toast("Muutmiseks on vaja internetti");return;}
+ editingObjectNr=o.nr;
+ $("objectModalTitle").textContent="Muuda objekti";
+ $("saveNewObject").textContent="Salvesta muudatused";
+ $("editExtraFields").style.display="block";
+ $("newObjectName").value=objectName(o);
+ $("newObjectAddress").value=o.aadress||"";
+ $("newObjectCustomer").value=o.tellija||"";
+ $("newObjectDate").value=formatObjectDate(o.tooKuupaev);
+ $("editConfirmationDate").value=formatObjectDate(o.kinnitamiseKuupaev);
+ $("editReportNumber").value=o.aruandeNr||"";
+ $("editNotes").value=o.markused||"";
+ $("objectModal").style.display="flex";
+ $("newObjectType").disabled=true;
+ $("newAssessmentType").disabled=true;
+ $("saveNewObject").disabled=true;
+ try{
+  await ensureToken();
+  await Promise.all([loadValjakuTyypid(),loadHindamiseLiigid()]);
+  for(const [id,value] of [["newObjectType",o.valjakuTyyp],["newAssessmentType",o.hindamiseLiik]]){
+   const el=$(id);
+   if(value && ![...el.options].some(x=>x.value===String(value))){const opt=new Option(String(value),String(value));el.add(opt);}
+   el.value=value||"";el.disabled=false;
+  }
+  $("saveNewObject").disabled=false;
+ }catch(e){showError("Muutmisvormi laadimise viga: "+e.message);}
+}
+async function changeObjectStatus(o){
+ const next=isReady(o)?"Töös":"Valmis";
+ if(!navigator.onLine){toast("Staatuse muutmiseks on vaja internetti");return;}
+ if(!confirm(isReady(o)?"Kas soovid objekti uuesti töösse võtta?":"Kas märgid objekti valmis? Pärast seda ei saa objekti andmeid muuta ega objekti kustutada."))return;
+ const btn=$("changeStatus");btn.disabled=true;
+ try{
+  await ensureToken();
+  await runScript("muudaObjektiStaatus",[o.nr,next]);
+  await syncObjects();
+  const updated=objektid.find(x=>String(x.nr)===String(o.nr));
+  if(updated)showObject(updated);
+  toast(next==="Valmis"?"Objekt märgitud valmis":"Objekt uuesti töös");
+ }catch(e){showError("Staatuse muutmine ebaõnnestus: "+e.message);toast("Staatust ei muudetud");}
+ finally{if(btn.isConnected)btn.disabled=false;}
+}
 async function createNewObject(){
+ if(editingObjectNr!==null)return saveEditedObject();
  const objekt=$("newObjectName").value.trim();
  const valjakuTyyp=$("newObjectType").value;
  const hindamiseLiik=$("newAssessmentType").value;
@@ -855,6 +930,22 @@ async function createNewObject(){
 $("newObjectButton").onclick=openObjectModal;
 $("cancelNewObject").onclick=()=>{$("objectModal").style.display="none"};
 $("saveNewObject").onclick=createNewObject;
+async function saveEditedObject(){
+ const nr=editingObjectNr;
+ const data={objekt:$("newObjectName").value.trim(),valjakuTyyp:$("newObjectType").value,hindamiseLiik:$("newAssessmentType").value,aadress:$("newObjectAddress").value.trim(),tellija:$("newObjectCustomer").value.trim(),tooKuupaev:$("newObjectDate").value,kinnitamiseKuupaev:$("editConfirmationDate").value,aruandeNr:$("editReportNumber").value.trim(),markused:$("editNotes").value.trim()};
+ if(!data.objekt||!data.valjakuTyyp||!data.hindamiseLiik||!data.tooKuupaev){toast("Täida kohustuslikud väljad");return;}
+ const btn=$("saveNewObject");btn.disabled=true;btn.textContent="Salvestan...";
+ try{
+  await ensureToken();
+  await runScript("muudaObjektiAndmeid",[nr,data]);
+  $("objectModal").style.display="none";editingObjectNr=null;
+  await syncObjects();
+  const updated=objektid.find(x=>String(x.nr)===String(nr));
+  if(updated)showObject(updated);
+  toast("Objekti andmed muudetud");
+ }catch(e){showError("Objekti muutmine ebaõnnestus: "+e.message);toast("Muudatusi ei salvestatud");}
+ finally{btn.disabled=false;btn.textContent="Salvesta muudatused";}
+}
 
 /* ================= ELEMENTS ================= */
 
@@ -986,7 +1077,8 @@ async function renderWork(){
  <div id="elementsHere" class="elementList"></div>`;
 
  $("workBack").onclick=()=>showObject(currentObject);
- $("newElement").onclick=openElementModal;
+   $("newElement").onclick=openElementModal;
+  if(isReady(currentObject))$("newElement").style.display="none";
 
  const container=$("elementsHere");
 
@@ -1047,7 +1139,8 @@ async function renderWork(){
     </div>`;
   }
 
-  d.querySelector(".photoButton").onclick=()=>openPhotoModal(e);
+     if(isReady(currentObject))d.querySelectorAll(".photoButton,.editElement,.deleteElement").forEach(x=>x.style.display="none");
+   d.querySelector(".photoButton").onclick=()=>openPhotoModal(e);
   d.querySelector(".editElement").onclick=()=>editElement(e);
   d.querySelector(".deleteElement").onclick=()=>deleteElement(e);
   container.appendChild(d);
