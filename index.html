@@ -389,6 +389,7 @@ h1{font-size:30px;margin:0;font-weight:800}
 <section id="todoView" style="display:none">
  <div class="todoTop"><b>Minu ülesanded</b><button id="todoAdd" class="btn" style="background:#ddf8df;color:#188344">+ Lisa ülesanne</button></div>
  <div id="todoEditor" style="display:none;background:white;padding:14px;border-radius:14px;margin-bottom:14px">
+  <div class="todoDateRow"><label for="todoWorkSelect">Seotud töö (valikuline)</label><select id="todoWorkSelect" class="todoInput"><option value="">Ilma tööta</option></select></div>
   <input id="todoText" class="todoInput" maxlength="300" placeholder="Kirjuta ülesanne...">
   <div class="todoDateRow"><label for="todoDeadlineInput">Tähtaeg (valikuline)</label><input type="date" id="todoDeadlineInput"></div>
   <div class="todoDateRow"><label for="todoPersonInput">Isiku nimi (valikuline)</label><input type="text" id="todoPersonInput" placeholder="Näiteks Mari Tamm" maxlength="100" autocomplete="off"></div>
@@ -2520,6 +2521,24 @@ const TODO_STATES=["Tegemata","Töös","Tehtud"];
 let todoItems=[];
 let todoActive=0;
 let todoEditing=null;
+let todoWorks=[];
+async function loadTodoWorks(){
+ try{
+  todoWorks=await runScript('psUlesandeTood',[]);
+  const sel=$("todoWorkSelect"),current=sel.value;
+  sel.replaceChildren(new Option("Ilma tööta",""));
+  for(const w of todoWorks)sel.add(new Option(w.nr+" – "+w.objekt,w.nr));
+  sel.value=current;
+ }catch(e){toast("Tööde laadimine ebaõnnestus: "+e.message);}
+}
+$("todoWorkSelect").onchange=()=>{
+ const w=todoWorks.find(x=>x.nr===$("todoWorkSelect").value);
+ if(!w)return;
+ $("todoText").value="Ülevaatus: "+w.objekt;
+ $("todoPersonInput").value=w.person||"";
+ $("todoPhoneInput").value=w.phone||"";
+ $("todoMapInput").value=w.mapUrl||"";
+};
 
 async function loadTodoSheet(){
  try{todoItems=await runScript('psGetUlesanded',[]);renderTodo();}
@@ -2637,7 +2656,9 @@ async function moveTodo(item,step){
  const status=TODO_STATES[TODO_STATES.indexOf(item.status)+step];
  try{await saveTodoSheet({...item,status});}catch(e){toast("Staatuse muutmine ebaõnnestus: "+e.message);}
 }
-function editTodo(item){
+async function editTodo(item){
+ await loadTodoWorks();
+ $("todoWorkSelect").value=item?.tooNr?String(item.tooNr):"";
  todoEditing=item?item.id:null;
  $("todoText").value=item?item.text:"";
  $("todoDeadlineInput").value=item?.deadline||"";
@@ -2661,7 +2682,7 @@ $("todoSave").onclick=async()=>{
  if(phone && !/^\+?[0-9]{3,15}$/.test(phone.replace(/[^+0-9]/g,""))){toast("Sisesta korrektne telefoninumber");return;}
  if(!value){toast("Sisesta ülesande tekst");return;}
  const original=todoEditing!==null?todoItems.find(t=>t.id===todoEditing):null;
- const item={...(original||{}),text:value,deadline,phone,person,mapUrl,status:original?.status||TODO_STATES[todoActive]};
+ const item={...(original||{}),tooNr:$("todoWorkSelect").value,text:value,deadline,phone,person,mapUrl,status:original?.status||TODO_STATES[todoActive]};
  const btn=$("todoSave");btn.disabled=true;
  try{await saveTodoSheet(item);$("todoEditor").style.display="none";toast("Ülesanne salvestatud");}
  catch(e){toast("Ülesande salvestamine ebaõnnestus: "+e.message);}
