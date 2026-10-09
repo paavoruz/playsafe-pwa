@@ -224,6 +224,9 @@ h1{font-size:30px;margin:0;font-weight:800}
 .todoCardActions .todoEdit:not(.todoRightStart){margin-left:0}
 .todoCardActions .todoMap:not(.todoRightStart),
 .todoCardActions .todoPhone:not(.todoRightStart){margin-left:0}
+.headerActionIcon{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:3px;font-size:10px;line-height:1.1}
+.headerActionIcon svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+@media(max-width:520px){.headerActions{right:10px;gap:5px}.headerAction{width:46px;height:48px;border-radius:12px}.headerActionIcon{font-size:9px}.headerActionIcon svg{width:21px;height:21px}.headerActionQuote svg{width:21px;height:21px}}
 </style>
 
 <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -236,7 +239,8 @@ h1{font-size:30px;margin:0;font-weight:800}
   <h1 id="pageTitle">Register</h1>
   <div id="headerActions" class="headerActions">
     <button id="openQuotesButton" class="headerAction headerActionQuote" type="button" aria-label="Hinnapakkumised" title="Hinnapakkumised"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2.5h7l5 5V21H7a2 2 0 0 1-2-2V4.5a2 2 0 0 1 2-2Z"/><path d="M14 2.5V8h5M9 12h6M9 16h6"/></svg><span>HP</span></button>
-    <button id="openDatabaseButton" class="headerAction" type="button" title="Asutused ja väljakud" aria-label="Asutused ja väljakud" style="font-size:12px;width:auto;padding:0 9px">AV</button>
+    <button id="openClientsButton" class="headerAction headerActionIcon" type="button" title="Kliendid" aria-label="Kliendid"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3.5 20v-2a5.5 5.5 0 0 1 11 0v2M16 5a3 3 0 0 1 0 6M17 14a5 5 0 0 1 3.5 4.8V20"/></svg><span>Kliendid</span></button>
+    <button id="openSitesButton" class="headerAction headerActionIcon" type="button" title="Väljakud" aria-label="Väljakud"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2.4"/></svg><span>Väljakud</span></button>
     <button id="newObjectButton" class="headerAction headerActionAdd" type="button" aria-label="Uus objekt" title="Uus objekt">+</button>
   </div>
 </header>
@@ -373,8 +377,8 @@ h1{font-size:30px;margin:0;font-weight:800}
 
 <section id="psDatabaseView" style="display:none">
  <div class="card">
-  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap"><div class="detailTitle">Asutused ja väljakud</div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btnDark" id="psDbQuoteBack" type="button" style="display:none">← Tagasi pakkumise juurde</button><button class="btn btnGray" id="psDbBack" type="button">← Register</button></div></div>
-  <div class="quoteNav" style="margin:12px 0"><button class="btn btnDark" id="psAsutusedTab" type="button">Asutused</button><button class="btn btnGray" id="psValjakudTab" type="button">Väljakud</button></div>
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap"><div class="detailTitle" id="psDbTitle">Kliendid</div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btnDark" id="psDbQuoteBack" type="button" style="display:none">← Tagasi pakkumise juurde</button><button class="btn btnGray" id="psDbBack" type="button">← Register</button></div></div>
+  
   <input id="psDbSearch" class="formInput" placeholder="Otsi nime või aadressi järgi" style="width:100%;margin-bottom:10px">
   <button class="btn btnDark" id="psDbNew" type="button">+ Lisa asutus</button>
   <div id="psDbList" style="margin-top:12px"></div>
@@ -2749,8 +2753,8 @@ function psDbField(key,label,value='',kind='text'){
 }
 function psDbRender(){
  const as=psDbTab==='asutused';
- $('psAsutusedTab').className='btn '+(as?'btnDark':'btnGray');$('psValjakudTab').className='btn '+(!as?'btnDark':'btnGray');
- $('psDbNew').textContent=as?'+ Lisa asutus':'+ Lisa väljak';
+ $('psDbTitle').textContent=as?'Kliendid':'Väljakud';
+ $('psDbNew').textContent=as?'+ Lisa klient':'+ Lisa väljak';
  const query=$('psDbSearch').value.trim().toLocaleLowerCase('et-EE');
  const items=(as?psDbAsutused:psDbValjakud).filter(x=>[x.nimi,x.aadress].some(v=>String(v||'').toLocaleLowerCase('et-EE').includes(query)));
  $('psDbList').innerHTML=items.length?items.map(x=>{
@@ -2772,7 +2776,7 @@ function psDbEdit(id=''){
  const as=psDbTab==='asutused';
  const x=(as?psDbAsutused:psDbValjakud).find(o=>o.id===id)||{};
  psDbEditing=id||null;
- $('psDbEditorTitle').textContent=(id?'Muuda ':'Lisa ')+(as?'asutust':'väljakut');
+ $('psDbEditorTitle').textContent=(id?'Muuda ':'Lisa ')+(as?'klienti':'väljakut');
  let html=psDbField('nimi','Nimi *',x.nimi)+psDbField('aadress','Aadress',x.aadress);
  if(as){html+=psDbField('registrikood','Registrikood',x.registrikood)+psDbField('kontaktisik','Kontaktisik',x.kontaktisik)+psDbField('telefon','Telefon',x.telefon,'tel')+psDbField('email','E-post',x.email,'email');}
  else{
@@ -2821,13 +2825,17 @@ async function psOpenAcceptedSites(quoteNr,asutuseId){
  if(select)select.value=asutuseId;
  $('psDbEditorTitle').textContent='Lisa pakkumise '+quoteNr+' väljak';
 }
-function psDbOpen(){
+function psDbOpen(tab){
+ if(tab==='asutused'||tab==='valjakud')psDbTab=tab;
+ $('psDbEditor').style.display='none';
+ $('psDbSearch').value='';
  if(!psQuoteSitesReturnNr)$('psDbQuoteBack').style.display='none';
  ['listView','detailView','workView','quoteView','todoView'].forEach(id=>$(id).style.display='none');
- $('psDatabaseView').style.display='block';$('todoNav').style.display='none';$('headerActions').style.display='none';$('pageTitle').textContent='Asutused ja väljakud';
+ $('psDatabaseView').style.display='block';$('todoNav').style.display='none';$('headerActions').style.display='none';$('pageTitle').textContent=psDbTab==='asutused'?'Kliendid':'Väljakud';
  psDbLoad();
 }
-$('openDatabaseButton').onclick=psDbOpen;
+$('openClientsButton').onclick=()=>psDbOpen('asutused');
+$('openSitesButton').onclick=()=>psDbOpen('valjakud');
 $('psDbBack').onclick=()=>{ psQuoteSitesReturnNr='';$('psDbQuoteBack').style.display='none';$('psDatabaseView').style.display='none';showList(false); };
 $('psDbQuoteBack').onclick=async()=>{
  const nr=psQuoteSitesReturnNr;
@@ -2838,8 +2846,6 @@ $('psDbQuoteBack').onclick=async()=>{
  crmSwitchTab(true);
  toast('Väljakud salvestatud. Vali pakkumise juures „Loo tööd”.');
 };
-$('psAsutusedTab').onclick=()=>{psDbTab='asutused';$('psDbEditor').style.display='none';psDbRender();};
-$('psValjakudTab').onclick=()=>{psDbTab='valjakud';$('psDbEditor').style.display='none';psDbRender();};
 $('psDbSearch').oninput=psDbRender;
 $('psDbNew').onclick=()=>psDbEdit();
 $('psDbSave').onclick=psDbSave;
