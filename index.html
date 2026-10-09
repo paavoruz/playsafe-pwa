@@ -283,6 +283,14 @@ h1{font-size:30px;margin:0;font-weight:800}
       </div>
     </div>
 
+    <div class="formGrid">
+      <div class="formGroup"><label class="formLabel" for="quoteRegCode">Tellija registrikood</label><input id="quoteRegCode" class="formInput" inputmode="numeric"></div>
+      <div class="formGroup"><label class="formLabel" for="quoteBillingAddress">Tellija arveaadress</label><input id="quoteBillingAddress" class="formInput" autocomplete="street-address"></div>
+      <div class="formGroup"><label class="formLabel" for="quoteContact">Kontaktisik</label><input id="quoteContact" class="formInput" autocomplete="name"></div>
+      <div class="formGroup"><label class="formLabel" for="quotePhone">Telefon</label><input id="quotePhone" class="formInput" type="tel" autocomplete="tel"></div>
+      <div class="formGroup"><label class="formLabel" for="quoteEmail">E-post</label><input id="quoteEmail" class="formInput" type="email" autocomplete="email"></div>
+    </div>
+
     <div class="formGroup">
       <label class="formLabel" for="quoteFieldType">Väljaku tüüp *</label>
       <select id="quoteFieldType" class="formInput">
@@ -2180,6 +2188,11 @@ async function saveQuote(){
   const result=await runScript("lisaHinnapakkumine",[{
    kuupaev:$("quoteDate").value||localDateISO(),
    tellija,
+   registrikood:$("quoteRegCode").value.trim(),
+   arveAadress:$("quoteBillingAddress").value.trim(),
+   kontaktisik:$("quoteContact").value.trim(),
+   telefon:$("quotePhone").value.trim(),
+   email:$("quoteEmail").value.trim(),
    objekt,
    valjakuTyyp,
    aadress:$("quoteAddress").value.trim(),
