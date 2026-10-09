@@ -188,6 +188,12 @@ h1{font-size:30px;margin:0;font-weight:800}
 .todoCard p{margin:0;font-size:14px}
 .todoCardHeader{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px}
 .todoCardHeader p{flex:1;min-width:0}
+.todoHeadingMeta{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap;min-width:0;max-width:65%}
+.todoHeadingMeta .todoPerson{margin-left:0;display:inline-flex;align-items:center;gap:4px;max-width:100%;font-size:11px}
+.todoPerson svg,.todoPhone svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.todoCardActions .todoPhone{margin-left:0;display:inline-flex;align-items:center;gap:5px;max-width:none}
+.todoCardActions .todoMap{margin-left:0}
+.todoCardActions .todoEdit{margin-left:auto}
 .todoDeadline{flex-shrink:0;font-size:11px;font-weight:700;padding:4px 6px;border-radius:7px;background:#f0e7ff;color:#5c398b;white-space:nowrap}
 .todoDeadline.overdue{background:#ffe7e7;color:#b72c3e}
 .todoDeadline.today{background:#fff1cc;color:#805900}
@@ -196,7 +202,7 @@ h1{font-size:30px;margin:0;font-weight:800}
 .todoDateRow input{padding:9px;border:1px solid #d6d1e2;border-radius:10px;font-size:16px;max-width:190px}
 .todoCardActions{display:flex;gap:5px;flex-wrap:wrap}
 .todoCardActions button{font-size:12px;border:0;border-radius:8px;padding:7px;background:#eee4ff;color:#50318b;display:inline-flex;align-items:center;justify-content:center;min-width:32px;min-height:32px}
-.todoCardActions .todoEdit{margin-left:0}
+.todoCardActions .todoEdit{margin-left:auto;flex-shrink:0}
 .todoPerson{margin-left:auto;align-self:center;font-size:12px;color:#5c398b;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .todoPerson + .todoPhone{margin-left:0}
 .todoMap + .todoPerson{margin-left:0}
@@ -212,6 +218,12 @@ h1{font-size:30px;margin:0;font-weight:800}
 .todoSwitch button.active{background:#dac7ff}
 .todoInput{width:100%;border:1px solid #d6d1e2;border-radius:12px;padding:13px;font-size:16px}
 @media(max-width:580px){.todoColumns{display:block}.todoColumn{display:none}.todoColumn.active{display:block}.todoSwitch{display:flex}}
+
+/* Ülesandekaardi parempoolsed tegevused: Maps, telefon, muuda, kustuta */
+.todoCardActions .todoRightStart{margin-left:auto}
+.todoCardActions .todoEdit:not(.todoRightStart){margin-left:0}
+.todoCardActions .todoMap:not(.todoRightStart),
+.todoCardActions .todoPhone:not(.todoRightStart){margin-left:0}
 </style>
 
 <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -2402,6 +2414,14 @@ function renderTodo(){
    const card=document.createElement("div");card.className="todoCard";
    const heading=document.createElement("div");heading.className="todoCardHeader";
    const text=document.createElement("p");text.textContent=item.text;heading.appendChild(text);
+   const headingMeta=document.createElement("div");headingMeta.className="todoHeadingMeta";
+   if(item.person){
+    const person=document.createElement("span");person.className="todoPerson";
+    person.title=String(item.person);
+    person.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/></svg>';
+    person.appendChild(document.createTextNode(String(item.person)));
+    headingMeta.appendChild(person);
+   }
    if(item.deadline){
     const due=document.createElement("span");due.className="todoDeadline";
     const [year,month,day]=item.deadline.split("-");
@@ -2409,8 +2429,9 @@ function renderTodo(){
     const today=new Date();const localToday=[today.getFullYear(),String(today.getMonth()+1).padStart(2,"0"),String(today.getDate()).padStart(2,"0")].join("-");
     if(item.status!=="Tehtud" && item.deadline<localToday){due.classList.add("overdue");card.classList.add("overdue");}
     else if(item.status!=="Tehtud" && item.deadline===localToday)due.classList.add("today");
-    heading.appendChild(due);
+    headingMeta.appendChild(due);
    }
+   heading.appendChild(headingMeta);
    card.appendChild(heading);
    const actions=document.createElement("div");actions.className="todoCardActions";
    const makeBtn=(label,action)=>{
@@ -2434,20 +2455,22 @@ function renderTodo(){
      actions.appendChild(map);
     }
    }
-   if(item.person){
-    const person=document.createElement("span");person.className="todoPerson";person.textContent=String(item.person);person.title=String(item.person);actions.appendChild(person);
-   }
    if(item.phone){
     const phone=String(item.phone).trim();
     const dial=phone.replace(/[^+0-9]/g,"");
     if(/^\+?[0-9]{3,15}$/.test(dial)){
      const link=document.createElement("a");link.className="todoPhone";
-     link.textContent=phone;link.href="tel:"+dial;
+     link.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7l.5 3a2 2 0 0 1-.6 1.8L7.1 10a16 16 0 0 0 6.9 6.9l1.5-1.9a2 2 0 0 1 1.8-.6l3 .5a2 2 0 0 1 1.7 2Z"/></svg>';
+     link.appendChild(document.createTextNode(phone));link.href="tel:"+dial;
      link.title="Helista: "+phone;link.setAttribute("aria-label","Helista numbrile "+phone);
      actions.appendChild(link);
     }
    }
    addIconBtn("Muuda","todoEdit",'<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L9 17l-4 1 1-4Z"/>',()=>editTodo(item));
+   // Hoia Google Maps, telefon, pliiats ja prügikast alati paremas servas.
+   // Noolte ja parempoolsete tegevuste vahele jääb painduv vaba ruum.
+   const rightFirst=actions.querySelector(".todoMap, .todoPhone, .todoEdit");
+   if(rightFirst)rightFirst.classList.add("todoRightStart");
    addIconBtn("Kustuta","todoDelete",'<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 10v7M14 10v7"/>',()=>{if(confirm("Kas kustutada see ülesanne?")){todoItems=todoItems.filter(t=>t.id!==item.id);saveTodoLocal();renderTodo();}});
    card.appendChild(actions);col.appendChild(card);
   });
