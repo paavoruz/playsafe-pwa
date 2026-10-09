@@ -186,7 +186,10 @@ h1{font-size:30px;margin:0;font-weight:800}
 .todoCard{background:white;border-radius:12px;padding:12px;margin-bottom:9px;overflow-wrap:anywhere;box-shadow:0 1px 3px #0000000a}
 .todoCard p{margin:0 0 10px;font-size:14px}
 .todoCardActions{display:flex;gap:5px;flex-wrap:wrap}
-.todoCardActions button{font-size:12px;border:0;border-radius:8px;padding:7px;background:#eee4ff;color:#50318b}
+.todoCardActions button{font-size:12px;border:0;border-radius:8px;padding:7px;background:#eee4ff;color:#50318b;display:inline-flex;align-items:center;justify-content:center;min-width:32px;min-height:32px}
+.todoCardActions .todoEdit{margin-left:auto}
+.todoCardActions .todoDelete{background:#fff0f1;color:#b33c4c}
+.todoCardActions svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .todoSwitch{display:none;gap:5px;margin-bottom:12px}
 .todoSwitch button{flex:1;border:0;padding:11px 3px;border-radius:10px;background:#e9e9ef;font-size:12px;font-weight:700}
 .todoSwitch button.active{background:#dac7ff}
@@ -2369,8 +2372,14 @@ function renderTodo(){
    };
    if(i>0)makeBtn("←",()=>moveTodo(item,-1));
    if(i<2)makeBtn("→",()=>moveTodo(item,1));
-   makeBtn("Muuda",()=>editTodo(item));
-   makeBtn("Kustuta",()=>{if(confirm("Kas kustutada see ülesanne?")){todoItems=todoItems.filter(t=>t.id!==item.id);saveTodoLocal();renderTodo();}});
+   const addIconBtn=(label,cssClass,svgPaths,action)=>{
+    const b=document.createElement("button");b.type="button";b.className=cssClass;
+    b.title=label;b.setAttribute("aria-label",label);
+    b.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true">'+svgPaths+'</svg>';
+    b.onclick=action;actions.appendChild(b);
+   };
+   addIconBtn("Muuda","todoEdit",'<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L9 17l-4 1 1-4Z"/>',()=>editTodo(item));
+   addIconBtn("Kustuta","todoDelete",'<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 10v7M14 10v7"/>',()=>{if(confirm("Kas kustutada see ülesanne?")){todoItems=todoItems.filter(t=>t.id!==item.id);saveTodoLocal();renderTodo();}});
    card.appendChild(actions);col.appendChild(card);
   });
   columns.appendChild(col);
