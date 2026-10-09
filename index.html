@@ -297,8 +297,8 @@ h1{font-size:30px;margin:0;font-weight:800}
 
       <div class="formGroup">
         <label class="formLabel" for="newAssessmentType">Hindamise liik *</label>
-        <select id="newAssessmentType" class="formInput">
-          <option value="AP">AP</option>
+        <select id="newAssessmentType" class="formInput" disabled>
+          <option value="">Laadin hindamise liike...</option>
         </select>
       </div>
     </div>
@@ -709,7 +709,8 @@ async function openObjectModal(){
  $("newObjectType").disabled=true;
  $("newObjectType").innerHTML='<option value="">Laadin väljaku tüüpe...</option>';
  $("saveNewObject").disabled=true;
- $("newAssessmentType").value="AP";
+ $("newAssessmentType").disabled=true;
+ $("newAssessmentType").innerHTML='<option value="">Laadin hindamise liike...</option>';
  $("newObjectAddress").value="";
  $("newObjectCustomer").value="";
  $("newObjectDate").value=localDateISO();
@@ -717,15 +718,18 @@ async function openObjectModal(){
  setTimeout(()=>$("newObjectName").focus(),100);
  try{
   await ensureToken();
-  const tyypid=await loadValjakuTyypid();
+  const [tyypid, liigid]=await Promise.all([loadValjakuTyypid(), loadHindamiseLiigid()]);
   if(!tyypid.length)throw new Error("Registris pole väljaku tüüpe.");
+  if(!liigid.length)throw new Error("Registris pole hindamise liike.");
   $("newObjectType").disabled=false;
+  $("newAssessmentType").disabled=false;
   $("saveNewObject").disabled=false;
  }catch(e){
   console.error(e);
-  $("newObjectType").innerHTML='<option value="">Tüüpe ei õnnestunud laadida</option>';
-  showError("Väljaku tüüpide laadimise viga: "+e.message);
-  toast("Väljaku tüüpe ei õnnestunud laadida");
+  $("newObjectType").innerHTML='<option value="">Valikute laadimine ebaõnnestus</option>';
+  $("newAssessmentType").innerHTML='<option value="">Valikute laadimine ebaõnnestus</option>';
+  showError("Valikute laadimise viga: "+e.message);
+  toast("Valikuid ei õnnestunud laadida");
  }
 }
 
@@ -745,6 +749,11 @@ async function createNewObject(){
 
  if(!valjakuTyyp){
   toast("Vali väljaku tüüp");
+  return;
+ }
+
+ if(!hindamiseLiik){
+  toast("Vali hindamise liik");
   return;
  }
 
@@ -1727,6 +1736,24 @@ function calculateQuote(){
  $("quoteVat").textContent=euro(vat);
  $("quoteGross").textContent=euro(net+vat);
  return {net,vat,gross:net+vat};
+}
+
+async function loadHindamiseLiigid(){
+ const liigid=await runScript("getHindamiseLiigid",[]);
+ const values=Array.isArray(liigid)?liigid:[];
+ const select=$("newAssessmentType");
+ if(select){
+  const current=select.value;
+  select.innerHTML='<option value="">Vali hindamise liik</option>';
+  values.forEach(v=>{
+   const opt=document.createElement("option");
+   opt.value=v;
+   opt.textContent=v;
+   select.appendChild(opt);
+  });
+  if(values.includes(current))select.value=current;
+ }
+ return values;
 }
 
 async function loadValjakuTyypid(){
