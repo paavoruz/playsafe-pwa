@@ -2800,6 +2800,30 @@ async function psDbLoad(){
  }
  catch(e){$('psDbList').textContent='Andmete laadimine ebaõnnestus: '+e.message;}
 }
+// Google Mapsi aadressiotsing: ei vaja API võtit ega muuda käsitsi valitud asukohta.
+function psMapLinkFromAddress(address){
+ const a=String(address||'').trim();
+ return a?'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(a):'';
+}
+function psDbBindAutoMap(){
+ const address=$('psDbFields').querySelector('[data-psfield="aadress"]');
+ const map=$('psDbFields').querySelector('[data-psfield="mapUrl"]');
+ if(!address||!map)return;
+ // Automaatselt loodud linki võib muuta; käsitsi muudetut ei kirjutata üle.
+ let lastGenerated=psMapLinkFromAddress(address.value);
+ const sync=()=>{
+  const old=map.value.trim();
+  if(!old||old===lastGenerated){
+   const next=psMapLinkFromAddress(address.value);
+   map.value=next;
+   lastGenerated=next;
+  }
+ };
+ address.addEventListener('input',sync);
+ address.addEventListener('change',sync);
+ // Olemasolevat linki avamisel ei asendata.
+ if(!map.value.trim())sync();
+}
 function psDbEdit(id=''){
  const as=psDbTab==='asutused';
  const x=(as?psDbAsutused:psDbValjakud).find(o=>o.id===id)||{};
@@ -2818,7 +2842,7 @@ function psDbEdit(id=''){
   html+=`<label style="display:block;margin-top:10px;font-size:13px;font-weight:600">Staatus<select class="formInput" data-psfield="staatus" style="display:block;width:100%;margin-top:4px">${['Aktiivne','Mitteaktiivne'].map(v=>`<option ${v===(x.staatus||'Aktiivne')?'selected':''}>${v}</option>`).join('')}</select></label>`;
  }
  html+=`<label style="display:block;margin-top:10px;font-size:13px;font-weight:600">Märkused<textarea class="formInput" data-psfield="markused" style="display:block;width:100%;margin-top:4px">${psDbSafe(x.markused||'')}</textarea></label>`;
- $('psDbFields').innerHTML=html;$('psDbEditor').style.display='block';$('psDbEditor').scrollIntoView({behavior:'smooth',block:'start'});
+ $('psDbFields').innerHTML=html;if(!as)psDbBindAutoMap();$('psDbEditor').style.display='block';$('psDbEditor').scrollIntoView({behavior:'smooth',block:'start'});
 }
 async function psDbSave(){
  const data={id:psDbEditing||''};
