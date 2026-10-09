@@ -360,10 +360,7 @@ h1{font-size:30px;margin:0;font-weight:800}
  <label class="formLabel" for="psWorkDate" style="margin-top:12px">Töö kuupäev (määrab ka aasta)</label>
  <input class="formInput" id="psWorkDate" type="date">
  <div style="margin-top:12px"><label><input id="psWorkInspection" type="checkbox" checked> Inspekteerimine</label></div>
- <select class="formInput" id="psWorkInspectionType" style="margin-top:8px">
-  <option>Aastane põhiülevaatus</option><option>Kasutuselevõtueelne ülevaatus</option>
-  <option>Erakorraline ülevaatus</option><option>Muu inspekteerimine</option>
- </select>
+ <select class="formInput" id="psWorkInspectionType"></select>
  <div style="margin-top:12px"><label><input id="psWorkHic" type="checkbox"> HIC-mõõtmine</label></div>
  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px">
   <button class="btn btnDark" id="psWorkSave" type="button">Loo valitud tööd</button>
@@ -2227,6 +2224,15 @@ async function psOpenWork(nr){
  $('psWorkHic').checked=false;
  $('psWorkPanel').scrollIntoView({behavior:'smooth',block:'start'});
  try{
+  const options=await runScript('psRegistriValikud',[]);
+  const liigid=options.hindamiseLiigid||[];
+  $('psWorkInspectionType').innerHTML=liigid.map(x=>`<option value="${crmEsc(x)}">${crmEsc(x)}</option>`).join('');
+  $('psWorkInspection').disabled=!liigid.length;
+  $('psWorkInspection').checked=!!liigid.length;
+  const hic=liigid.find(x=>x.toLocaleLowerCase('et-EE')==='hic-mõõtmine');
+  $('psWorkHic').disabled=!hic;
+  $('psWorkHic').dataset.liik=hic||'';
+  $('psWorkHic').title=hic?'':'HIC-mõõtmise jaoks lisa see valik tööde registri E-veeru rippmenüüsse.';
   const sites=await runScript('psGetValjakud',[]);
   $('psWorkSite').innerHTML=sites.map(v=>`<option value="${crmEsc(v.id)}">${crmEsc(v.nimi)} · ${crmEsc(v.aadress)}</option>`).join('');
   if(!sites.length)$('psWorkExisting').textContent='Väljakuid pole veel lisatud. Lisa need vaates „Asutused ja väljakud”.';
@@ -2243,7 +2249,7 @@ $('psWorkSave').onclick=async()=>{
  const nr=psCurrentWorkQuote,id=$('psWorkSite').value,paev=$('psWorkDate').value;
  const types=[];
  if($('psWorkInspection').checked)types.push($('psWorkInspectionType').value);
- if($('psWorkHic').checked)types.push('HIC-mõõtmine');
+ if($('psWorkHic').checked)types.push($('psWorkHic').dataset.liik);
  if(!nr||!id||!paev||!types.length){showError('Vali väljak, kuupäev ja vähemalt üks teenus.');return;}
  if(!confirm(`Kas luua ${types.length} tööd valitud väljakule?`))return;
  const btn=$('psWorkSave');btn.disabled=true;
