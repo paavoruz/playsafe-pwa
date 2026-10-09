@@ -290,12 +290,8 @@ h1{font-size:30px;margin:0;font-weight:800}
     <div class="formGrid">
       <div class="formGroup">
         <label class="formLabel" for="newObjectType">Väljaku tüüp *</label>
-        <select id="newObjectType" class="formInput">
-          <option value="mänguväljak">mänguväljak</option>
-          <option value="spordiväljak">spordiväljak</option>
-          <option value="jõuväljak">jõuväljak</option>
-          <option value="rulapark">rulapark</option>
-          <option value="muu">muu</option>
+        <select id="newObjectType" class="formInput" disabled>
+          <option value="">Laadin väljaku tüüpe...</option>
         </select>
       </div>
 
@@ -703,20 +699,34 @@ function localDateISO(){
  return `${y}-${m}-${day}`;
 }
 
-function openObjectModal(){
+async function openObjectModal(){
  if(!navigator.onLine){
   toast("Uue objekti lisamiseks on vaja internetiühendust");
   return;
  }
 
  $("newObjectName").value="";
- $("newObjectType").value="mänguväljak";
+ $("newObjectType").disabled=true;
+ $("newObjectType").innerHTML='<option value="">Laadin väljaku tüüpe...</option>';
+ $("saveNewObject").disabled=true;
  $("newAssessmentType").value="AP";
  $("newObjectAddress").value="";
  $("newObjectCustomer").value="";
  $("newObjectDate").value=localDateISO();
  $("objectModal").style.display="flex";
  setTimeout(()=>$("newObjectName").focus(),100);
+ try{
+  await ensureToken();
+  const tyypid=await loadValjakuTyypid();
+  if(!tyypid.length)throw new Error("Registris pole väljaku tüüpe.");
+  $("newObjectType").disabled=false;
+  $("saveNewObject").disabled=false;
+ }catch(e){
+  console.error(e);
+  $("newObjectType").innerHTML='<option value="">Tüüpe ei õnnestunud laadida</option>';
+  showError("Väljaku tüüpide laadimise viga: "+e.message);
+  toast("Väljaku tüüpe ei õnnestunud laadida");
+ }
 }
 
 async function createNewObject(){
@@ -730,6 +740,11 @@ async function createNewObject(){
  if(!objekt){
   toast("Sisesta objekti nimi");
   $("newObjectName").focus();
+  return;
+ }
+
+ if(!valjakuTyyp){
+  toast("Vali väljaku tüüp");
   return;
  }
 
