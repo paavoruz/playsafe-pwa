@@ -352,6 +352,25 @@ h1{font-size:30px;margin:0;font-weight:800}
   </div>
 
 </div><div id="quoteListPanel" style="display:none"><div class="card"><div class="detailTitle">Kõik pakkumised</div><input id="quoteSearch" class="formInput" placeholder="Otsi pakkumist..." style="margin:12px 0"><button id="quoteRefresh" class="btn btnGray" type="button">Värskenda</button><div id="quoteListContent" style="margin-top:12px"></div></div></div>
+<div id="psWorkPanel" class="card" style="display:none;margin-top:12px">
+ <div class="detailTitle" id="psWorkTitle">Loo tööd</div>
+ <p class="muted">Vali olemasolev väljak ja teenused. Iga teenus luuakse eraldi tööna.</p>
+ <label class="formLabel" for="psWorkSite">Mänguväljak</label>
+ <select class="formInput" id="psWorkSite"></select>
+ <label class="formLabel" for="psWorkDate" style="margin-top:12px">Töö kuupäev (määrab ka aasta)</label>
+ <input class="formInput" id="psWorkDate" type="date">
+ <div style="margin-top:12px"><label><input id="psWorkInspection" type="checkbox" checked> Inspekteerimine</label></div>
+ <select class="formInput" id="psWorkInspectionType" style="margin-top:8px">
+  <option>Aastane põhiülevaatus</option><option>Kasutuselevõtueelne ülevaatus</option>
+  <option>Erakorraline ülevaatus</option><option>Muu inspekteerimine</option>
+ </select>
+ <div style="margin-top:12px"><label><input id="psWorkHic" type="checkbox"> HIC-mõõtmine</label></div>
+ <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px">
+  <button class="btn btnDark" id="psWorkSave" type="button">Loo valitud tööd</button>
+  <button class="btn btnGray" id="psWorkClose" type="button">Sulge</button>
+ </div>
+ <div id="psWorkExisting" class="muted" style="margin-top:12px"></div>
+</div>
 </section>
 
 <section id="psDatabaseView" style="display:none">
@@ -2170,7 +2189,8 @@ function crmEsc(x){return String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":
 function crmRenderQuotes(){
  const q=($('quoteSearch').value||'').toLowerCase();
  const items=crmQuoteCache.filter(x=>[x.nr,x.tellija,x.objekt].some(y=>String(y||'').toLowerCase().includes(q)));
- $('quoteListContent').innerHTML=items.length?items.map(x=>`<div class="card" style="border:1px solid #ddd;margin:8px 0"><b>${crmEsc(x.nr)}</b> · ${crmEsc(x.kuupaev)}<div>${crmEsc(x.tellija)} — ${crmEsc(x.objekt)}</div><div><b>${crmEsc(x.kokku)} €</b></div><select class="formInput crmStatus" data-nr="${crmEsc(x.nr)}" style="margin-top:8px"><option ${x.staatus==='Koostatud'?'selected':''}>Koostatud</option><option ${x.staatus==='Saadetud'?'selected':''}>Saadetud</option><option ${x.staatus==='Aktsepteeritud'?'selected':''}>Aktsepteeritud</option><option ${x.staatus==='Tagasi lükatud'?'selected':''}>Tagasi lükatud</option></select>${/^https:\/\//.test(x.pdf)?`<a target="_blank" rel="noopener" href="${crmEsc(x.pdf)}">Ava PDF</a>`:''}</div>`).join(''):'Pakkumisi ei leitud.';
+ $('quoteListContent').innerHTML=items.length?items.map(x=>`<div class="card" style="border:1px solid #ddd;margin:8px 0"><b>${crmEsc(x.nr)}</b> · ${crmEsc(x.kuupaev)}<div>${crmEsc(x.tellija)} — ${crmEsc(x.objekt)}</div><div><b>${crmEsc(x.kokku)} €</b></div><select class="formInput crmStatus" data-nr="${crmEsc(x.nr)}" style="margin-top:8px"><option ${x.staatus==='Koostatud'?'selected':''}>Koostatud</option><option ${x.staatus==='Saadetud'?'selected':''}>Saadetud</option><option ${x.staatus==='Aktsepteeritud'?'selected':''}>Aktsepteeritud</option><option ${x.staatus==='Tagasi lükatud'?'selected':''}>Tagasi lükatud</option></select>${/^https:\/\//.test(x.pdf)?`<a target="_blank" rel="noopener" href="${crmEsc(x.pdf)}">Ava PDF</a>`:''}${x.staatus==='Aktsepteeritud'?` <button type="button" class="btn btnDark psWorkOpen" data-nr="${crmEsc(x.nr)}" style="margin-top:8px">Loo tööd</button>`:''}</div>`).join(''):'Pakkumisi ei leitud.';
+ document.querySelectorAll('.psWorkOpen').forEach(b=>b.onclick=()=>psOpenWork(b.dataset.nr));
  document.querySelectorAll('.crmStatus').forEach(el=>el.onchange=async()=>{
  const item=crmQuoteCache.find(x=>x.nr===el.dataset.nr);if(!item)return;
  const old=item.staatus;
@@ -2194,6 +2214,49 @@ $('quoteCreateTab').onclick=()=>crmSwitchTab(false);
 $('quoteListTab').onclick=()=>crmSwitchTab(true);
 $('quoteRefresh').onclick=crmLoadQuotes;
 $('quoteSearch').oninput=crmRenderQuotes;
+
+
+let psCurrentWorkQuote='';
+async function psOpenWork(nr){
+ psCurrentWorkQuote=nr;
+ $('psWorkPanel').style.display='block';
+ $('psWorkTitle').textContent='Loo tööd · '+nr;
+ $('psWorkDate').value=localDateISO();
+ $('psWorkExisting').textContent='Laadin...';
+ $('psWorkInspection').checked=true;
+ $('psWorkHic').checked=false;
+ $('psWorkPanel').scrollIntoView({behavior:'smooth',block:'start'});
+ try{
+  const sites=await runScript('psGetValjakud',[]);
+  $('psWorkSite').innerHTML=sites.map(v=>`<option value="${crmEsc(v.id)}">${crmEsc(v.nimi)} · ${crmEsc(v.aadress)}</option>`).join('');
+  if(!sites.length)$('psWorkExisting').textContent='Väljakuid pole veel lisatud. Lisa need vaates „Asutused ja väljakud”.';
+  else await psRefreshWork();
+ }catch(e){showError('Väljakute laadimise viga: '+e.message);}
+}
+async function psRefreshWork(){
+ const rows=await runScript('psPakkumiseTood',[psCurrentWorkQuote]);
+ $('psWorkExisting').innerHTML=rows.length?'<b>Selle pakkumisega seotud tööd</b><div>'+rows.map(r=>`${crmEsc(r.liik)} · ${crmEsc(r.aasta)} · ${crmEsc(r.olek)}${r.tooNr?' · nr '+crmEsc(r.tooNr):''}`).join('<div style="margin-top:6px"></div>')+'</div>':'Selle pakkumisega pole veel töid seotud.';
+}
+$('psWorkClose').onclick=()=>{$('psWorkPanel').style.display='none';};
+$('psWorkInspection').onchange=()=>{$('psWorkInspectionType').disabled=!$('psWorkInspection').checked;};
+$('psWorkSave').onclick=async()=>{
+ const nr=psCurrentWorkQuote,id=$('psWorkSite').value,paev=$('psWorkDate').value;
+ const types=[];
+ if($('psWorkInspection').checked)types.push($('psWorkInspectionType').value);
+ if($('psWorkHic').checked)types.push('HIC-mõõtmine');
+ if(!nr||!id||!paev||!types.length){showError('Vali väljak, kuupäev ja vähemalt üks teenus.');return;}
+ if(!confirm(`Kas luua ${types.length} tööd valitud väljakule?`))return;
+ const btn=$('psWorkSave');btn.disabled=true;
+ let ok=0;
+ try{
+  for(const liik of types){
+   await runScript('psLooPakkumiseToo',[{pakkumiseNr:nr,valjakuId:id,liik:liik,kuupaev:paev}]);
+   ok++;
+  }
+  toast('Loodud '+ok+' tööd');
+ }catch(e){showError('Loodud '+ok+' tööd. Edasi tekkis viga: '+e.message);}
+ finally{btn.disabled=false;try{await psRefreshWork();}catch(e){showError(e.message);}}
+};
 
 async function openQuotes(){
   $("psDatabaseView").style.display="none";
