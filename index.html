@@ -809,7 +809,7 @@ async function deleteObject(o, triggerButton=null){
     const allPhotos=await pendingPhotosFor(o.nr);
     for(const p of allPhotos)await del("photos",p.id);
     currentObject=null;
-    showList();
+    showList(false);
     await syncObjects();
     toast(`Objekt nr ${nr} kustutatud`);
   }catch(e){
@@ -821,11 +821,39 @@ async function deleteObject(o, triggerButton=null){
   }
 }
 
-function showList(){
- $("detailView").style.display="none";
- $("workView").style.display="none";
- $("listView").style.display="block";
- $("pageTitle").textContent="Objektid";
+// Peavaatesse naastes värskendame ainult objektide registrit.
+// Sama-aegsed tagasipöördumised ei tekita mitut serveripäringut.
+let backgroundObjectRefresh=null;
+async function refreshObjectsOnReturn(){
+  if(!navigator.onLine || !accessToken || backgroundObjectRefresh)return;
+  const button=$("syncButton");
+  backgroundObjectRefresh=(async()=>{
+    button.disabled=true;
+    button.textContent="Värskendan...";
+    try{
+      await syncObjects();
+      hideError();
+    }catch(e){
+      console.warn("Objektide automaatne värskendamine ebaõnnestus",e);
+      showError("Objektide automaatne värskendamine ebaõnnestus: "+e.message);
+    }finally{
+      backgroundObjectRefresh=null;
+      button.disabled=false;
+      button.textContent="↻ Sünkroniseeri";
+    }
+  })();
+  await backgroundObjectRefresh;
+}
+
+function showList(refreshOnReturn=true){
+  const returningFromObject=$("detailView").style.display!=="none";
+  $("detailView").style.display="none";
+  $("workView").style.display="none";
+  $("quoteView").style.display="none";
+  $("listView").style.display="block";
+  $("pageTitle").textContent="Objektid";
+  renderObjects();
+  if(returningFromObject && refreshOnReturn)void refreshObjectsOnReturn();
 }
 
 /* ================= NEW OBJECT ================= */
