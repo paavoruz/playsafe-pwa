@@ -196,7 +196,15 @@ h1{font-size:30px;margin:0;font-weight:800}
 .todoDateRow input{padding:9px;border:1px solid #d6d1e2;border-radius:10px;font-size:16px;max-width:190px}
 .todoCardActions{display:flex;gap:5px;flex-wrap:wrap}
 .todoCardActions button{font-size:12px;border:0;border-radius:8px;padding:7px;background:#eee4ff;color:#50318b;display:inline-flex;align-items:center;justify-content:center;min-width:32px;min-height:32px}
-.todoCardActions .todoEdit{margin-left:auto}
+.todoCardActions .todoEdit{margin-left:0}
+.todoPerson{margin-left:auto;align-self:center;font-size:12px;color:#5c398b;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.todoPerson + .todoPhone{margin-left:0}
+.todoMap + .todoPerson{margin-left:0}
+.todoMap + .todoPhone{margin-left:0}
+.todoMap{margin-left:auto;display:inline-flex;align-items:center;justify-content:center;min-width:32px;min-height:32px;border-radius:8px;background:#e7f1ff;color:#2a64b6;text-decoration:none;flex-shrink:0}
+.todoMap svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.todoPhone{margin-left:auto;align-self:center;font-size:12px;color:#5c35a1;font-weight:700;text-decoration:none;white-space:nowrap;padding:6px 3px;max-width:46%;overflow:hidden;text-overflow:ellipsis}
+.todoPhone:active{text-decoration:underline}
 .todoCardActions .todoDelete{background:#fff0f1;color:#b33c4c}
 .todoCardActions svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .todoSwitch{display:none;gap:5px;margin-bottom:12px}
@@ -326,6 +334,9 @@ h1{font-size:30px;margin:0;font-weight:800}
  <div id="todoEditor" style="display:none;background:white;padding:14px;border-radius:14px;margin-bottom:14px">
   <input id="todoText" class="todoInput" maxlength="300" placeholder="Kirjuta ülesanne...">
   <div class="todoDateRow"><label for="todoDeadlineInput">Tähtaeg (valikuline)</label><input type="date" id="todoDeadlineInput"></div>
+  <div class="todoDateRow"><label for="todoPersonInput">Isiku nimi (valikuline)</label><input type="text" id="todoPersonInput" placeholder="Näiteks Mari Tamm" maxlength="100" autocomplete="off"></div>
+  <div class="todoDateRow"><label for="todoPhoneInput">Telefon (valikuline)</label><input type="tel" id="todoPhoneInput" placeholder="+372 5555 5555" autocomplete="tel" maxlength="35"></div>
+  <div class="todoDateRow"><label for="todoMapInput">Google Mapsi link (valikuline)</label><input type="url" id="todoMapInput" placeholder="https://maps.app.goo.gl/..." maxlength="2000" style="flex:1;min-width:0;max-width:100%"></div>
   <div style="display:flex;gap:8px;margin-top:10px"><button id="todoSave" class="btn btnDark">Salvesta</button><button id="todoCancel" class="btn btnGray">Tühista</button></div>
  </div>
  <div class="todoSwitch" id="todoSwitch"></div>
@@ -2361,6 +2372,15 @@ function openTodo(){
  setActiveTab("todo");
  renderTodo();
 }
+function validTodoMapUrl(raw){
+ try{
+  const u=new URL(String(raw).trim());
+  if(u.protocol!=="https:")return null;
+  const host=u.hostname.toLowerCase();
+  if(host==="maps.app.goo.gl" || host==="goo.gl" && u.pathname.startsWith("/maps/") || host==="maps.google.com" || host==="www.google.com" && u.pathname.startsWith("/maps") || host==="google.com" && u.pathname.startsWith("/maps"))return u.href;
+ }catch(e){}
+ return null;
+}
 function renderTodo(){
  const tabs=$("todoSwitch"),columns=$("todoColumns");
  tabs.replaceChildren();columns.replaceChildren();
@@ -2404,6 +2424,29 @@ function renderTodo(){
     b.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true">'+svgPaths+'</svg>';
     b.onclick=action;actions.appendChild(b);
    };
+   if(item.mapUrl){
+    const url=validTodoMapUrl(item.mapUrl);
+    if(url){
+     const map=document.createElement("a");map.className="todoMap";map.href=url;
+     map.target="_blank";map.rel="noopener noreferrer";
+     map.title="Ava Google Mapsis navigeerimiseks";map.setAttribute("aria-label","Ava asukoht Google Mapsis");
+     map.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>';
+     actions.appendChild(map);
+    }
+   }
+   if(item.person){
+    const person=document.createElement("span");person.className="todoPerson";person.textContent=String(item.person);person.title=String(item.person);actions.appendChild(person);
+   }
+   if(item.phone){
+    const phone=String(item.phone).trim();
+    const dial=phone.replace(/[^+0-9]/g,"");
+    if(/^\+?[0-9]{3,15}$/.test(dial)){
+     const link=document.createElement("a");link.className="todoPhone";
+     link.textContent=phone;link.href="tel:"+dial;
+     link.title="Helista: "+phone;link.setAttribute("aria-label","Helista numbrile "+phone);
+     actions.appendChild(link);
+    }
+   }
    addIconBtn("Muuda","todoEdit",'<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L9 17l-4 1 1-4Z"/>',()=>editTodo(item));
    addIconBtn("Kustuta","todoDelete",'<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 10v7M14 10v7"/>',()=>{if(confirm("Kas kustutada see ülesanne?")){todoItems=todoItems.filter(t=>t.id!==item.id);saveTodoLocal();renderTodo();}});
    card.appendChild(actions);col.appendChild(card);
@@ -2419,6 +2462,9 @@ function editTodo(item){
  todoEditing=item?item.id:null;
  $("todoText").value=item?item.text:"";
  $("todoDeadlineInput").value=item?.deadline||"";
+ $("todoPhoneInput").value=item?.phone||"";
+ $("todoPersonInput").value=item?.person||"";
+ $("todoMapInput").value=item?.mapUrl||"";
  $("todoEditor").style.display="block";
  $("todoText").focus();
 }
@@ -2429,12 +2475,17 @@ $("todoCancel").onclick=()=>$("todoEditor").style.display="none";
 $("todoSave").onclick=()=>{
  const value=$("todoText").value.trim();
  const deadline=$("todoDeadlineInput").value;
+ const phone=$("todoPhoneInput").value.trim();
+ const person=$("todoPersonInput").value.trim();
+ const mapUrl=$("todoMapInput").value.trim();
+ if(mapUrl && !validTodoMapUrl(mapUrl)){toast("Sisesta korrektne Google Mapsi link (https://...)");return;}
+ if(phone && !/^\+?[0-9]{3,15}$/.test(phone.replace(/[^+0-9]/g,""))){toast("Sisesta korrektne telefoninumber");return;}
  if(!value){toast("Sisesta ülesande tekst");return;}
  if(todoEditing!==null){
   const item=todoItems.find(t=>t.id===todoEditing);
-  if(item){item.text=value;item.deadline=deadline;}
+  if(item){item.text=value;item.deadline=deadline;item.phone=phone;item.person=person;item.mapUrl=mapUrl;}
  }else{
-  todoItems.unshift({id:String(Date.now())+"_"+Math.random().toString(36).slice(2),text:value,deadline,status:TODO_STATES[todoActive]});
+  todoItems.unshift({id:String(Date.now())+"_"+Math.random().toString(36).slice(2),text:value,deadline,phone,person,mapUrl,status:TODO_STATES[todoActive]});
  }
  saveTodoLocal();$("todoEditor").style.display="none";renderTodo();
 };
