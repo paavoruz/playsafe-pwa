@@ -236,6 +236,7 @@ h1{font-size:30px;margin:0;font-weight:800}
   <h1 id="pageTitle">Register</h1>
   <div id="headerActions" class="headerActions">
     <button id="openQuotesButton" class="headerAction headerActionQuote" type="button" aria-label="Hinnapakkumised" title="Hinnapakkumised"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2.5h7l5 5V21H7a2 2 0 0 1-2-2V4.5a2 2 0 0 1 2-2Z"/><path d="M14 2.5V8h5M9 12h6M9 16h6"/></svg><span>HP</span></button>
+    <button id="openDatabaseButton" class="headerAction" type="button" title="Asutused ja väljakud" aria-label="Asutused ja väljakud" style="font-size:12px;width:auto;padding:0 9px">AV</button>
     <button id="newObjectButton" class="headerAction headerActionAdd" type="button" aria-label="Uus objekt" title="Uus objekt">+</button>
   </div>
 </header>
@@ -351,6 +352,21 @@ h1{font-size:30px;margin:0;font-weight:800}
   </div>
 
 </div><div id="quoteListPanel" style="display:none"><div class="card"><div class="detailTitle">Kõik pakkumised</div><input id="quoteSearch" class="formInput" placeholder="Otsi pakkumist..." style="margin:12px 0"><button id="quoteRefresh" class="btn btnGray" type="button">Värskenda</button><div id="quoteListContent" style="margin-top:12px"></div></div></div>
+</section>
+
+<section id="psDatabaseView" style="display:none">
+ <div class="card">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap"><div class="detailTitle">Asutused ja väljakud</div><button class="btn btnGray" id="psDbBack" type="button">← Register</button></div>
+  <div class="quoteNav" style="margin:12px 0"><button class="btn btnDark" id="psAsutusedTab" type="button">Asutused</button><button class="btn btnGray" id="psValjakudTab" type="button">Väljakud</button></div>
+  <input id="psDbSearch" class="formInput" placeholder="Otsi nime või aadressi järgi" style="width:100%;margin-bottom:10px">
+  <button class="btn btnDark" id="psDbNew" type="button">+ Lisa asutus</button>
+  <div id="psDbList" style="margin-top:12px"></div>
+ </div>
+ <div class="card" id="psDbEditor" style="display:none;margin-top:12px">
+  <div class="detailTitle" id="psDbEditorTitle">Lisa asutus</div>
+  <div id="psDbFields"></div>
+  <div style="display:flex;gap:8px;margin-top:12px"><button class="btn btnDark" id="psDbSave" type="button">Salvesta</button><button class="btn btnGray" id="psDbCancel" type="button">Tühista</button></div>
+ </div>
 </section>
 
 <section id="todoView" style="display:none">
@@ -935,6 +951,7 @@ async function refreshObjectsOnReturn(){
 }
 
 function showList(refreshOnReturn=true){
+  $("psDatabaseView").style.display="none";
   $("headerActions").style.display="flex";
   $("todoView").style.display="none";
   $("todoNav").style.display="flex";
@@ -2179,6 +2196,7 @@ $('quoteRefresh').onclick=crmLoadQuotes;
 $('quoteSearch').oninput=crmRenderQuotes;
 
 async function openQuotes(){
+  $("psDatabaseView").style.display="none";
   $("headerActions").style.display="none";
   $("todoNav").style.display="none";
  $("listView").style.display="none";
@@ -2424,6 +2442,7 @@ function setActiveTab(tab){
  $("tabTodo").classList.toggle("active",tab==="todo");
 }
 function openTodo(){
+ $("psDatabaseView").style.display="none";
  ["listView","detailView","workView","quoteView"].forEach(id=>$(id).style.display="none");
  $("todoView").style.display="block";
  $("todoNav").style.display="flex";
@@ -2606,6 +2625,69 @@ async function start(){
 }
 
 start();
+
+/* ===== Asutuste ja väljakute vaade ===== */
+let psDbTab='asutused',psDbAsutused=[],psDbValjakud=[],psDbEditing=null;
+const psDbSafe=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function psDbField(key,label,value='',kind='text'){
+ return `<label style="display:block;margin-top:10px;font-size:13px;font-weight:600">${psDbSafe(label)}<input class="formInput" data-psfield="${key}" type="${kind}" value="${psDbSafe(value)}" style="display:block;width:100%;margin-top:4px"></label>`;
+}
+function psDbRender(){
+ const as=psDbTab==='asutused';
+ $('psAsutusedTab').className='btn '+(as?'btnDark':'btnGray');$('psValjakudTab').className='btn '+(!as?'btnDark':'btnGray');
+ $('psDbNew').textContent=as?'+ Lisa asutus':'+ Lisa väljak';
+ const query=$('psDbSearch').value.trim().toLocaleLowerCase('et-EE');
+ const items=(as?psDbAsutused:psDbValjakud).filter(x=>[x.nimi,x.aadress].some(v=>String(v||'').toLocaleLowerCase('et-EE').includes(query)));
+ $('psDbList').innerHTML=items.length?items.map(x=>{
+  const institution=as?'':(psDbAsutused.find(a=>a.id===x.asutuseId)?.nimi||'Asutus määramata');
+  return `<div style="border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin:8px 0;display:flex;align-items:center;justify-content:space-between;gap:10px"><div><b>${psDbSafe(x.nimi)}</b><div class="muted">${psDbSafe(x.aadress||'')}${institution?' · '+psDbSafe(institution):''}</div></div><button type="button" class="btn btnGray psDbEdit" data-id="${psDbSafe(x.id)}">Muuda</button></div>`;
+ }).join(''):'<div class="muted" style="padding:15px">Kirjeid ei leitud.</div>';
+ $('psDbList').querySelectorAll('.psDbEdit').forEach(b=>b.onclick=()=>psDbEdit(b.dataset.id));
+}
+async function psDbLoad(){
+ $('psDbList').textContent='Laadin andmeid...';
+ try{[psDbAsutused,psDbValjakud]=await Promise.all([runScript('psGetAsutused',[]),runScript('psGetValjakud',[])]);psDbRender();}
+ catch(e){$('psDbList').textContent='Andmete laadimine ebaõnnestus: '+e.message;}
+}
+function psDbEdit(id=''){
+ const as=psDbTab==='asutused';
+ const x=(as?psDbAsutused:psDbValjakud).find(o=>o.id===id)||{};
+ psDbEditing=id||null;
+ $('psDbEditorTitle').textContent=(id?'Muuda ':'Lisa ')+(as?'asutust':'väljakut');
+ let html=psDbField('nimi','Nimi *',x.nimi)+psDbField('aadress','Aadress',x.aadress);
+ if(as){html+=psDbField('registrikood','Registrikood',x.registrikood)+psDbField('kontaktisik','Kontaktisik',x.kontaktisik)+psDbField('telefon','Telefon',x.telefon,'tel')+psDbField('email','E-post',x.email,'email');}
+ else{
+  html+=`<label style="display:block;margin-top:10px;font-size:13px;font-weight:600">Asutus (valikuline)<select class="formInput" data-psfield="asutuseId" style="display:block;width:100%;margin-top:4px"><option value="">Asutus määramata</option>${psDbAsutused.map(a=>`<option value="${psDbSafe(a.id)}" ${a.id===x.asutuseId?'selected':''}>${psDbSafe(a.nimi)}</option>`).join('')}</select></label>`;
+  html+=psDbField('tyyp','Väljaku tüüp',x.tyyp)+psDbField('seadmeteArv','Seadmete arv',x.seadmeteArv,'number');
+  html+=`<label style="display:block;margin-top:10px;font-size:13px;font-weight:600">Staatus<select class="formInput" data-psfield="staatus" style="display:block;width:100%;margin-top:4px">${['Aktiivne','Mitteaktiivne'].map(v=>`<option ${v===(x.staatus||'Aktiivne')?'selected':''}>${v}</option>`).join('')}</select></label>`;
+ }
+ html+=`<label style="display:block;margin-top:10px;font-size:13px;font-weight:600">Märkused<textarea class="formInput" data-psfield="markused" style="display:block;width:100%;margin-top:4px">${psDbSafe(x.markused||'')}</textarea></label>`;
+ $('psDbFields').innerHTML=html;$('psDbEditor').style.display='block';$('psDbEditor').scrollIntoView({behavior:'smooth',block:'start'});
+}
+async function psDbSave(){
+ const data={id:psDbEditing||''};
+ $('psDbFields').querySelectorAll('[data-psfield]').forEach(el=>data[el.dataset.psfield]=el.value.trim());
+ if(!data.nimi){toast('Sisesta nimi');return;}
+ const btn=$('psDbSave');btn.disabled=true;
+ try{
+  await runScript(psDbTab==='asutused'?'psSalvestaAsutus':'psSalvestaValjak',[data]);
+  $('psDbEditor').style.display='none';toast('Salvestatud');await psDbLoad();
+ }catch(e){alert('Salvestamine ebaõnnestus: '+e.message);}finally{btn.disabled=false;}
+}
+function psDbOpen(){
+ ['listView','detailView','workView','quoteView','todoView'].forEach(id=>$(id).style.display='none');
+ $('psDatabaseView').style.display='block';$('todoNav').style.display='none';$('headerActions').style.display='none';$('pageTitle').textContent='Asutused ja väljakud';
+ psDbLoad();
+}
+$('openDatabaseButton').onclick=psDbOpen;
+$('psDbBack').onclick=()=>{ $('psDatabaseView').style.display='none';showList(false); };
+$('psAsutusedTab').onclick=()=>{psDbTab='asutused';$('psDbEditor').style.display='none';psDbRender();};
+$('psValjakudTab').onclick=()=>{psDbTab='valjakud';$('psDbEditor').style.display='none';psDbRender();};
+$('psDbSearch').oninput=psDbRender;
+$('psDbNew').onclick=()=>psDbEdit();
+$('psDbSave').onclick=psDbSave;
+$('psDbCancel').onclick=()=>{$('psDbEditor').style.display='none';};
+
 </script>
 </body>
 </html>
