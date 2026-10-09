@@ -2520,11 +2520,12 @@ const TODO_STATES=["Tegemata","Töös","Tehtud"];
 let todoItems=[];
 let todoActive=0;
 let todoEditing=null;
-try{const saved=JSON.parse(localStorage.getItem(TODO_KEY)||"[]");if(Array.isArray(saved))todoItems=saved;}catch(e){}
-function saveTodoLocal(){
- try{localStorage.setItem(TODO_KEY,JSON.stringify(todoItems));return true;}
- catch(e){toast("Ülesannete salvestamine ebaõnnestus");return false;}
+
+async function loadTodoSheet(){
+ try{todoItems=await runScript('psGetUlesanded',[]);renderTodo();}
+ catch(e){toast('Ülesannete laadimine ebaõnnestus: '+e.message);}
 }
+async function saveTodoSheet(item){await runScript('psSalvestaUlesanne',[item]);await loadTodoSheet();}
 function setActiveTab(tab){
  $("tabRegister").classList.toggle("active",tab==="register");
  $("tabTodo").classList.toggle("active",tab==="todo");
@@ -2537,7 +2538,7 @@ function openTodo(){
  $("headerActions").style.display="none";
  $("pageTitle").textContent="Ülesanded";
  setActiveTab("todo");
- renderTodo();
+ renderTodo();loadTodoSheet();
 }
 function validTodoMapUrl(raw){
  try{
@@ -2626,15 +2627,15 @@ function renderTodo(){
    // Noolte ja parempoolsete tegevuste vahele jääb painduv vaba ruum.
    const rightFirst=actions.querySelector(".todoMap, .todoPhone, .todoEdit");
    if(rightFirst)rightFirst.classList.add("todoRightStart");
-   addIconBtn("Kustuta","todoDelete",'<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 10v7M14 10v7"/>',()=>{if(confirm("Kas kustutada see ülesanne?")){todoItems=todoItems.filter(t=>t.id!==item.id);saveTodoLocal();renderTodo();}});
+   addIconBtn("Kustuta","todoDelete",'<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 10v7M14 10v7"/>',async()=>{if(confirm("Kas kustutada see ülesanne?")){try{await runScript("psKustutaUlesanne",[item.id]);await loadTodoSheet();}catch(e){toast("Kustutamine ebaõnnestus: "+e.message);}}});
    card.appendChild(actions);col.appendChild(card);
   });
   columns.appendChild(col);
  });
 }
-function moveTodo(item,step){
- item.status=TODO_STATES[TODO_STATES.indexOf(item.status)+step];
- saveTodoLocal();renderTodo();
+async function moveTodo(item,step){
+ const status=TODO_STATES[TODO_STATES.indexOf(item.status)+step];
+ try{await saveTodoSheet({...item,status});}catch(e){toast("Staatuse muutmine ebaõnnestus: "+e.message);}
 }
 function editTodo(item){
  todoEditing=item?item.id:null;
@@ -2650,7 +2651,7 @@ $("tabRegister").onclick=()=>showList(false);
 $("tabTodo").onclick=openTodo;
 $("todoAdd").onclick=()=>editTodo(null);
 $("todoCancel").onclick=()=>$("todoEditor").style.display="none";
-$("todoSave").onclick=()=>{
+$("todoSave").onclick=async()=>{
  const value=$("todoText").value.trim();
  const deadline=$("todoDeadlineInput").value;
  const phone=$("todoPhoneInput").value.trim();
@@ -2659,13 +2660,12 @@ $("todoSave").onclick=()=>{
  if(mapUrl && !validTodoMapUrl(mapUrl)){toast("Sisesta korrektne Google Mapsi link (https://...)");return;}
  if(phone && !/^\+?[0-9]{3,15}$/.test(phone.replace(/[^+0-9]/g,""))){toast("Sisesta korrektne telefoninumber");return;}
  if(!value){toast("Sisesta ülesande tekst");return;}
- if(todoEditing!==null){
-  const item=todoItems.find(t=>t.id===todoEditing);
-  if(item){item.text=value;item.deadline=deadline;item.phone=phone;item.person=person;item.mapUrl=mapUrl;}
- }else{
-  todoItems.unshift({id:String(Date.now())+"_"+Math.random().toString(36).slice(2),text:value,deadline,phone,person,mapUrl,status:TODO_STATES[todoActive]});
- }
- saveTodoLocal();$("todoEditor").style.display="none";renderTodo();
+ const original=todoEditing!==null?todoItems.find(t=>t.id===todoEditing):null;
+ const item={...(original||{}),text:value,deadline,phone,person,mapUrl,status:original?.status||TODO_STATES[todoActive]};
+ const btn=$("todoSave");btn.disabled=true;
+ try{await saveTodoSheet(item);$("todoEditor").style.display="none";toast("Ülesanne salvestatud");}
+ catch(e){toast("Ülesande salvestamine ebaõnnestus: "+e.message);}
+ finally{btn.disabled=false;}
 };
 
 /* ================= SERVICE WORKER ================= */
@@ -2755,6 +2755,7 @@ function psDbEdit(id=''){
   html+=`<label style="display:block;margin-top:10px;font-size:13px;font-weight:600">Väljaku tüüp *<select class="formInput" data-psfield="tyyp" required style="display:block;width:100%;margin-top:4px"><option value="">Vali väljaku tüüp</option>${psDbTyypid.map(t=>`<option value="${psDbSafe(t)}" ${t===existingType?'selected':''}>${psDbSafe(t)}</option>`).join('')}</select></label>`;
   if(existingType&&!allowed)html+=`<div class="muted" style="color:#a33;margin-top:5px">Senine tüüp „${psDbSafe(existingType)}” ei kuulu registri valikutesse. Vali uus tüüp.</div>`;
   html+=psDbField('seadmeteArv','Seadmete arv',x.seadmeteArv,'number');
+  html+=psDbField('mapUrl','Google Mapsi link',x.mapUrl,'url');
   html+=`<label style="display:block;margin-top:10px;font-size:13px;font-weight:600">Staatus<select class="formInput" data-psfield="staatus" style="display:block;width:100%;margin-top:4px">${['Aktiivne','Mitteaktiivne'].map(v=>`<option ${v===(x.staatus||'Aktiivne')?'selected':''}>${v}</option>`).join('')}</select></label>`;
  }
  html+=`<label style="display:block;margin-top:10px;font-size:13px;font-weight:600">Märkused<textarea class="formInput" data-psfield="markused" style="display:block;width:100%;margin-top:4px">${psDbSafe(x.markused||'')}</textarea></label>`;
