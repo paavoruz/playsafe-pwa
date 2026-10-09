@@ -677,11 +677,48 @@ function showObject(o){
   ${detailRow("Tellija",o.tellija)}
   ${detailRow("Staatus",o.staatus)}
   ${detailRow("Aruande nr",o.aruandeNr)}
-  <button id="startWork" class="btn btnDark btnFull">Alusta pildistamist</button>
+  <button id="startWork" class="btn btnDark btnFull">Alusta pildistamist</button>\n   <button id="deleteObject" class="btn btnFull" style="margin-top:12px;background:#fff0ee;color:#b42318">🗑 Kustuta objekt</button>
  </div>`;
 
  $("detailBack").onclick=showList;
  $("startWork").onclick=()=>openWork(o);
+}
+
+async function deleteObject(o){
+  if(!navigator.onLine){toast("Objekti kustutamiseks on vaja internetti");return;}
+  const nimi=objectName(o);
+  const nr=String(o.nr);
+  const local=await localElementsFor(o.nr);
+  const pending=await pendingPhotosFor(o.nr);
+  if(local.some(e=>!e.serverId||e.pendingRename||e.pendingDelete)||pending.length){
+    toast("Objektil on sünkroniseerimata töid. Sünkroniseeri esmalt.");
+    return;
+  }
+  if(!confirm(`Kas soovid kustutada objekti nr ${nr} – ${nimi}?\\n\\nKogu objekti Drive'i kaust (sh fotod ja aruanded) liigub prügikasti ning registririda kustutatakse.`))return;
+  const sisestatud=prompt(`TEINE KINNITUS\\n\\nKustutamise kinnitamiseks kirjuta objekti täpne nimi:\\n${nimi}`);
+  if(sisestatud===null)return;
+  if(sisestatud.trim()!==nimi){toast("Nimi ei ühti. Kustutamine katkestatud.");return;}
+  const button=$("deleteObject");
+  button.disabled=true;
+  button.textContent="Kustutan...";
+  try{
+    await ensureToken();
+    const tulemus=await runScript("kustutaObjekt",[o.nr,nimi]);
+    if(!tulemus?.ok)throw new Error("Server ei kinnitanud kustutamist.");
+    for(const e of local)await del("elements",e.localId);
+    const allPhotos=await pendingPhotosFor(o.nr);
+    for(const p of allPhotos)await del("photos",p.id);
+    currentObject=null;
+    showList();
+    await syncObjects();
+    toast(`Objekt nr ${nr} kustutatud`);
+  }catch(e){
+    console.error(e);
+    showError("Objekti kustutamise viga: "+e.message);
+    toast("Kustutamine ebaõnnestus");
+  }finally{
+    if(button.isConnected){button.disabled=false;button.textContent="🗑 Kustuta objekt";}
+  }
 }
 
 function showList(){
