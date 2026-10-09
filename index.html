@@ -354,7 +354,7 @@ h1{font-size:30px;margin:0;font-weight:800}
 </div><div id="quoteListPanel" style="display:none"><div class="card"><div class="detailTitle">Kõik pakkumised</div><input id="quoteSearch" class="formInput" placeholder="Otsi pakkumist..." style="margin:12px 0"><button id="quoteRefresh" class="btn btnGray" type="button">Värskenda</button><div id="quoteListContent" style="margin-top:12px"></div></div></div>
 <div id="psWorkPanel" class="card" style="display:none;margin-top:12px">
  <div class="detailTitle" id="psWorkTitle">Loo tööd</div>
- <p class="muted">Vali olemasolev väljak ja teenused. Iga teenus luuakse eraldi tööna.</p>
+ <p class="muted">Vali üks või mitu väljakut ning hindamise liik.</p>
  <label class="formLabel" for="psWorkSite">Mänguväljak</label>
  <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;margin:6px 0"><span class="muted">Vali üks või mitu väljakut</span><label style="white-space:nowrap"><input type="checkbox" id="psWorkAll"> Vali kõik</label></div>
  <div id="psWorkSites" style="max-height:260px;overflow-y:auto;border:1px solid #ddd;border-radius:10px;padding:10px"></div>
@@ -362,7 +362,6 @@ h1{font-size:30px;margin:0;font-weight:800}
  <input class="formInput" id="psWorkDate" type="date">
  <div style="margin-top:12px"><label><input id="psWorkInspection" type="checkbox" checked> Inspekteerimine</label></div>
  <select class="formInput" id="psWorkInspectionType"></select>
- <div style="margin-top:12px"><label><input id="psWorkHic" type="checkbox"> HIC-mõõtmine</label></div>
  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px">
   <button class="btn btnDark" id="psWorkSave" type="button">Loo valitud tööd</button>
   <button class="btn btnGray" id="psWorkClose" type="button">Sulge</button>
@@ -1940,7 +1939,7 @@ async function loadHinnakiri(){
  await ensureToken();
  const result=await runScript("getHinnakiri");
  if(!Array.isArray(result))throw new Error("Hinnakirja ei saadud.");
- hinnakiri=result.filter(x=>String(x.aktiivne||"JAH").toUpperCase()!=="EI");
+ hinnakiri=result.filter(x=>String(x.aktiivne||"JAH").toUpperCase()!=="EI" && !/\bHIC\b/i.test(String(x.nimi||x.teenus||x.kirjeldus||"")));
  renderQuoteServices();
 }
 
@@ -2223,7 +2222,6 @@ async function psOpenWork(nr){
  $('psWorkDate').value=localDateISO();
  $('psWorkExisting').textContent='Laadin...';
  $('psWorkInspection').checked=true;
- $('psWorkHic').checked=false;
  $('psWorkPanel').scrollIntoView({behavior:'smooth',block:'start'});
  try{
   const options=await runScript('psRegistriValikud',[]);
@@ -2231,10 +2229,6 @@ async function psOpenWork(nr){
   $('psWorkInspectionType').innerHTML=liigid.map(x=>`<option value="${crmEsc(x)}">${crmEsc(x)}</option>`).join('');
   $('psWorkInspection').disabled=!liigid.length;
   $('psWorkInspection').checked=!!liigid.length;
-  const hic=liigid.find(x=>x.toLocaleLowerCase('et-EE')==='hic-mõõtmine');
-  $('psWorkHic').disabled=!hic;
-  $('psWorkHic').dataset.liik=hic||'';
-  $('psWorkHic').title=hic?'':'HIC-mõõtmise jaoks lisa see valik tööde registri E-veeru rippmenüüsse.';
   const sites=await runScript('psGetValjakud',[]);
   $('psWorkSites').innerHTML=sites.map(v=>`<label style="display:flex;align-items:flex-start;gap:9px;padding:7px 3px;border-bottom:1px solid #eee"><input class="psWorkSiteCheck" type="checkbox" value="${crmEsc(v.id)}" style="margin-top:3px"><span>${crmEsc(v.nimi)} <span class="muted">· ${crmEsc(v.aadress)}</span></span></label>`).join('');
   $('psWorkAll').checked=false;
@@ -2255,7 +2249,6 @@ $('psWorkSave').onclick=async()=>{
  const nr=psCurrentWorkQuote,ids=[...document.querySelectorAll('.psWorkSiteCheck:checked')].map(x=>x.value),paev=$('psWorkDate').value;
  const types=[];
  if($('psWorkInspection').checked)types.push($('psWorkInspectionType').value);
- if($('psWorkHic').checked)types.push($('psWorkHic').dataset.liik);
  const feedback=$('psWorkFeedback');
  if(!nr||!ids.length||!paev||!types.length){feedback.textContent='Vali vähemalt üks väljak, kuupäev ja teenus.';return;}
  const count=ids.length*types.length;
