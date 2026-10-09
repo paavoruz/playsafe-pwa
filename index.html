@@ -34,6 +34,11 @@ h1{font-size:30px;margin:0;font-weight:800}
 .objectList,.elementList{display:flex;flex-direction:column;gap:10px}
 .card{background:#fff;border-radius:17px;padding:16px}
 .objectCard{cursor:pointer;position:relative;padding-right:60px}
+.inlineEditButton{border:0;background:#f1f1f4;color:#555;border-radius:10px;min-width:38px;height:38px;cursor:pointer;flex-shrink:0}
+.inlineEditRow{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.inlineEditControls{display:flex;align-items:center;gap:6px;margin-top:7px}
+.inlineEditControls .formInput{min-width:0;flex:1}
+.inlineEditControls button{min-width:38px}
 .objectDeleteIcon{position:absolute;top:13px;right:13px;width:38px;height:38px;border:0;border-radius:11px;background:#fff0ee;color:#b42318;font-size:19px;cursor:pointer}
 .objectDeleteIcon:disabled{opacity:.5;cursor:wait}
 .objectReady{position:absolute;right:13px;top:18px;background:#e3f6e9;color:#18743a;border-radius:10px;padding:7px 11px;font-size:13px;font-weight:800}
@@ -677,38 +682,109 @@ function detailRow(label,value){
  <div class="value">${esc(value)}</div></div>`;
 }
 
+const OBJECT_EDIT_FIELDS=[
+ {key:"objekt",label:"Objekt",type:"text",required:true},
+ {key:"aadress",label:"Aadress",type:"text"},
+ {key:"valjakuTyyp",label:"Väljaku tüüp",type:"select",required:true,source:"getValjakuTyypid"},
+ {key:"hindamiseLiik",label:"Hindamise liik",type:"select",required:true,source:"getHindamiseLiigid"},
+ {key:"tellija",label:"Tellija",type:"text"},
+ {key:"tooKuupaev",label:"Töö kuupäev",type:"date",required:true},
+ {key:"kinnitamiseKuupaev",label:"Töö kinnitamise kuupäev",type:"date"},
+ {key:"aruandeNr",label:"Aruande nr",type:"text"},
+ {key:"markused",label:"Märkused",type:"textarea"}
+];
+function editableDetailRow(field,o){
+ const raw=o[field.key]??"";
+ const shown=field.type==="date"?formatObjectDate(raw):String(raw);
+ return `<div class="row" data-object-field="${field.key}">
+ <div class="label">${esc(field.label)}</div>
+ <div class="inlineEditRow"><div class="value">${esc(shown)||'<span style="color:#999;font-weight:400">—</span>'}</div>
+ ${isReady(o)?"":`<button type="button" class="inlineEditButton" aria-label="Muuda: ${esc(field.label)}" title="Muuda">✎</button>`}</div>
+ </div>`;
+}
 function showObject(o){
  currentObject=o;
  $("listView").style.display="none";
  $("workView").style.display="none";
  $("detailView").style.display="block";
  $("pageTitle").textContent="Objekt";
-
  $("detailView").innerHTML=`
  <button class="back" id="detailBack">‹ Tagasi objektidesse</button>
  <div class="card">
   <div class="detailTitle">${esc(objectName(o))}</div>
   ${detailRow("Jrk nr",o.nr)}
-  ${detailRow("Aadress",o.aadress)}
-  ${detailRow("Väljaku tüüp",o.valjakuTyyp)}
-  ${detailRow("Hindamise liik",o.hindamiseLiik)}
-  ${detailRow("Tellija",o.tellija)}
-     <div class="row"><div class="label">Staatus</div><div class="value">${isReady(o)?'<span class="statusReady">Valmis</span>':esc(o.staatus||"Töös")}</div></div>
-   ${detailRow("Töö kuupäev",formatObjectDate(o.tooKuupaev))}
-   ${detailRow("Töö kinnitamise kuupäev",formatObjectDate(o.kinnitamiseKuupaev))}
-   ${detailRow("Aruande nr",o.aruandeNr)}
-   ${detailRow("Märkused",o.markused)}
-   <div class="objectActions">
-    ${isReady(o)?'<button id="changeStatus" class="btn btnGray btnFull">↩ Võta uuesti töösse</button>':`<button id="editObject" class="btn btnGray btnFull">✏️ Muuda objekti andmeid</button><button id="changeStatus" class="btn btnBlue btnFull">✓ Märgi valmis</button><button id="deleteObject" class="btn btnFull" style="background:#fff0ee;color:#b42318">🗑 Kustuta objekt</button>`}
-    <button id="startWork" class="btn btnDark btnFull">${isReady(o)?"Vaata elemente ja fotosid":"Alusta pildistamist"}</button>
-   </div>
+  ${OBJECT_EDIT_FIELDS.slice(0,5).map(f=>editableDetailRow(f,o)).join("")}
+  <div class="row"><div class="label">Staatus</div><div class="value">${isReady(o)?'<span class="statusReady">Valmis</span>':esc(o.staatus||"Töös")}</div></div>
+  ${OBJECT_EDIT_FIELDS.slice(5).map(f=>editableDetailRow(f,o)).join("")}
+  <div class="objectActions">
+   ${isReady(o)?'<button id="changeStatus" class="btn btnGray btnFull">↩ Võta uuesti töösse</button>':`<button id="changeStatus" class="btn btnBlue btnFull">✓ Märgi valmis</button><button id="deleteObject" class="btn btnFull" style="background:#fff0ee;color:#b42318">🗑 Kustuta objekt</button>`}
+   <button id="startWork" class="btn btnDark btnFull">${isReady(o)?"Vaata elemente ja fotosid":"Alusta pildistamist"}</button>
+  </div>
  </div>`;
-
  $("detailBack").onclick=showList;
  $("startWork").onclick=()=>openWork(o);
-   if($("deleteObject"))$("deleteObject").onclick=()=>deleteObject(o,$("deleteObject"));
-  if($("editObject"))$("editObject").onclick=()=>openEditObject(o);
-  $("changeStatus").onclick=()=>changeObjectStatus(o);
+ if($("deleteObject"))$("deleteObject").onclick=()=>deleteObject(o,$("deleteObject"));
+ $("changeStatus").onclick=()=>changeObjectStatus(o);
+ if(!isReady(o))for(const field of OBJECT_EDIT_FIELDS){
+  const row=$("detailView").querySelector(`[data-object-field="${field.key}"]`);
+  row.querySelector(".inlineEditButton").onclick=()=>beginInlineObjectEdit(o,field,row);
+ }
+}
+async function beginInlineObjectEdit(o,field,row){
+ if(!navigator.onLine){toast("Andmete muutmiseks on vaja internetti");return;}
+ if($("detailView").querySelector(".inlineEditControls")){toast("Lõpeta esmalt pooleliolev muudatus");return;}
+ const holder=row.querySelector(".inlineEditRow");
+ holder.style.display="none";
+ const controls=document.createElement("div");controls.className="inlineEditControls";
+ const input=document.createElement(field.type==="select"?"select":field.type==="textarea"?"textarea":"input");
+ input.className="formInput";
+ if(field.type!=="select"&&field.type!=="textarea")input.type=field.type;
+ input.value=field.type==="date"?formatObjectDate(o[field.key]):String(o[field.key]??"");
+ if(field.type==="textarea")input.rows=3;
+ controls.appendChild(input);
+ const yes=document.createElement("button");yes.className="btn btnBlue";yes.textContent="✓";yes.title="Salvesta";
+ const no=document.createElement("button");no.className="btn btnGray";no.textContent="✕";no.title="Loobu";
+ controls.append(yes,no);row.appendChild(controls);
+ const cancel=()=>{controls.remove();holder.style.display="flex";};
+ no.onclick=cancel;
+ if(field.type==="select"){
+  input.disabled=true;yes.disabled=true;
+  try{
+   await ensureToken();
+   const opts=await runScript(field.source,[]);
+   if(!controls.isConnected)return;
+   input.innerHTML="";
+   const values=[...new Set([String(o[field.key]||""),...(Array.isArray(opts)?opts:[])].filter(Boolean))];
+   for(const value of values){const option=new Option(value,value);input.add(option);}
+   input.value=String(o[field.key]||"");input.disabled=false;yes.disabled=false;
+  }catch(e){cancel();showError("Valikute laadimine ebaõnnestus: "+e.message);return;}
+ }
+ yes.onclick=async()=>{
+  const value=input.value.trim();
+  if(field.required&&!value){toast("Väli on kohustuslik");input.focus();return;}
+  if(field.type==="date"&&value&&!/^\d{4}-\d{2}-\d{2}$/.test(value)){toast("Vigane kuupäev");return;}
+  if(value===(field.type==="date"?formatObjectDate(o[field.key]):String(o[field.key]??"").trim())){cancel();return;}
+  yes.disabled=true;no.disabled=true;input.disabled=true;yes.textContent="…";
+  try{
+   await ensureToken();
+   const data={};for(const f of OBJECT_EDIT_FIELDS)data[f.key]=f.type==="date"?formatObjectDate(o[f.key]):String(o[f.key]??"");
+   data[field.key]=value;
+   await runScript("muudaObjektiAndmeid",[o.nr,data]);
+   // Serveri kinnitus on saadud: uuendame kohe ka kohalikku vaadet.
+   const updated={...o,...data};
+   if(field.key==="tooKuupaev")updated.aasta=value.slice(0,4);
+   const index=objektid.findIndex(x=>String(x.nr)===String(o.nr));
+   if(index>=0)objektid[index]=updated;
+   await put("objects",updated);
+   showObject(updated);
+   toast("Salvestatud Google Sheetsi");
+  }catch(e){
+   console.error(e);showError("Andmete salvestamine ebaõnnestus: "+e.message);
+   toast("Muudatust ei salvestatud");
+   yes.disabled=false;no.disabled=false;input.disabled=false;yes.textContent="✓";
+  }
+ };
+ input.focus();
 }
 
 async function deleteObject(o, triggerButton=null){
