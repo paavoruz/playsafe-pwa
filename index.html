@@ -268,6 +268,8 @@ h1{font-size:30px;margin:0;font-weight:800}
     <button id="objectsTab" class="btn btnGray">Objektid</button>
     <button id="quotesTab" class="btn btnDark active">Hinnapakkumised</button>
   </div>
+<div class="quoteNav" style="margin:12px 0"><button id="quoteCreateTab" class="btn btnDark" type="button">Uus pakkumine</button><button id="quoteListTab" class="btn btnGray" type="button">Kõik pakkumised</button></div>
+<div id="quoteCreatePanel">
 
   <div class="card">
     <div class="detailTitle">Uus hinnapakkumine</div>
@@ -347,6 +349,8 @@ h1{font-size:30px;margin:0;font-weight:800}
     <button id="reloadPrices" class="btn btnGray">↻ Hinnakiri</button>
     <button id="saveQuote" class="btn btnDark">Salvesta pakkumine</button>
   </div>
+
+</div><div id="quoteListPanel" style="display:none"><div class="card"><div class="detailTitle">Kõik pakkumised</div><input id="quoteSearch" class="formInput" placeholder="Otsi pakkumist..." style="margin:12px 0"><button id="quoteRefresh" class="btn btnGray" type="button">Värskenda</button><div id="quoteListContent" style="margin-top:12px"></div></div></div>
 </section>
 
 <section id="todoView" style="display:none">
@@ -2142,6 +2146,37 @@ async function loadValjakuTyypid(){
  }
  return values;
 }
+
+
+let crmQuoteCache=[];
+function crmEsc(x){return String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function crmRenderQuotes(){
+ const q=($('quoteSearch').value||'').toLowerCase();
+ const items=crmQuoteCache.filter(x=>[x.nr,x.tellija,x.objekt].some(y=>String(y||'').toLowerCase().includes(q)));
+ $('quoteListContent').innerHTML=items.length?items.map(x=>`<div class="card" style="border:1px solid #ddd;margin:8px 0"><b>${crmEsc(x.nr)}</b> · ${crmEsc(x.kuupaev)}<div>${crmEsc(x.tellija)} — ${crmEsc(x.objekt)}</div><div><b>${crmEsc(x.kokku)} €</b></div><select class="formInput crmStatus" data-nr="${crmEsc(x.nr)}" style="margin-top:8px"><option ${x.staatus==='Koostatud'?'selected':''}>Koostatud</option><option ${x.staatus==='Saadetud'?'selected':''}>Saadetud</option><option ${x.staatus==='Aktsepteeritud'?'selected':''}>Aktsepteeritud</option><option ${x.staatus==='Tagasi lükatud'?'selected':''}>Tagasi lükatud</option></select>${/^https:\/\//.test(x.pdf)?`<a target="_blank" rel="noopener" href="${crmEsc(x.pdf)}">Ava PDF</a>`:''}</div>`).join(''):'Pakkumisi ei leitud.';
+ document.querySelectorAll('.crmStatus').forEach(el=>el.onchange=async()=>{
+ const item=crmQuoteCache.find(x=>x.nr===el.dataset.nr);if(!item)return;
+ const old=item.staatus;
+ if(el.value==='Aktsepteeritud'&&!confirm('Kas märgid pakkumise aktsepteerituks ja kliendi aktiivseks?')){el.value=old;return;}
+ el.disabled=true;
+ try{await runScript('crmMuudaPakkumiseStaatus',[item.nr,el.value]);item.staatus=el.value;toast('Staatus salvestatud');crmRenderQuotes();}
+ catch(e){el.value=old;showError('Staatuse salvestamise viga: '+e.message);}finally{el.disabled=false;}
+ });
+}
+async function crmLoadQuotes(){
+ $('quoteListContent').textContent='Laadin...';
+ try{crmQuoteCache=await runScript('crmHinnapakkumised',[]);crmRenderQuotes();}
+ catch(e){showError('Pakkumiste laadimise viga: '+e.message);$('quoteListContent').textContent='Laadimine ebaõnnestus.';}
+}
+function crmSwitchTab(list){
+ $('quoteCreatePanel').style.display=list?'none':'block';$('quoteListPanel').style.display=list?'block':'none';
+ $('quoteCreateTab').className='btn '+(list?'btnGray':'btnDark');$('quoteListTab').className='btn '+(list?'btnDark':'btnGray');
+ if(list)crmLoadQuotes();
+}
+$('quoteCreateTab').onclick=()=>crmSwitchTab(false);
+$('quoteListTab').onclick=()=>crmSwitchTab(true);
+$('quoteRefresh').onclick=crmLoadQuotes;
+$('quoteSearch').oninput=crmRenderQuotes;
 
 async function openQuotes(){
   $("headerActions").style.display="none";
