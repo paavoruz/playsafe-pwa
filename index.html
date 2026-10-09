@@ -241,37 +241,7 @@ body:has(#quoteView[style*="display: block"]) #openQuotesButton{display:none!imp
 @media(prefers-reduced-motion:reduce){.todoNav{transition:none}}
 </style>
 
-<script src="https://accounts.google.com/gsi/client" async defer>
-let psMailCurrentNr='';
-async function psOpenMail(nr){
- try{
-  const p=await runScript('psPakkumiseKirjaEelvaade',[nr]);
-  psMailCurrentNr=nr;
-  $('psMailFrom').value=p.sender;
-  $('psMailTo').value=p.recipient;
-  $('psMailSubject').value=p.subject;
-  $('psMailBody').value=p.body;
-  $('psMailAttachment').textContent='📎 '+p.pdfName+' (PDF manus)';
-  $('psMailInfo').textContent=p.permitted?'Vaata kiri üle enne saatmist.':'Saatja info@playsafe.ee ei ole veel selle Google konto lubatud saatjate hulgas.';
-  $('psMailSend').disabled=!p.permitted;
-  $('psMailModal').style.display='block';
- }catch(e){showError('Kirja avamine ebaõnnestus: '+e.message);}
-}
-$('psMailClose').onclick=()=>$('psMailModal').style.display='none';
-$('psMailSend').onclick=async()=>{
- const b=$('psMailSend');
- if(!confirm('Kas saadad pakkumise PDF-manusega aadressile '+$('psMailTo').value+'?'))return;
- b.disabled=true;b.textContent='Saadan...';
- try{
-  await runScript('psSaadaPakkumineGmailiga',[{nr:psMailCurrentNr,recipient:$('psMailTo').value,subject:$('psMailSubject').value,body:$('psMailBody').value}]);
-  $('psMailModal').style.display='none';
-  toast('Pakkumine saadetud Gmailiga');
-  await crmLoadQuotes();
- }catch(e){showError('Saatmine ebaõnnestus: '+e.message);}
- finally{b.disabled=false;b.textContent='Saada Gmailiga';}
-};
-
-</script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 
 <body>
@@ -2949,5 +2919,38 @@ $('psDbCancel').onclick=()=>{$('psDbEditor').style.display='none';};
   <button type="button" class="btn btnDark" id="psMailSend" style="width:100%">Saada Gmailiga</button>
  </div>
 </div>
+<script>
+
+let psMailCurrentNr='';
+async function psOpenMail(nr){
+ try{
+  const p=await runScript('psPakkumiseKirjaEelvaade',[nr]);
+  psMailCurrentNr=nr;
+  $('psMailFrom').value=p.sender;
+  $('psMailTo').value=p.recipient;
+  $('psMailSubject').value=p.subject;
+  $('psMailBody').value=p.body;
+  $('psMailAttachment').textContent='📎 '+p.pdfName+' (PDF manus)';
+  $('psMailInfo').textContent=p.permitted?'Vaata kiri üle enne saatmist.':'Saatja info@playsafe.ee ei ole veel selle Google konto lubatud saatjate hulgas.';
+  $('psMailSend').disabled=!p.permitted;
+  $('psMailModal').style.display='block';
+ }catch(e){showError('Kirja avamine ebaõnnestus: '+e.message);}
+}
+$('psMailClose').onclick=()=>$('psMailModal').style.display='none';
+$('psMailSend').onclick=async()=>{
+ const b=$('psMailSend');
+ if(!confirm('Kas saadad pakkumise PDF-manusega aadressile '+$('psMailTo').value+'?'))return;
+ b.disabled=true;b.textContent='Saadan...';
+ try{
+  await runScript('psSaadaPakkumineGmailiga',[{nr:psMailCurrentNr,recipient:$('psMailTo').value,subject:$('psMailSubject').value,body:$('psMailBody').value}]);
+  $('psMailModal').style.display='none';
+  toast('Pakkumine saadetud Gmailiga');
+  await crmLoadQuotes();
+ }catch(e){showError('Saatmine ebaõnnestus: '+e.message);}
+ finally{b.disabled=false;b.textContent='Saada Gmailiga';}
+};
+
+
+</script>
 </body>
 </html>
