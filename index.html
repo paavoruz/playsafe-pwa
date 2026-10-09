@@ -227,6 +227,8 @@ h1{font-size:30px;margin:0;font-weight:800}
 .headerActionIcon{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:3px;font-size:10px;line-height:1.1}
 .headerActionIcon svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 @media(max-width:520px){.headerActions{right:10px;gap:5px}.headerAction{width:46px;height:48px;border-radius:12px}.headerActionIcon{font-size:9px}.headerActionIcon svg{width:21px;height:21px}.headerActionQuote svg{width:21px;height:21px}}
+/* Pakkumiste vaates ei dubleeri päise HP ikooni */
+body:has(#quoteView[style*="display: block"]) #openQuotesButton{display:none!important}
 /* Ühtne navigatsioon igas vaates */
 #headerActions{display:flex!important}
 #todoNav{display:flex!important}
@@ -272,10 +274,6 @@ h1{font-size:30px;margin:0;font-weight:800}
 
 
 <section id="quoteView" style="display:none">
-  <div class="quoteNav">
-    <button id="objectsTab" class="btn btnGray">Objektid</button>
-    <button id="quotesTab" class="btn btnDark active">Pakkumised</button>
-  </div>
 <div class="quoteNav" style="margin:12px 0"><button id="quoteCreateTab" class="btn btnDark" type="button">Uus pakkumine</button><button id="quoteListTab" class="btn btnGray" type="button">Kõik pakkumised</button></div>
 <div id="quoteCreatePanel">
 
@@ -2418,8 +2416,8 @@ async function saveQuote(){
 }
 
 $("openQuotesButton").onclick=openQuotes;
-$("objectsTab").onclick=showList;
-$("quotesTab").onclick=openQuotes;
+
+
 $("quoteTransportKm").oninput=calculateQuote;
 $("quoteTransportPrice").oninput=calculateQuote;
 $("quoteAddress").oninput=calculateQuote;
