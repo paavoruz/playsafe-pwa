@@ -2722,7 +2722,7 @@ async function start(){
 start();
 
 /* ===== Asutuste ja väljakute vaade ===== */
-let psDbTab='asutused',psDbAsutused=[],psDbValjakud=[],psDbEditing=null;
+let psDbTab='asutused',psDbAsutused=[],psDbValjakud=[],psDbEditing=null,psDbTyypid=[];
 const psDbSafe=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function psDbField(key,label,value='',kind='text'){
  return `<label style="display:block;margin-top:10px;font-size:13px;font-weight:600">${psDbSafe(label)}<input class="formInput" data-psfield="${key}" type="${kind}" value="${psDbSafe(value)}" style="display:block;width:100%;margin-top:4px"></label>`;
@@ -2741,7 +2741,11 @@ function psDbRender(){
 }
 async function psDbLoad(){
  $('psDbList').textContent='Laadin andmeid...';
- try{[psDbAsutused,psDbValjakud]=await Promise.all([runScript('psGetAsutused',[]),runScript('psGetValjakud',[])]);psDbRender();}
+ try{
+  const [asutused,valjakud,valikud]=await Promise.all([runScript('psGetAsutused',[]),runScript('psGetValjakud',[]),runScript('psRegistriValikud',[])]);
+  psDbAsutused=asutused;psDbValjakud=valjakud;psDbTyypid=valikud.valjakuTyypid||[];
+  psDbRender();
+ }
  catch(e){$('psDbList').textContent='Andmete laadimine ebaõnnestus: '+e.message;}
 }
 function psDbEdit(id=''){
@@ -2753,7 +2757,11 @@ function psDbEdit(id=''){
  if(as){html+=psDbField('registrikood','Registrikood',x.registrikood)+psDbField('kontaktisik','Kontaktisik',x.kontaktisik)+psDbField('telefon','Telefon',x.telefon,'tel')+psDbField('email','E-post',x.email,'email');}
  else{
   html+=`<label style="display:block;margin-top:10px;font-size:13px;font-weight:600">Asutus (valikuline)<select class="formInput" data-psfield="asutuseId" style="display:block;width:100%;margin-top:4px"><option value="">Asutus määramata</option>${psDbAsutused.map(a=>`<option value="${psDbSafe(a.id)}" ${a.id===x.asutuseId?'selected':''}>${psDbSafe(a.nimi)}</option>`).join('')}</select></label>`;
-  html+=psDbField('tyyp','Väljaku tüüp',x.tyyp)+psDbField('seadmeteArv','Seadmete arv',x.seadmeteArv,'number');
+  const existingType=String(x.tyyp||'');
+  const allowed=psDbTyypid.some(t=>t===existingType);
+  html+=`<label style="display:block;margin-top:10px;font-size:13px;font-weight:600">Väljaku tüüp *<select class="formInput" data-psfield="tyyp" required style="display:block;width:100%;margin-top:4px"><option value="">Vali väljaku tüüp</option>${psDbTyypid.map(t=>`<option value="${psDbSafe(t)}" ${t===existingType?'selected':''}>${psDbSafe(t)}</option>`).join('')}</select></label>`;
+  if(existingType&&!allowed)html+=`<div class="muted" style="color:#a33;margin-top:5px">Senine tüüp „${psDbSafe(existingType)}” ei kuulu registri valikutesse. Vali uus tüüp.</div>`;
+  html+=psDbField('seadmeteArv','Seadmete arv',x.seadmeteArv,'number');
   html+=`<label style="display:block;margin-top:10px;font-size:13px;font-weight:600">Staatus<select class="formInput" data-psfield="staatus" style="display:block;width:100%;margin-top:4px">${['Aktiivne','Mitteaktiivne'].map(v=>`<option ${v===(x.staatus||'Aktiivne')?'selected':''}>${v}</option>`).join('')}</select></label>`;
  }
  html+=`<label style="display:block;margin-top:10px;font-size:13px;font-weight:600">Märkused<textarea class="formInput" data-psfield="markused" style="display:block;width:100%;margin-top:4px">${psDbSafe(x.markused||'')}</textarea></label>`;
@@ -2763,6 +2771,7 @@ async function psDbSave(){
  const data={id:psDbEditing||''};
  $('psDbFields').querySelectorAll('[data-psfield]').forEach(el=>data[el.dataset.psfield]=el.value.trim());
  if(!data.nimi){toast('Sisesta nimi');return;}
+ if(psDbTab==='valjakud'&&!data.tyyp){alert('Vali väljaku tüüp tööde registri C-veeru valikutest.');return;}
  const btn=$('psDbSave');btn.disabled=true;
  try{
   await runScript(psDbTab==='asutused'?'psSalvestaAsutus':'psSalvestaValjak',[data]);
