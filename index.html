@@ -176,9 +176,13 @@ h1{font-size:30px;margin:0;font-weight:800}
 .quoteActions .btn{flex:1}
 
 
-.todoNav{position:fixed;bottom:0;left:0;right:0;display:flex;background:#fff;border-top:1px solid #e5e1ed;padding:9px 12px calc(9px + env(safe-area-inset-bottom));z-index:110;gap:10px}
-.todoNav button{flex:1;border:0;background:transparent;padding:10px;border-radius:12px;color:#777;font-weight:750}
-.todoNav button.active{background:#eee4ff;color:#5c35a1}
+/* iOS-stiilis ujuv navigatsioon, liikuv aktiivse vaate taust */
+.todoNav{position:fixed;left:50%;right:auto;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);width:min(420px,calc(100% - 28px));display:flex;gap:0;padding:6px;background:rgba(255,255,255,.88);border:1px solid rgba(125,110,145,.20);border-radius:24px;box-shadow:0 10px 32px rgba(44,31,70,.18),0 2px 8px rgba(44,31,70,.06);z-index:110;isolation:isolate;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.todoNav::before{content:"";position:absolute;top:6px;bottom:6px;left:6px;width:calc((100% - 12px)/2);background:#eee4ff;border-radius:19px;z-index:-1;transform:translateX(0);transition:transform .32s cubic-bezier(.22,1,.36,1);box-shadow:0 1px 5px rgba(85,50,150,.10)}
+.todoNav:has(#tabTodo.active)::before{transform:translateX(100%)}
+.todoNav button{position:relative;flex:1;min-height:48px;border:0;background:transparent;padding:11px 8px;border-radius:19px;color:#777;font-weight:750;transition:color .24s ease;cursor:pointer}
+.todoNav button.active{background:transparent;color:#5c35a1}
+@media(prefers-reduced-motion:reduce){.todoNav::before,.todoNav button{transition:none}}
 .todoTop{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:16px}
 .todoColumns{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 .todoColumn{background:#eeedf2;border-radius:16px;padding:10px;min-height:170px}
