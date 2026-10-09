@@ -2525,6 +2525,11 @@ let todoWorks=[];
 async function loadTodoWorks(){
  try{
   todoWorks=await runScript('psUlesandeTood',[]);
+  todoWorks.sort((a,b)=>{
+   const na=Number(a.nr),nb=Number(b.nr);
+   if(Number.isFinite(na)&&Number.isFinite(nb))return nb-na;
+   return String(b.nr).localeCompare(String(a.nr),'et',{numeric:true});
+  });
   const sel=$("todoWorkSelect"),current=sel.value;
   sel.replaceChildren(new Option("Ilma tööta",""));
   for(const w of todoWorks)sel.add(new Option(w.nr+" – "+w.objekt,w.nr));
@@ -2534,7 +2539,7 @@ async function loadTodoWorks(){
 $("todoWorkSelect").onchange=()=>{
  const w=todoWorks.find(x=>x.nr===$("todoWorkSelect").value);
  if(!w)return;
- $("todoText").value="Ülevaatus: "+w.objekt;
+ $("todoText").value=w.objekt;
  $("todoPersonInput").value=w.person||"";
  $("todoPhoneInput").value=w.phone||"";
  $("todoMapInput").value=w.mapUrl||"";
