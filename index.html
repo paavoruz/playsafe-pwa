@@ -238,7 +238,7 @@ h1{font-size:30px;margin:0;font-weight:800}
   <div class="brand">PLAYSAFE</div>
   <h1 id="pageTitle">Register</h1>
   <div id="headerActions" class="headerActions">
-    <button id="openQuotesButton" class="headerAction headerActionQuote" type="button" aria-label="Hinnapakkumised" title="Hinnapakkumised"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2.5h7l5 5V21H7a2 2 0 0 1-2-2V4.5a2 2 0 0 1 2-2Z"/><path d="M14 2.5V8h5M9 12h6M9 16h6"/></svg><span>HP</span></button>
+    <button id="openQuotesButton" class="headerAction headerActionQuote" type="button" aria-label="Pakkumised" title="Pakkumised"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2.5h7l5 5V21H7a2 2 0 0 1-2-2V4.5a2 2 0 0 1 2-2Z"/><path d="M14 2.5V8h5M9 12h6M9 16h6"/></svg><span>HP</span></button>
     <button id="openClientsButton" class="headerAction headerActionIcon" type="button" title="Kliendid" aria-label="Kliendid"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3.5 20v-2a5.5 5.5 0 0 1 11 0v2M16 5a3 3 0 0 1 0 6M17 14a5 5 0 0 1 3.5 4.8V20"/></svg><span>Kliendid</span></button>
     <button id="openSitesButton" class="headerAction headerActionIcon" type="button" title="Väljakud" aria-label="Väljakud"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2.4"/></svg><span>Väljakud</span></button>
     <button id="newObjectButton" class="headerAction headerActionAdd" type="button" aria-label="Uus objekt" title="Uus objekt">+</button>
@@ -271,7 +271,7 @@ h1{font-size:30px;margin:0;font-weight:800}
 <section id="quoteView" style="display:none">
   <div class="quoteNav">
     <button id="objectsTab" class="btn btnGray">Objektid</button>
-    <button id="quotesTab" class="btn btnDark active">Hinnapakkumised</button>
+    <button id="quotesTab" class="btn btnDark active">Pakkumised</button>
   </div>
 <div class="quoteNav" style="margin:12px 0"><button id="quoteCreateTab" class="btn btnDark" type="button">Uus pakkumine</button><button id="quoteListTab" class="btn btnGray" type="button">Kõik pakkumised</button></div>
 <div id="quoteCreatePanel">
@@ -377,7 +377,7 @@ h1{font-size:30px;margin:0;font-weight:800}
 
 <section id="psDatabaseView" style="display:none">
  <div class="card">
-  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap"><div class="detailTitle" id="psDbTitle">Kliendid</div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btnDark" id="psDbQuoteBack" type="button" style="display:none">← Tagasi pakkumise juurde</button><button class="btn btnGray" id="psDbBack" type="button">← Register</button></div></div>
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap"><div style="display:flex;gap:8px;flex-wrap:wrap;margin-left:auto"><button class="btn btnDark" id="psDbQuoteBack" type="button" style="display:none">← Tagasi pakkumise juurde</button><button class="btn btnGray" id="psDbBack" type="button">← Register</button></div></div>
   
   <input id="psDbSearch" class="formInput" placeholder="Otsi nime või aadressi järgi" style="width:100%;margin-bottom:10px">
   <button class="btn btnDark" id="psDbNew" type="button">+ Lisa asutus</button>
@@ -2297,7 +2297,7 @@ async function openQuotes(){
  $("detailView").style.display="none";
  $("workView").style.display="none";
  $("quoteView").style.display="block";
- $("pageTitle").textContent="Hinnapakkumised";
+ $("pageTitle").textContent="Pakkumised";
  $("quoteDate").value=$("quoteDate").value||localDateISO();
 
  try{
@@ -2753,7 +2753,7 @@ function psDbField(key,label,value='',kind='text'){
 }
 function psDbRender(){
  const as=psDbTab==='asutused';
- $('psDbTitle').textContent=as?'Kliendid':'Väljakud';
+ // Vaate nimi kuvatakse ainult lehe päises.
  $('psDbNew').textContent=as?'+ Lisa klient':'+ Lisa väljak';
  const query=$('psDbSearch').value.trim().toLocaleLowerCase('et-EE');
  const items=(as?psDbAsutused:psDbValjakud).filter(x=>[x.nimi,x.aadress].some(v=>String(v||'').toLocaleLowerCase('et-EE').includes(query)));
@@ -2831,7 +2831,7 @@ function psDbOpen(tab){
  $('psDbSearch').value='';
  if(!psQuoteSitesReturnNr)$('psDbQuoteBack').style.display='none';
  ['listView','detailView','workView','quoteView','todoView'].forEach(id=>$(id).style.display='none');
- $('psDatabaseView').style.display='block';$('todoNav').style.display='none';$('headerActions').style.display='none';$('pageTitle').textContent=psDbTab==='asutused'?'Kliendid':'Väljakud';
+ $('psDatabaseView').style.display='block';$('todoNav').style.display='none';$('headerActions').style.display='flex';$('pageTitle').textContent=psDbTab==='asutused'?'Kliendid':'Väljakud';
  psDbLoad();
 }
 $('openClientsButton').onclick=()=>psDbOpen('asutused');
