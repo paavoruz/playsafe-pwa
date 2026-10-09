@@ -2195,7 +2195,7 @@ function crmRenderQuotes(){
  const old=item.staatus;
  if(el.value==='Aktsepteeritud'&&!confirm('Kas märgid pakkumise aktsepteerituks ja kliendi aktiivseks?')){el.value=old;return;}
  el.disabled=true;
- try{await runScript('crmMuudaPakkumiseStaatus',[item.nr,el.value]);item.staatus=el.value;toast('Staatus salvestatud');crmRenderQuotes();}
+ try{const result=await runScript('crmMuudaPakkumiseStaatus',[item.nr,el.value]);item.staatus=el.value;toast('Staatus salvestatud');crmRenderQuotes();if(el.value==='Aktsepteeritud')await psOpenAcceptedSites(item.nr,result.asutuseId);}
  catch(e){el.value=old;showError('Staatuse salvestamise viga: '+e.message);}finally{el.disabled=false;}
  });
 }
@@ -2797,6 +2797,17 @@ async function psDbSave(){
   await runScript(psDbTab==='asutused'?'psSalvestaAsutus':'psSalvestaValjak',[data]);
   $('psDbEditor').style.display='none';toast('Salvestatud');await psDbLoad();
  }catch(e){alert('Salvestamine ebaõnnestus: '+e.message);}finally{btn.disabled=false;}
+}
+async function psOpenAcceptedSites(quoteNr,asutuseId){
+ if(!asutuseId){alert('Asutuse ID puudub. Kontrolli, kas asutus loodi.');return;}
+ psDbTab='valjakud';
+ $('psDbSearch').value='';
+ psDbOpen();
+ await psDbLoad();
+ psDbEdit();
+ const select=$('psDbFields').querySelector('[data-psfield="asutuseId"]');
+ if(select)select.value=asutuseId;
+ $('psDbEditorTitle').textContent='Lisa pakkumise '+quoteNr+' väljak';
 }
 function psDbOpen(){
  ['listView','detailView','workView','quoteView','todoView'].forEach(id=>$(id).style.display='none');
