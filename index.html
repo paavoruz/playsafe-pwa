@@ -281,7 +281,7 @@ body:has(#quoteView[style*="display: block"]) #openQuotesButton{display:none!imp
 
 
 <section id="quoteView" style="display:none">
-<div class="quoteNav" style="margin:12px 0"><button id="quoteCreateTab" class="btn btnDark" type="button">Uus pakkumine</button><button id="quoteListTab" class="btn btnGray" type="button">Kõik pakkumised</button></div>
+<div class="quoteNav" style="margin:12px 0"><button id="quoteCreateTab" class="btn btnDark" type="button">Uus pakkumine</button><button id="quoteListTab" class="btn btnGray" type="button">Pakkumised</button></div>
 <div id="quoteCreatePanel">
 
   <div class="card">
@@ -363,7 +363,7 @@ body:has(#quoteView[style*="display: block"]) #openQuotesButton{display:none!imp
     <button id="saveQuote" class="btn btnDark">Salvesta pakkumine</button>
   </div>
 
-</div><div id="quoteListPanel" style="display:none"><div class="card"><div class="detailTitle">Kõik pakkumised</div><input id="quoteSearch" class="formInput" placeholder="Otsi pakkumist..." style="margin:12px 0"><button id="quoteRefresh" class="btn btnGray" type="button">Värskenda</button><div id="quoteListContent" style="margin-top:12px"></div></div></div>
+</div><div id="quoteListPanel" style="display:none"><div class="card"><div class="detailTitle">Pakkumised</div><div id="quoteStatusFilters" style="display:flex;gap:6px;flex-wrap:wrap;margin:12px 0 4px" role="group" aria-label="Pakkumiste staatuse filtrid"><button type="button" class="btn btnDark psQuoteFilter" data-status="Kõik">Kõik</button><button type="button" class="btn btnGray psQuoteFilter" data-status="Koostatud">✎ Koostatud</button><button type="button" class="btn btnGray psQuoteFilter" data-status="Saadetud">✉ Saadetud</button><button type="button" class="btn btnGray psQuoteFilter" data-status="Aktsepteeritud">✓ Aktsepteeritud</button><button type="button" class="btn btnGray psQuoteFilter" data-status="Tagasi lükatud">✕ Tagasi lükatud</button></div><input id="quoteSearch" class="formInput" placeholder="Otsi pakkumist..." style="margin:12px 0"><button id="quoteRefresh" class="btn btnGray" type="button">Värskenda</button><div id="quoteListContent" style="margin-top:12px"></div></div></div>
 <div id="psWorkPanel" class="card" style="display:none;margin-top:12px">
  <div class="detailTitle" id="psWorkTitle">Loo tööd</div>
  <p class="muted">Vali üks või mitu väljakut ning hindamise liik.</p>
@@ -2197,10 +2197,18 @@ async function loadValjakuTyypid(){
 
 
 let crmQuoteCache=[];
+let psQuoteStatusFilter='Kõik';
+function psSetQuoteStatusFilter(status){
+ psQuoteStatusFilter=status;
+ document.querySelectorAll('.psQuoteFilter').forEach(b=>{b.className='btn '+(b.dataset.status===status?'btnDark':'btnGray');b.setAttribute('aria-pressed',String(b.dataset.status===status));});
+ crmRenderQuotes();
+}
+document.querySelectorAll('.psQuoteFilter').forEach(b=>b.addEventListener('click',()=>psSetQuoteStatusFilter(b.dataset.status)));
+
 function crmEsc(x){return String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function crmRenderQuotes(){
  const q=($('quoteSearch').value||'').toLowerCase();
- const items=crmQuoteCache.filter(x=>[x.nr,x.tellija,x.objekt].some(y=>String(y||'').toLowerCase().includes(q)));
+ const items=crmQuoteCache.filter(x=>(psQuoteStatusFilter==='Kõik'||x.staatus===psQuoteStatusFilter)&&[x.nr,x.tellija,x.objekt].some(y=>String(y||'').toLowerCase().includes(q)));
  $('quoteListContent').innerHTML=items.length?items.map(x=>`<div class="card" style="border:1px solid #ddd;margin:8px 0;position:relative;padding-right:48px"><div style="position:absolute;top:10px;right:10px">${/^https:\/\//.test(x.pdf)?`<a target="_blank" rel="noopener" href="${crmEsc(x.pdf)}" title="Ava pakkumise PDF" aria-label="Ava pakkumise PDF" style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border:1px solid #ddd;border-radius:9px;color:#c43b3b;text-decoration:none;background:white"><svg xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M7 16h10"/><path d="M7 13h10"/></svg></a>`:''}</div><b>${crmEsc(x.nr)}</b> · ${crmEsc(x.kuupaev)}<div>${crmEsc(x.tellija)} — ${crmEsc(x.objekt)}</div><div><b>${crmEsc(x.kokku)} €</b></div><select class="formInput crmStatus" data-nr="${crmEsc(x.nr)}" style="margin-top:8px"><option ${x.staatus==='Koostatud'?'selected':''}>Koostatud</option><option ${x.staatus==='Saadetud'?'selected':''}>Saadetud</option><option ${x.staatus==='Aktsepteeritud'?'selected':''}>Aktsepteeritud</option><option ${x.staatus==='Tagasi lükatud'?'selected':''}>Tagasi lükatud</option></select><div style="margin-top:8px"><button type="button" class="btn btnGray psMailOpen" data-nr="${crmEsc(x.nr)}">✉ Saada pakkumine</button></div>${x.staatus==='Aktsepteeritud'?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button type="button" class="btn btnDark psQuoteSites" data-nr="${crmEsc(x.nr)}">Lisa väljakud</button><button type="button" class="btn btnGray psWorkOpen" data-nr="${crmEsc(x.nr)}">Loo tööd</button></div>`:''}</div>`).join(''):'Pakkumisi ei leitud.';
 
  document.querySelectorAll('.psWorkOpen').forEach(b=>b.onclick=()=>psOpenWork(b.dataset.nr));
