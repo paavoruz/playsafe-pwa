@@ -394,7 +394,7 @@ body:has(#quoteView[style*="display: block"]) #openQuotesButton{display:none!imp
  <div class="card" id="psDbEditor" style="display:none;margin-top:12px">
   <div class="detailTitle" id="psDbEditorTitle">Lisa asutus</div>
   <div id="psDbFields"></div>
-  <div style="display:flex;gap:8px;margin-top:12px"><button class="btn btnDark" id="psDbSave" type="button">Salvesta</button><button class="btn btnGray" id="psDbCancel" type="button">Tühista</button></div>
+  <div style="display:flex;gap:8px;margin-top:12px"><button class="btn btnDark" id="psDbSave" type="button">Salvesta</button><button class="btn btnGray" id="psDbCancel" type="button">Tühista</button><button class="btn" id="psDbDelete" type="button" style="display:none;margin-left:auto;background:#fff0ee;color:#b42318">🗑 Kustuta</button></div>
  </div>
 </section>
 
@@ -2789,7 +2789,7 @@ function psDbRender(){
  const items=(as?psDbAsutused:psDbValjakud).filter(x=>[x.nimi,x.aadress].some(v=>String(v||'').toLocaleLowerCase('et-EE').includes(query)));
  $('psDbList').innerHTML=items.length?items.map(x=>{
   const institution=as?'':(psDbAsutused.find(a=>a.id===x.asutuseId)?.nimi||'Asutus määramata');
-  return `<div style="border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin:8px 0;display:flex;align-items:center;justify-content:space-between;gap:10px"><div><b>${psDbSafe(x.nimi)}</b><div class="muted">${psDbSafe(x.aadress||'')}${institution?' · '+psDbSafe(institution):''}</div></div><button type="button" class="btn btnGray psDbEdit" data-id="${psDbSafe(x.id)}">Muuda</button></div>`;
+  return `<div style="border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin:8px 0;display:flex;align-items:center;justify-content:space-between;gap:10px"><div><b>${psDbSafe(x.nimi)}</b><div class="muted">${psDbSafe(x.aadress||'')}${institution?' · '+psDbSafe(institution):''}</div></div><button type="button" class="btn btnGray psDbEdit" data-id="${psDbSafe(x.id)}" title="Muuda" aria-label="Muuda ${as?'klienti':'väljakut'}" style="min-width:44px;min-height:44px;padding:8px;font-size:21px">✎</button></div>`;
  }).join(''):'<div class="muted" style="padding:15px">Kirjeid ei leitud.</div>';
  $('psDbList').querySelectorAll('.psDbEdit').forEach(b=>b.onclick=()=>psDbEdit(b.dataset.id));
 }
@@ -2830,6 +2830,7 @@ function psDbEdit(id=''){
  const as=psDbTab==='asutused';
  const x=(as?psDbAsutused:psDbValjakud).find(o=>o.id===id)||{};
  psDbEditing=id||null;
+ $('psDbDelete').style.display=id?'inline-block':'none';
  $('psDbEditorTitle').textContent=(id?'Muuda ':'Lisa ')+(as?'klienti':'väljakut');
  let html=psDbField('nimi','Nimi *',x.nimi)+psDbField('aadress','Aadress',x.aadress);
  if(as){html+=psDbField('registrikood','Registrikood',x.registrikood)+psDbField('kontaktisik','Kontaktisik',x.kontaktisik)+psDbField('telefon','Telefon',x.telefon,'tel')+psDbField('email','E-post',x.email,'email');}
@@ -2857,6 +2858,21 @@ async function psDbSave(){
   $('psDbEditor').style.display='none';toast('Salvestatud');await psDbLoad();
  }catch(e){alert('Salvestamine ebaõnnestus: '+e.message);}finally{btn.disabled=false;}
 }
+async function psDbDeleteCurrent(){
+ const id=psDbEditing,as=psDbTab==='asutused';
+ if(!id)return;
+ const x=(as?psDbAsutused:psDbValjakud).find(o=>o.id===id);
+ if(!x)return;
+ if(!confirm('Kas soovid '+(as?'kliendi':'väljaku')+' „'+x.nimi+'” jäädavalt kustutada?'))return;
+ const b=$('psDbDelete');b.disabled=true;
+ try{
+  await runScript(as?'psKustutaAsutus':'psKustutaValjak',[id]);
+  $('psDbEditor').style.display='none';psDbEditing=null;
+  toast('Kustutatud');await psDbLoad();
+ }catch(e){alert('Kustutamine ebaõnnestus: '+e.message);}
+ finally{b.disabled=false;}
+}
+$('psDbDelete').onclick=psDbDeleteCurrent;
 let psQuoteSitesReturnNr='';
 async function psOpenQuoteSites(quoteNr){
  const q=crmQuoteCache.find(x=>String(x.nr)===String(quoteNr));
