@@ -397,9 +397,21 @@ body:has(#quoteView[style*="display: block"]) #openQuotesButton{display:none!imp
  <div class="card">
   <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap"><div style="display:flex;gap:8px;flex-wrap:wrap;margin-left:auto"><button class="btn btnDark" id="psDbQuoteBack" type="button" style="display:none">← Tagasi pakkumise juurde</button></div></div>
   
-  <input id="psDbSearch" class="formInput" placeholder="Otsi nime või aadressi järgi" style="width:100%;margin-bottom:10px">
-  <button class="btn btnDark" id="psDbNew" type="button">+ Lisa asutus</button>
-  <div id="psDbList" style="margin-top:12px"></div>
+  <div id="psSiteTabs" style="display:none;gap:8px;margin:10px 0 14px">
+    <button type="button" class="btn btnDark" id="psSiteListTab" aria-label="Kõik väljakud" title="Kõik väljakud" style="min-width:48px;min-height:46px;display:inline-flex;align-items:center;justify-content:center"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.4"/><rect x="14" y="3" width="7" height="7" rx="1.4"/><rect x="3" y="14" width="7" height="7" rx="1.4"/><rect x="14" y="14" width="7" height="7" rx="1.4"/></svg></button>
+    <button type="button" class="btn btnGray" id="psSiteAddTab" aria-label="Lisa väljak" title="Lisa väljak" style="min-width:48px;min-height:46px;display:inline-flex;align-items:center;justify-content:center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+  </div>
+  <div id="psDbListPanel">
+    <input id="psDbSearch" class="formInput" placeholder="Otsi nime või aadressi järgi" style="width:100%;margin-bottom:10px">
+    <button class="btn btnDark" id="psDbNew" type="button">+ Lisa asutus</button>
+    <div id="psDbList" style="margin-top:12px"></div>
+  </div>
+  <div id="psSiteAddPanel" style="display:none">
+    <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px" for="psSiteExisting">Vali olemasolev väljak</label>
+    <select id="psSiteExisting" class="formInput" style="width:100%;margin-bottom:12px"><option value="">Vali nimekirjast...</option></select>
+    <div class="muted" style="text-align:center;margin:8px 0">või</div>
+    <button type="button" class="btn btnDark" id="psSiteCreate" style="width:100%">＋ Lisa uus väljak</button>
+  </div>
  </div>
  <div class="card" id="psDbEditor" style="display:none;margin-top:12px">
   <div class="detailTitle" id="psDbEditorTitle">Lisa asutus</div>
@@ -2799,10 +2811,30 @@ const psDbSafe=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','
 function psDbField(key,label,value='',kind='text'){
  return `<label style="display:block;margin-top:10px;font-size:13px;font-weight:600">${psDbSafe(label)}<input class="formInput" data-psfield="${key}" type="${kind}" value="${psDbSafe(value)}" style="display:block;width:100%;margin-top:4px"></label>`;
 }
+let psSiteMode='list';
+function psSetSiteMode(mode){
+ psSiteMode=mode;
+ const site=psDbTab==='valjakud';
+ $('psSiteTabs').style.display=site?'flex':'none';
+ $('psDbListPanel').style.display=site&&mode==='add'?'none':'block';
+ $('psSiteAddPanel').style.display=site&&mode==='add'?'block':'none';
+ $('psSiteListTab').className='btn '+(mode==='list'?'btnDark':'btnGray');
+ $('psSiteAddTab').className='btn '+(mode==='add'?'btnDark':'btnGray');
+ if(site&&mode==='add'){
+  $('psSiteExisting').innerHTML='<option value="">Vali nimekirjast...</option>'+
+   psDbValjakud.slice().sort((a,b)=>String(a.nimi).localeCompare(String(b.nimi),'et'))
+   .map(x=>'<option value="'+psDbSafe(x.id)+'">'+psDbSafe(x.nimi)+'</option>').join('');
+ }
+ if(mode==='list')$('psDbEditor').style.display='none';
+}
+$('psSiteListTab').onclick=()=>psSetSiteMode('list');
+$('psSiteAddTab').onclick=()=>psSetSiteMode('add');
+$('psSiteCreate').onclick=()=>psDbEdit();
+$('psSiteExisting').onchange=e=>{if(e.target.value)psDbEdit(e.target.value);};
 function psDbRender(){
  const as=psDbTab==='asutused';
  // Vaate nimi kuvatakse ainult lehe päises.
- $('psDbNew').textContent=as?'+ Lisa klient':'+ Lisa väljak';
+ $('psDbNew').textContent=as?'+ Lisa klient':'＋';
  const query=$('psDbSearch').value.trim().toLocaleLowerCase('et-EE');
  const items=(as?psDbAsutused:psDbValjakud).filter(x=>[x.nimi,x.aadress].some(v=>String(v||'').toLocaleLowerCase('et-EE').includes(query)));
  $('psDbList').innerHTML=items.length?items.map(x=>{
@@ -2816,7 +2848,7 @@ async function psDbLoad(){
  try{
   const [asutused,valjakud,valikud]=await Promise.all([runScript('psGetAsutused',[]),runScript('psGetValjakud',[]),runScript('psRegistriValikud',[])]);
   psDbAsutused=asutused;psDbValjakud=valjakud;psDbTyypid=valikud.valjakuTyypid||[];
-  psDbRender();
+  psDbRender();psSetSiteMode(psSiteMode);
  }
  catch(e){$('psDbList').textContent='Andmete laadimine ebaõnnestus: '+e.message;}
 }
@@ -2908,6 +2940,7 @@ async function psOpenAcceptedSites(quoteNr,asutuseId){
  $('psDbSearch').value='';
  psDbOpen();
  await psDbLoad();
+ psSetSiteMode('add');
  psDbEdit();
  const select=$('psDbFields').querySelector('[data-psfield="asutuseId"]');
  if(select)select.value=asutuseId;
@@ -2917,6 +2950,7 @@ function psUpdateClientHeader(){ /* Kõigil vaadetel sama päis. */ }
 function psDbOpen(tab){
  if(tab==='asutused'||tab==='valjakud')psDbTab=tab;
  $('psDbEditor').style.display='none';
+ psSiteMode='list';psSetSiteMode('list');
  $('psDbSearch').value='';
  if(!psQuoteSitesReturnNr)$('psDbQuoteBack').style.display='none';
  ['listView','detailView','workView','quoteView','todoView'].forEach(id=>$(id).style.display='none');
@@ -2936,7 +2970,7 @@ $('psDbQuoteBack').onclick=async()=>{
  toast('Väljakud salvestatud. Vali pakkumise juures „Loo tööd”.');
 };
 $('psDbSearch').oninput=psDbRender;
-$('psDbNew').onclick=()=>psDbEdit();
+$('psDbNew').onclick=()=>{if(psDbTab==='valjakud')psSetSiteMode('add');else psDbEdit();};
 $('psDbSave').onclick=psDbSave;
 $('psDbCancel').onclick=()=>{$('psDbEditor').style.display='none';};
 
