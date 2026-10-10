@@ -239,6 +239,16 @@ body:has(#quoteView[style*="display: block"]) #openQuotesButton{display:none!imp
 .todoNav{transition:transform .28s ease,opacity .28s ease;will-change:transform,opacity}
 .todoNav.navHidden{transform:translate(-50%,calc(100% + 28px + env(safe-area-inset-bottom)));opacity:0;pointer-events:none}
 @media(prefers-reduced-motion:reduce){.todoNav{transition:none}}
+
+/* Pakkumiste staatuse filtrid: ainult ikoonid */
+.psQuoteFilters{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0 4px;align-items:center}
+.psQuoteFilter{width:45px;height:45px;display:inline-flex;align-items:center;justify-content:center;border-radius:13px;border:1px solid transparent;cursor:pointer;transition:box-shadow .15s,transform .15s;background:#f2f3f5;color:#747b86;padding:0}
+.psQuoteFilter[data-status="Koostatud"]{background:#f0f1f3;color:#818791;border-color:#d8dbe0}
+.psQuoteFilter[data-status="Saadetud"]{background:#fff3bf;color:#ba8200;border-color:#f7df80}
+.psQuoteFilter[data-status="Aktsepteeritud"]{background:#def5e7;color:#178547;border-color:#b8e5c9}
+.psQuoteFilter[data-status="Tagasi lükatud"]{background:#ffe2e2;color:#cf3434;border-color:#f5baba}
+.psQuoteFilter[aria-pressed="true"]{box-shadow:0 0 0 2px #27334d;transform:translateY(-1px)}
+.psQuoteFilter:focus-visible{outline:3px solid #7185c6;outline-offset:3px}
 </style>
 
 <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -363,7 +373,7 @@ body:has(#quoteView[style*="display: block"]) #openQuotesButton{display:none!imp
     <button id="saveQuote" class="btn btnDark">Salvesta pakkumine</button>
   </div>
 
-</div><div id="quoteListPanel" style="display:none"><div class="card"><div class="detailTitle">Pakkumised</div><div id="quoteStatusFilters" style="display:flex;gap:6px;flex-wrap:wrap;margin:12px 0 4px" role="group" aria-label="Pakkumiste staatuse filtrid"><button type="button" class="btn btnDark psQuoteFilter" data-status="Kõik">Kõik</button><button type="button" class="btn btnGray psQuoteFilter" data-status="Koostatud">✎ Koostatud</button><button type="button" class="btn btnGray psQuoteFilter" data-status="Saadetud">✉ Saadetud</button><button type="button" class="btn btnGray psQuoteFilter" data-status="Aktsepteeritud">✓ Aktsepteeritud</button><button type="button" class="btn btnGray psQuoteFilter" data-status="Tagasi lükatud">✕ Tagasi lükatud</button></div><input id="quoteSearch" class="formInput" placeholder="Otsi pakkumist..." style="margin:12px 0"><button id="quoteRefresh" class="btn btnGray" type="button">Värskenda</button><div id="quoteListContent" style="margin-top:12px"></div></div></div>
+</div><div id="quoteListPanel" style="display:none"><div class="card"><div class="detailTitle">Pakkumised</div><div id="quoteStatusFilters" class="psQuoteFilters" role="group" aria-label="Pakkumiste staatuse filtrid"><button type="button" class="psQuoteFilter" data-status="Kõik" title="Kõik" aria-label="Kõik" aria-pressed="true"><svg xmlns="http://www.w3.org/2000/svg" width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button><button type="button" class="psQuoteFilter" data-status="Koostatud" title="Koostatud" aria-label="Koostatud" aria-pressed="false"><svg xmlns="http://www.w3.org/2000/svg" width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L9 17l-4 1 1-4Z"/></svg></button><button type="button" class="psQuoteFilter" data-status="Saadetud" title="Saadetud" aria-label="Saadetud" aria-pressed="false"><svg xmlns="http://www.w3.org/2000/svg" width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="m3 6 9 7 9-7"/></svg></button><button type="button" class="psQuoteFilter" data-status="Aktsepteeritud" title="Aktsepteeritud" aria-label="Aktsepteeritud" aria-pressed="false"><svg xmlns="http://www.w3.org/2000/svg" width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></button><button type="button" class="psQuoteFilter" data-status="Tagasi lükatud" title="Tagasi lükatud" aria-label="Tagasi lükatud" aria-pressed="false"><svg xmlns="http://www.w3.org/2000/svg" width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div><input id="quoteSearch" class="formInput" placeholder="Otsi pakkumist..." style="margin:12px 0"><button id="quoteRefresh" class="btn btnGray" type="button">Värskenda</button><div id="quoteListContent" style="margin-top:12px"></div></div></div>
 <div id="psWorkPanel" class="card" style="display:none;margin-top:12px">
  <div class="detailTitle" id="psWorkTitle">Loo tööd</div>
  <p class="muted">Vali üks või mitu väljakut ning hindamise liik.</p>
@@ -2200,7 +2210,7 @@ let crmQuoteCache=[];
 let psQuoteStatusFilter='Kõik';
 function psSetQuoteStatusFilter(status){
  psQuoteStatusFilter=status;
- document.querySelectorAll('.psQuoteFilter').forEach(b=>{b.className='btn '+(b.dataset.status===status?'btnDark':'btnGray');b.setAttribute('aria-pressed',String(b.dataset.status===status));});
+ document.querySelectorAll('.psQuoteFilter').forEach(b=>{b.setAttribute('aria-pressed',String(b.dataset.status===status));});
  crmRenderQuotes();
 }
 document.querySelectorAll('.psQuoteFilter').forEach(b=>b.addEventListener('click',()=>psSetQuoteStatusFilter(b.dataset.status)));
