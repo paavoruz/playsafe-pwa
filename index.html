@@ -286,6 +286,11 @@ body:has(#quoteView[style*="display: block"]) #openQuotesButton{display:none!imp
   </div>
 
   <div id="errorBox" class="errorBox"></div>
+  <div id="psQueueManager" class="card" style="display:none;margin:12px 0;padding:14px">
+   <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><strong>Ootel andmete haldamine</strong><button type="button" id="psQueueClose" class="btn btnGray">✕</button></div>
+   <p class="muted" style="margin:8px 0">Siin saad eemaldada ainult valitud objekti telefonis ootel elemendid ja fotod. Teisi objekte ei puudutata.</p>
+   <div id="psQueueItems"></div>
+  </div>
   <div id="objectList" class="objectList"></div>
 </section>
 
@@ -1940,9 +1945,11 @@ async function syncPending(){
     `Sünkroniseerimine lõpetatud: ${unique.length} viga jäi ootele. `+
     unique.slice(0,3).join(" | ")
    );
+   await psQueueOpen();
    toast("Osa töid sünkroniseeriti, osa jäi ootele");
   }else{
    hideError();
+   $('psQueueManager').style.display='none';
    toast("Ootel tööd sünkroniseeritud");
   }
 
@@ -2522,6 +2529,45 @@ async function updateSyncInfo(){
  : "Seda telefoni pole veel registriga sünkroniseeritud.";
 }
 
+function psQueueEscape(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+async function psQueueGroups(){
+ const [elements,photos]=await Promise.all([getAll('elements'),getAll('photos')]);
+ const groups=new Map();
+ const group=nr=>{const k=String(nr??'');if(!groups.has(k))groups.set(k,{nr:k,elements:[],photos:[]});return groups.get(k);};
+ for(const e of elements)if(!e.serverId||e.pendingRename||e.pendingDelete)group(e.objectNr).elements.push(e);
+ for(const p of photos)group(p.objectNr).photos.push(p);
+ return [...groups.values()].filter(g=>g.elements.length||g.photos.length).sort((a,b)=>b.nr.localeCompare(a.nr,'et',{numeric:true}));
+}
+async function psQueueOpen(){
+ const panel=$('psQueueManager');panel.style.display='block';
+ const root=$('psQueueItems');root.textContent='Laadin ootel andmeid...';
+ try{
+  const groups=await psQueueGroups();
+  root.innerHTML=groups.length?groups.map(g=>`<div style="padding:12px 0;border-top:1px solid #ddd;display:flex;align-items:center;justify-content:space-between;gap:10px"><div><b>Objekt ${psQueueEscape(g.nr)}</b><div class="muted">${g.elements.length} elementi · ${g.photos.length} fotot</div></div><button type="button" class="btn btnGray psQueueRemove" data-nr="${psQueueEscape(g.nr)}" style="color:#b42318">Kustuta ootel</button></div>`).join(''):'Ootel elemente ega fotosid ei ole.';
+  root.querySelectorAll('.psQueueRemove').forEach(b=>b.onclick=()=>psQueueRemove(b.dataset.nr));
+ }catch(e){root.textContent='Ootel andmete lugemine ebaõnnestus: '+e.message;}
+}
+async function psQueueRemove(nr){
+ if(syncing){alert('Oota sünkroniseerimise lõpp ära.');return;}
+ const groups=await psQueueGroups(),g=groups.find(x=>x.nr===String(nr));if(!g)return psQueueOpen();
+ const count=g.elements.length+g.photos.length;
+ if(!confirm(`Kas kustutad objekti ${nr} ${count} ootel toimingut sellest telefonist?\n\n${g.elements.length} elementi ja ${g.photos.length} fotot. Neid andmeid ei saa pärast taastada. Teiste objektide andmed jäävad alles.`))return;
+ try{
+  // Üks IndexedDB tehing tagab, et kustutatakse ainult sama objekti ootel kirjed.
+  await new Promise((resolve,reject)=>{
+   const tx=db.transaction(['elements','photos'],'readwrite');
+   const es=tx.objectStore('elements'),ps=tx.objectStore('photos');
+   g.elements.forEach(e=>es.delete(e.localId));g.photos.forEach(p=>ps.delete(p.id));
+   tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||new Error('Tehing katkestati'));
+  });
+  toast('Objekti '+nr+' ootel andmed kustutatud');
+  await psQueueOpen();
+  if(currentObject&&String(currentObject.nr)===String(nr)&&$('workView').style.display!=='none')await renderWork();
+  // Eelmise sünkroniseerimise veateade võib olla aegunud; järgmine sync annab värske tulemuse.
+  hideError();
+ }catch(e){alert('Kustutamine ebaõnnestus: '+e.message);}
+}
+$('psQueueClose').onclick=()=>$('psQueueManager').style.display='none';
 function showError(message){
  $("errorBox").textContent=message;
  $("errorBox").style.display="block";
