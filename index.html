@@ -942,10 +942,9 @@ function showObject(o){
   <div class="detailTitle">${esc(objectName(o))}</div>
   ${detailRow("Jrk nr",o.nr)}
   ${OBJECT_EDIT_FIELDS.slice(0,5).map(f=>editableDetailRow(f,o)).join("")}
-  <div class="row"><div class="label">Staatus</div><div class="value"><button type="button" id="detailStatusBadge" class="objectStatusBadge ${isReady(o)?'objectStatusReady':objectStatus(o)==='Objektil käidud'?'objectStatusWorking':'objectStatusNew'}">${objectStatus(o)} ✎</button></div></div>
+  <div class="row"><div class="label">Staatus</div><div class="value"><select id="detailStatusSelect" class="formInput" aria-label="Objekti staatus" style="max-width:260px;margin:0;font-weight:700">${["Uus","Objektil käidud","Valmis"].map(status=>`<option value="${status}" ${objectStatus(o)===status?'selected':''}>${status}</option>`).join('')}</select></div></div>
   ${OBJECT_EDIT_FIELDS.slice(5).map(f=>editableDetailRow(f,o)).join("")}
   <div class="objectActions">
-   <button id="changeStatus" class="btn btnBlue btnFull">Muuda staatust</button>
    ${isReady(o)?'':`<button id="deleteObject" class="btn btnFull" style="background:#fff0ee;color:#b42318">🗑 Kustuta objekt</button>`}
    <button id="startWork" class="btn btnDark btnFull">${isReady(o)?"Vaata elemente ja fotosid":"Alusta pildistamist"}</button>
   </div>
@@ -953,8 +952,12 @@ function showObject(o){
  $("detailBack").onclick=showList;
  $("startWork").onclick=()=>openWork(o);
  if($("deleteObject"))$("deleteObject").onclick=()=>deleteObject(o,$("deleteObject"));
- $("changeStatus").onclick=()=>chooseObjectStatus(o);
- $("detailStatusBadge").onclick=()=>chooseObjectStatus(o);
+ $("detailStatusSelect").onchange=async event=>{
+  const select=event.currentTarget;
+  const next=select.value;
+  select.disabled=true;
+  try{await chooseObjectStatus(o,next);}finally{if(select.isConnected){select.value=objectStatus(o);select.disabled=false;}}
+ };
  if(!isReady(o))for(const field of OBJECT_EDIT_FIELDS){
   const row=$("detailView").querySelector(`[data-object-field="${field.key}"]`);
   row.querySelector(".inlineEditButton").onclick=()=>beginInlineObjectEdit(o,field,row);
@@ -1190,13 +1193,10 @@ async function openEditObject(o){
   $("saveNewObject").disabled=false;
  }catch(e){showError("Muutmisvormi laadimise viga: "+e.message);}
 }
-async function chooseObjectStatus(o){
+async function chooseObjectStatus(o,next){
  const choices=["Uus","Objektil käidud","Valmis"];
  const current=objectStatus(o);
- const answer=prompt("Vali töö staatus:\\n1 – Uus\\n2 – Objektil käidud\\n3 – Valmis\\n\\nPraegune: "+current, String(choices.indexOf(current)+1));
- if(answer===null)return;
- const next=choices[Number(answer)-1];
- if(!next){toast("Vali 1, 2 või 3");return;}
+ if(!choices.includes(next)){toast("Tundmatu staatus");return;}
  if(next===current)return;
  if(!navigator.onLine){toast("Staatuse muutmiseks on vaja internetti");return;}
  if(!confirm("Kas muudad töö staatuse: "+current+" → "+next+"?"))return;
@@ -1209,6 +1209,7 @@ async function chooseObjectStatus(o){
   toast("Staatus salvestatud: "+next);
  }catch(e){showError("Staatuse muutmine ebaõnnestus: "+e.message);}
 }
+
 async function createNewObject(){
  if(editingObjectNr!==null)return saveEditedObject();
  const objekt=$("newObjectName").value.trim();
