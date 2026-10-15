@@ -49,7 +49,9 @@ h1{font-size:30px;margin:0;font-weight:800}
 .card{background:#fff;border-radius:17px;padding:16px}
 .objectCard{cursor:pointer;position:relative;padding-right:112px;border:1px solid transparent}
 .objectAddressLine{display:flex;align-items:center;gap:7px;margin-top:3px}
-.objectMapsLink{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:28px;height:28px;border-radius:8px;text-decoration:none;background:rgba(255,255,255,.7);font-size:18px}
+.objectMapsLink{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:28px;height:28px;border-radius:8px;text-decoration:none;background:transparent;font-size:18px}
+.objectMapsLink{background:transparent;color:#2a64b6}
+.objectMapsLink svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .objectMapsLink:focus-visible{outline:2px solid #1763a9;outline-offset:2px}
 .objectCardNew{background:#fff7d6;border-color:#f3df93}
 .objectCardVisited{background:#e7f3ff;border-color:#bdddf9}
@@ -870,7 +872,7 @@ function renderObjects(){
   d.className="card objectCard "+(objectStatus(o)==="Valmis"?"objectCardReady":objectStatus(o)==="Objektil käidud"?"objectCardVisited":"objectCardNew");
   d.innerHTML=`<div class="small">NR ${esc(o.nr)}</div>
   <div class="objectName">${esc(objectName(o))}</div>
-  <div class="objectAddressLine">${String(o.aadress||"").trim()?`<a class="objectMapsLink" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(o.aadress)}" target="_blank" rel="noopener noreferrer" aria-label="Ava aadress Google Mapsis" title="Ava Google Mapsis">📍</a><span class="muted">${esc(o.aadress)}</span>`:''}</div>
+  <div class="objectAddressLine">${String(o.aadress||"").trim()?`<a class="objectMapsLink" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(o.aadress)}" target="_blank" rel="noopener noreferrer" aria-label="Ava aadress Google Mapsis" title="Ava Google Mapsis"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg></a><span class="muted">${esc(o.aadress)}</span>`:''}</div>
   <div class="objectStatusActions">
     <span class="objectStatusBadge ${isReady(o)?'objectStatusReady':objectStatus(o)==='Objektil käidud'?'objectStatusWorking':'objectStatusNew'}">${objectStatus(o)}</span>
     ${isReady(o)?'':`<button type="button" class="objectDeleteIcon" aria-label="Kustuta objekt ${esc(objectName(o))}" title="Kustuta objekt">🗑</button>`}
