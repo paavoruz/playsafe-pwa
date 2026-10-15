@@ -40,13 +40,18 @@ h1{font-size:30px;margin:0;font-weight:800}
 .errorBox{display:none;background:#fff0ee;color:#98251d;border:1px solid #ffc4bd;border-radius:14px;padding:13px;margin-bottom:13px}
 .objectList,.elementList{display:flex;flex-direction:column;gap:10px}
 .card{background:#fff;border-radius:17px;padding:16px}
-.objectCard{cursor:pointer;position:relative;padding-right:60px}
+.objectCard{cursor:pointer;position:relative;padding-right:100px}
 .inlineEditButton{border:0;background:#f1f1f4;color:#555;border-radius:10px;min-width:38px;height:38px;cursor:pointer;flex-shrink:0}
 .inlineEditRow{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .inlineEditControls{display:flex;align-items:center;gap:6px;margin-top:7px}
 .inlineEditControls .formInput{min-width:0;flex:1}
 .inlineEditControls button{min-width:38px}
-.objectDeleteIcon{position:absolute;top:13px;right:13px;width:38px;height:38px;border:0;border-radius:11px;background:#fff0ee;color:#b42318;font-size:19px;cursor:pointer}
+.objectDeleteIcon{width:38px;height:38px;border:0;border-radius:11px;background:#fff0ee;color:#b42318;font-size:19px;cursor:pointer}
+.objectStatusActions{position:absolute;top:13px;right:13px;display:flex;flex-direction:column;align-items:center;gap:8px;min-width:70px}
+.objectStatusBadge{border-radius:10px;padding:7px 10px;font-size:13px;font-weight:800;white-space:nowrap}
+.objectStatusNew{background:#fff1bd;color:#876000}
+.objectStatusWorking{background:#dcecff;color:#1763a9}
+.objectStatusReady{background:#e3f6e9;color:#18743a}
 .objectDeleteIcon:disabled{opacity:.5;cursor:wait}
 .objectReady{position:absolute;right:13px;top:18px;background:#e3f6e9;color:#18743a;border-radius:10px;padding:7px 11px;font-size:13px;font-weight:800}
 .statusReady{display:inline-block;background:#e3f6e9;color:#18743a;border-radius:9px;padding:6px 11px;font-weight:800}
@@ -830,7 +835,10 @@ function renderObjects(){
   d.innerHTML=`<div class="small">NR ${esc(o.nr)}</div>
   <div class="objectName">${esc(objectName(o))}</div>
   <div class="muted">${esc(o.aadress||"")}</div>
-  ${isReady(o)?'<span class="objectReady">Valmis</span>':`<button type="button" class="objectDeleteIcon" aria-label="Kustuta objekt ${esc(objectName(o))}" title="Kustuta objekt">🗑</button>`}`;
+  <div class="objectStatusActions">
+    <span class="objectStatusBadge ${isReady(o)?'objectStatusReady':String(o.staatus||'').trim().toLocaleLowerCase('et-EE')==='töös'?'objectStatusWorking':'objectStatusNew'}">${isReady(o)?'Valmis':String(o.staatus||'').trim().toLocaleLowerCase('et-EE')==='töös'?'Töös':'Uus'}</span>
+    ${isReady(o)?'':`<button type="button" class="objectDeleteIcon" aria-label="Kustuta objekt ${esc(objectName(o))}" title="Kustuta objekt">🗑</button>`}
+  </div>`;
   d.onclick=()=>showObject(o);
    const trash=d.querySelector(".objectDeleteIcon");
    if(trash)trash.onclick=e=>{
