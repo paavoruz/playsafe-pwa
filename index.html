@@ -47,7 +47,10 @@ h1{font-size:30px;margin:0;font-weight:800}
 .objectFilter.active .filterCount{background:#d8c5ff;color:#4d2e88}
 .objectList,.elementList{display:flex;flex-direction:column;gap:10px}
 .card{background:#fff;border-radius:17px;padding:16px}
-.objectCard{cursor:pointer;position:relative;padding-right:100px}
+.objectCard{cursor:pointer;position:relative;padding-right:112px;border:1px solid transparent}
+.objectCardNew{background:#fff7d6;border-color:#f3df93}
+.objectCardVisited{background:#e7f3ff;border-color:#bdddf9}
+.objectCardReady{background:#e6f7eb;border-color:#b9e5c5}
 .inlineEditButton{border:0;background:#f1f1f4;color:#555;border-radius:10px;min-width:38px;height:38px;cursor:pointer;flex-shrink:0}
 .inlineEditRow{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .inlineEditControls{display:flex;align-items:center;gap:6px;margin-top:7px}
@@ -861,16 +864,15 @@ function renderObjects(){
 
  list.forEach(o=>{
   const d=document.createElement("div");
-  d.className="card objectCard";
+  d.className="card objectCard "+(objectStatus(o)==="Valmis"?"objectCardReady":objectStatus(o)==="Objektil käidud"?"objectCardVisited":"objectCardNew");
   d.innerHTML=`<div class="small">NR ${esc(o.nr)}</div>
   <div class="objectName">${esc(objectName(o))}</div>
   <div class="muted">${esc(o.aadress||"")}</div>
   <div class="objectStatusActions">
-    <button type="button" class="objectStatusBadge ${isReady(o)?'objectStatusReady':objectStatus(o)==='Objektil käidud'?'objectStatusWorking':'objectStatusNew'}" title="Muuda staatust">${objectStatus(o)}</button>
+    <span class="objectStatusBadge ${isReady(o)?'objectStatusReady':objectStatus(o)==='Objektil käidud'?'objectStatusWorking':'objectStatusNew'}">${objectStatus(o)}</span>
     ${isReady(o)?'':`<button type="button" class="objectDeleteIcon" aria-label="Kustuta objekt ${esc(objectName(o))}" title="Kustuta objekt">🗑</button>`}
   </div>`;
   d.onclick=()=>showObject(o);
-   d.querySelector(".objectStatusBadge").onclick=e=>{e.stopPropagation();chooseObjectStatus(o);};
    const trash=d.querySelector(".objectDeleteIcon");
    if(trash)trash.onclick=e=>{
     e.stopPropagation();
