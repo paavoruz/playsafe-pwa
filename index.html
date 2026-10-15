@@ -65,6 +65,10 @@ h1{font-size:30px;margin:0;font-weight:800}
 .objectStatusActions{position:absolute;top:7px;right:22px;width:116px;display:flex;flex-direction:column;align-items:flex-end;gap:8px}
 .objectStatusBadge{border:0;cursor:pointer;border-radius:10px;padding:7px 10px;font-size:13px;font-weight:400;white-space:nowrap}
 .objectCard .objectStatusBadge{box-sizing:border-box;width:116px;text-align:right;padding-right:0}
+.objectCardDeadline{position:absolute;right:22px;bottom:12px;font-size:13px;font-weight:800;line-height:20px;background:transparent;text-align:right;white-space:nowrap}
+.objectCardNew .objectCardDeadline{color:#876000}
+.objectCardVisited .objectCardDeadline{color:#1763a9}
+.objectCardDeadline.overdue{color:#c52232!important}
 .objectCard .objectName{margin:2px 0}
 .objectCard .objectAddressLine{margin-top:1px}
 .objectStatusNew{background:#fff7d6;color:#876000}
@@ -839,6 +843,15 @@ function esc(v){
 }
 
 let activeObjectFilter="Kõik";
+function objectDeadlineInfo(o){
+ const raw=formatObjectDate(o.tooKuupaev);
+ const match=/^(\d{4})-(\d{2})-(\d{2})$/.exec(raw);
+ if(!match)return null;
+ const iso=match[0];
+ const today=new Date();
+ const todayLocal=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
+ return {label:`${match[3]}.${match[2]}.${match[1]}`,overdue:iso<todayLocal};
+}
 function renderObjects(){
  const counts={"Uus":0,"Objektil käidud":0,"Valmis":0};
  objektid.forEach(o=>{counts[objectStatus(o)]++;});
@@ -871,6 +884,7 @@ function renderObjects(){
  }
 
  list.forEach(o=>{
+  const deadline=objectStatus(o)==="Valmis"?null:objectDeadlineInfo(o);
   const d=document.createElement("div");
   d.className="card objectCard "+(objectStatus(o)==="Valmis"?"objectCardReady":objectStatus(o)==="Objektil käidud"?"objectCardVisited":"objectCardNew");
   d.innerHTML=`<div class="small">NR ${esc(o.nr)}</div>
@@ -878,7 +892,8 @@ function renderObjects(){
   <div class="objectAddressLine">${String(o.aadress||"").trim()?`<a class="objectMapsLink" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(o.aadress)}" target="_blank" rel="noopener noreferrer" aria-label="Ava aadress Google Mapsis" title="Ava Google Mapsis"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg></a><span class="muted">${esc(o.aadress)}</span>`:''}</div>
   <div class="objectStatusActions">
     <span class="objectStatusBadge ${isReady(o)?'objectStatusReady':objectStatus(o)==='Objektil käidud'?'objectStatusWorking':'objectStatusNew'}">${objectStatus(o)}</span>
-  </div>`;
+  </div>
+  ${deadline?`<span class="objectCardDeadline${deadline.overdue?' overdue':''}" title="Töö tähtaeg${deadline.overdue?' – möödunud':''}">${deadline.label}</span>`:''}`;
   d.onclick=()=>showObject(o);
   const mapsLink=d.querySelector(".objectMapsLink");
   if(mapsLink)mapsLink.onclick=e=>e.stopPropagation();
