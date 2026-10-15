@@ -453,7 +453,7 @@ body:has(#quoteView[style*="display: block"]) #openQuotesButton{display:none!imp
     <div class="modalTitle" id="objectModalTitle">Uus objekt</div>
 
     <div class="formGroup">
-      <label class="formLabel" for="newObjectName">Objekt *</label>
+      <label class="formLabel" for="newObjectName">Objekt (nt Kelmiküla lasteaed, Paldiski madalseiklusrada) *</label>
       <input id="newObjectName" class="formInput" autocomplete="off">
     </div>
 
@@ -476,7 +476,7 @@ body:has(#quoteView[style*="display: block"]) #openQuotesButton{display:none!imp
     </div>
 
     <div class="formGroup">
-      <label class="formLabel" for="newObjectAddress">Aadress</label>
+      <label class="formLabel" for="newObjectAddress">Väljaku aadress</label>
       <input id="newObjectAddress" class="formInput" autocomplete="street-address">
     </div>
 
@@ -491,7 +491,7 @@ body:has(#quoteView[style*="display: block"]) #openQuotesButton{display:none!imp
       <div class="formGroup"><label class="formLabel" for="manualContactEmail">Kontaktisiku e-post</label><input id="manualContactEmail" class="formInput" type="email" autocomplete="email"></div>
     </div>
     <div class="formGroup">
-      <label class="formLabel" for="newObjectDate">Töö kuupäev *</label>
+      <label class="formLabel" for="newObjectDate">Töö tähtaeg *</label>
       <input id="newObjectDate" class="formInput" type="date">
     </div>
 
@@ -1157,7 +1157,7 @@ async function createNewObject(){
  }
 
  if(!tooKuupaev){
-  toast("Vali töö kuupäev");
+  toast("Vali töö tähtaeg");
   return;
  }
 
