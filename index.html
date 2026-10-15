@@ -38,6 +38,13 @@ h1{font-size:30px;margin:0;font-weight:800}
 .syncInfo{font-size:13px;color:#888;margin:8px 3px 14px}
 .authBox{display:none;background:#fff8e6;border:1px solid #efd78e;border-radius:15px;padding:14px;margin-bottom:14px}
 .errorBox{display:none;background:#fff0ee;color:#98251d;border:1px solid #ffc4bd;border-radius:14px;padding:13px;margin-bottom:13px}
+.objectFilters{display:flex;gap:8px;overflow-x:auto;padding:1px 1px 11px;margin-bottom:2px;scrollbar-width:thin}
+.objectFilter{display:inline-flex;align-items:center;gap:6px;flex-shrink:0;border:1px solid #e0dfe7;background:#fff;color:#444;border-radius:999px;padding:9px 11px;font-size:13px;font-weight:750;cursor:pointer}
+.objectFilter.active{background:#ece4ff;border-color:#ab8ce6;color:#4d2e88;box-shadow:0 0 0 1px #ab8ce6 inset}
+.filterDot{display:inline-block;width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.dotNew{background:#e3b12e}.dotVisited{background:#428fdd}.dotReady{background:#38a764}
+.filterCount{font-size:12px;background:#f0eff3;border-radius:20px;padding:2px 6px;color:#555}
+.objectFilter.active .filterCount{background:#d8c5ff;color:#4d2e88}
 .objectList,.elementList{display:flex;flex-direction:column;gap:10px}
 .card{background:#fff;border-radius:17px;padding:16px}
 .objectCard{cursor:pointer;position:relative;padding-right:100px}
@@ -276,6 +283,12 @@ body:has(#quoteView[style*="display: block"]) #openQuotesButton{display:none!imp
 
 <section id="listView">
   <input id="searchInput" class="search" type="search" placeholder="Otsi objekti või aadressi...">
+  <div class="objectFilters" id="objectFilters" role="group" aria-label="Filtreeri objekte staatuse järgi">
+    <button type="button" class="objectFilter active" data-status="Kõik" aria-pressed="true">▦ Kõik <span class="filterCount" id="countAll">0</span></button>
+    <button type="button" class="objectFilter" data-status="Uus" aria-pressed="false"><span class="filterDot dotNew"></span> Uus <span class="filterCount" id="countNew">0</span></button>
+    <button type="button" class="objectFilter" data-status="Objektil käidud" aria-pressed="false"><span class="filterDot dotVisited"></span> Objektil käidud <span class="filterCount" id="countVisited">0</span></button>
+    <button type="button" class="objectFilter" data-status="Valmis" aria-pressed="false"><span class="filterDot dotReady"></span> Valmis <span class="filterCount" id="countReady">0</span></button>
+  </div>
 
   <div class="statusCard">
     <div id="connectionStatus" class="connection">Kontrollin...</div>
@@ -814,9 +827,22 @@ function esc(v){
  .replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;");
 }
 
+let activeObjectFilter="Kõik";
 function renderObjects(){
+ const counts={"Uus":0,"Objektil käidud":0,"Valmis":0};
+ objektid.forEach(o=>{counts[objectStatus(o)]++;});
+ $("countAll").textContent=objektid.length;
+ $("countNew").textContent=counts["Uus"];
+ $("countVisited").textContent=counts["Objektil käidud"];
+ $("countReady").textContent=counts["Valmis"];
+ document.querySelectorAll("#objectFilters .objectFilter").forEach(b=>{
+  const active=b.dataset.status===activeObjectFilter;
+  b.classList.toggle("active",active);
+  b.setAttribute("aria-pressed",String(active));
+ });
  const q=$("searchInput").value.trim().toLowerCase();
  const list=objektid.filter(o=>
+  (activeObjectFilter==="Kõik"||objectStatus(o)===activeObjectFilter) &&
   [o.nr,o.objekt,o.aadress,o.tellija].join(" ").toLowerCase().includes(q)
  ).sort((a,b)=>{
   const getNr=o=>{
@@ -2612,6 +2638,9 @@ function toast(message){
 }
 
 $("searchInput").oninput=renderObjects;
+document.querySelectorAll("#objectFilters .objectFilter").forEach(b=>{
+ b.onclick=()=>{activeObjectFilter=b.dataset.status;renderObjects();};
+});
 $("syncButton").onclick=synchronize;
 
 $("googleButton").onclick=async()=>{
