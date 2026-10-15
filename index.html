@@ -47,7 +47,7 @@ h1{font-size:30px;margin:0;font-weight:800}
 .objectFilter.active .filterCount{background:#d8c5ff;color:#4d2e88}
 .objectList,.elementList{display:flex;flex-direction:column;gap:10px}
 .card{background:#fff;border-radius:17px;padding:16px}
-.objectCard{cursor:pointer;position:relative;padding-right:112px;border:1px solid transparent}
+.objectCard{cursor:pointer;position:relative;padding-right:112px;padding-bottom:52px;border:1px solid transparent}
 .objectAddressLine{display:flex;align-items:center;gap:7px;margin-top:3px}
 .objectMapsLink{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:28px;height:28px;border-radius:8px;text-decoration:none;background:transparent;font-size:18px}
 .objectMapsLink{background:transparent;color:#2a64b6}
@@ -61,9 +61,9 @@ h1{font-size:30px;margin:0;font-weight:800}
 .inlineEditControls{display:flex;align-items:center;gap:6px;margin-top:7px}
 .inlineEditControls .formInput{min-width:0;flex:1}
 .inlineEditControls button{min-width:38px}
-.objectDeleteIcon{width:38px;height:38px;border:0;border-radius:11px;background:#fff0ee;color:#b42318;font-size:19px;cursor:pointer}
+.objectDeleteIcon{position:absolute;left:13px;bottom:9px;width:38px;height:38px;border:0;border-radius:11px;background:transparent;color:#b42318;font-size:19px;cursor:pointer}
 .objectStatusActions{position:absolute;top:13px;right:13px;display:flex;flex-direction:column;align-items:center;gap:8px;min-width:70px}
-.objectStatusBadge{border:0;cursor:pointer;border-radius:10px;padding:7px 10px;font-size:13px;font-weight:800;white-space:nowrap}
+.objectStatusBadge{border:0;cursor:pointer;border-radius:10px;padding:7px 10px;font-size:13px;font-weight:400;white-space:nowrap}
 .objectStatusNew{background:#fff1bd;color:#876000}
 .objectStatusWorking{background:#dcecff;color:#1763a9}
 .objectStatusReady{background:#e3f6e9;color:#18743a}
@@ -875,8 +875,8 @@ function renderObjects(){
   <div class="objectAddressLine">${String(o.aadress||"").trim()?`<a class="objectMapsLink" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(o.aadress)}" target="_blank" rel="noopener noreferrer" aria-label="Ava aadress Google Mapsis" title="Ava Google Mapsis"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg></a><span class="muted">${esc(o.aadress)}</span>`:''}</div>
   <div class="objectStatusActions">
     <span class="objectStatusBadge ${isReady(o)?'objectStatusReady':objectStatus(o)==='Objektil käidud'?'objectStatusWorking':'objectStatusNew'}">${objectStatus(o)}</span>
-    ${isReady(o)?'':`<button type="button" class="objectDeleteIcon" aria-label="Kustuta objekt ${esc(objectName(o))}" title="Kustuta objekt">🗑</button>`}
-  </div>`;
+  </div>
+  ${isReady(o)?'':`<button type="button" class="objectDeleteIcon" aria-label="Kustuta objekt ${esc(objectName(o))}" title="Kustuta objekt">🗑</button>`}`;
   d.onclick=()=>showObject(o);
   const mapsLink=d.querySelector(".objectMapsLink");
   if(mapsLink)mapsLink.onclick=e=>e.stopPropagation();
