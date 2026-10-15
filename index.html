@@ -844,7 +844,7 @@ function esc(v){
 
 let activeObjectFilter="Kõik";
 function objectDeadlineInfo(o){
- const raw=formatObjectDate(o.tooKuupaev);
+ const raw=formatObjectDate(o.tooTahtaeg);
  const match=/^(\d{4})-(\d{2})-(\d{2})$/.exec(raw);
  if(!match)return null;
  const iso=match[0];
@@ -914,6 +914,7 @@ const OBJECT_EDIT_FIELDS=[
  {key:"hindamiseLiik",label:"Hindamise liik",type:"select",required:true,source:"getHindamiseLiigid"},
  {key:"tellija",label:"Tellija",type:"text"},
  {key:"tooKuupaev",label:"Töö kuupäev",type:"date",required:true},
+ {key:"tooTahtaeg",label:"Töö tähtaeg",type:"date"},
  {key:"kinnitamiseKuupaev",label:"Töö kinnitamise kuupäev",type:"date"},
  {key:"aruandeNr",label:"Aruande nr",type:"text"},
  {key:"markused",label:"Märkused",type:"textarea"}
@@ -1159,7 +1160,7 @@ async function openEditObject(o){
  $("newObjectAddress").value=o.aadress||"";
  $("newObjectCustomer").value=o.tellija||"";
  $('manualContactFields').style.display='none';
- $("newObjectDate").value=formatObjectDate(o.tooKuupaev);
+ $("newObjectDate").value=formatObjectDate(o.tooTahtaeg);
  $("editConfirmationDate").value=formatObjectDate(o.kinnitamiseKuupaev);
  $("editReportNumber").value=o.aruandeNr||"";
  $("editNotes").value=o.markused||"";
@@ -1236,7 +1237,7 @@ async function createNewObject(){
   await ensureToken();
 
   const uus=await runScript("psLooManuaalneObjekt",[{
-   objekt,valjakuTyyp,hindamiseLiik,aadress,tellija,tooKuupaev,
+   objekt,valjakuTyyp,hindamiseLiik,aadress,tellija,tooTahtaeg:tooKuupaev,
    kontaktisik:$('manualContactName').value.trim(),
    telefon:$('manualContactPhone').value.trim(),
    email:$('manualContactEmail').value.trim()
@@ -1277,8 +1278,9 @@ $("cancelNewObject").onclick=()=>{$("objectModal").style.display="none"};
 $("saveNewObject").onclick=createNewObject;
 async function saveEditedObject(){
  const nr=editingObjectNr;
- const data={objekt:$("newObjectName").value.trim(),valjakuTyyp:$("newObjectType").value,hindamiseLiik:$("newAssessmentType").value,aadress:$("newObjectAddress").value.trim(),tellija:$("newObjectCustomer").value.trim(),tooKuupaev:$("newObjectDate").value,kinnitamiseKuupaev:$("editConfirmationDate").value,aruandeNr:$("editReportNumber").value.trim(),markused:$("editNotes").value.trim()};
- if(!data.objekt||!data.valjakuTyyp||!data.hindamiseLiik||!data.tooKuupaev){toast("Täida kohustuslikud väljad");return;}
+ const original=objektid.find(o=>String(o.nr)===String(nr));
+ const data={tooKuupaev:formatObjectDate(original?.tooKuupaev)||localDateISO(),objekt:$("newObjectName").value.trim(),valjakuTyyp:$("newObjectType").value,hindamiseLiik:$("newAssessmentType").value,aadress:$("newObjectAddress").value.trim(),tellija:$("newObjectCustomer").value.trim(),tooTahtaeg:$("newObjectDate").value,kinnitamiseKuupaev:$("editConfirmationDate").value,aruandeNr:$("editReportNumber").value.trim(),markused:$("editNotes").value.trim()};
+ if(!data.objekt||!data.valjakuTyyp||!data.hindamiseLiik||!data.tooKuupaev||!data.tooTahtaeg){toast("Täida kohustuslikud väljad");return;}
  const btn=$("saveNewObject");btn.disabled=true;btn.textContent="Salvestan...";
  try{
   await ensureToken();
