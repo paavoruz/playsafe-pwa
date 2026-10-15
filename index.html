@@ -48,6 +48,9 @@ h1{font-size:30px;margin:0;font-weight:800}
 .objectList,.elementList{display:flex;flex-direction:column;gap:10px}
 .card{background:#fff;border-radius:17px;padding:16px}
 .objectCard{cursor:pointer;position:relative;padding-right:112px;border:1px solid transparent}
+.objectAddressLine{display:flex;align-items:center;gap:7px;margin-top:3px}
+.objectMapsLink{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:28px;height:28px;border-radius:8px;text-decoration:none;background:rgba(255,255,255,.7);font-size:18px}
+.objectMapsLink:focus-visible{outline:2px solid #1763a9;outline-offset:2px}
 .objectCardNew{background:#fff7d6;border-color:#f3df93}
 .objectCardVisited{background:#e7f3ff;border-color:#bdddf9}
 .objectCardReady{background:#e6f7eb;border-color:#b9e5c5}
@@ -867,12 +870,14 @@ function renderObjects(){
   d.className="card objectCard "+(objectStatus(o)==="Valmis"?"objectCardReady":objectStatus(o)==="Objektil käidud"?"objectCardVisited":"objectCardNew");
   d.innerHTML=`<div class="small">NR ${esc(o.nr)}</div>
   <div class="objectName">${esc(objectName(o))}</div>
-  <div class="muted">${esc(o.aadress||"")}</div>
+  <div class="objectAddressLine">${String(o.aadress||"").trim()?`<a class="objectMapsLink" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(o.aadress)}" target="_blank" rel="noopener noreferrer" aria-label="Ava aadress Google Mapsis" title="Ava Google Mapsis">📍</a><span class="muted">${esc(o.aadress)}</span>`:''}</div>
   <div class="objectStatusActions">
     <span class="objectStatusBadge ${isReady(o)?'objectStatusReady':objectStatus(o)==='Objektil käidud'?'objectStatusWorking':'objectStatusNew'}">${objectStatus(o)}</span>
     ${isReady(o)?'':`<button type="button" class="objectDeleteIcon" aria-label="Kustuta objekt ${esc(objectName(o))}" title="Kustuta objekt">🗑</button>`}
   </div>`;
   d.onclick=()=>showObject(o);
+  const mapsLink=d.querySelector(".objectMapsLink");
+  if(mapsLink)mapsLink.onclick=e=>e.stopPropagation();
    const trash=d.querySelector(".objectDeleteIcon");
    if(trash)trash.onclick=e=>{
     e.stopPropagation();
