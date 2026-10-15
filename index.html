@@ -485,6 +485,11 @@ body:has(#quoteView[style*="display: block"]) #openQuotesButton{display:none!imp
       <input id="newObjectCustomer" class="formInput" autocomplete="organization">
     </div>
 
+    <div id="manualContactFields">
+      <div class="formGroup"><label class="formLabel" for="manualContactName">Tellija kontaktisik</label><input id="manualContactName" class="formInput" autocomplete="name"></div>
+      <div class="formGroup"><label class="formLabel" for="manualContactPhone">Kontaktisiku telefon</label><input id="manualContactPhone" class="formInput" type="tel" autocomplete="tel"></div>
+      <div class="formGroup"><label class="formLabel" for="manualContactEmail">Kontaktisiku e-post</label><input id="manualContactEmail" class="formInput" type="email" autocomplete="email"></div>
+    </div>
     <div class="formGroup">
       <label class="formLabel" for="newObjectDate">Töö kuupäev *</label>
       <input id="newObjectDate" class="formInput" type="date">
@@ -1052,6 +1057,8 @@ async function openObjectModal(){
  $("newAssessmentType").innerHTML='<option value="">Laadin hindamise liike...</option>';
  $("newObjectAddress").value="";
  $("newObjectCustomer").value="";
+ for(const id of ['manualContactName','manualContactPhone','manualContactEmail'])$(id).value='';
+ $('manualContactFields').style.display='block';
  $("newObjectDate").value=localDateISO();
  $("objectModal").style.display="flex";
  setTimeout(()=>$("newObjectName").focus(),100);
@@ -1089,6 +1096,7 @@ async function openEditObject(o){
  $("newObjectName").value=objectName(o);
  $("newObjectAddress").value=o.aadress||"";
  $("newObjectCustomer").value=o.tellija||"";
+ $('manualContactFields').style.display='none';
  $("newObjectDate").value=formatObjectDate(o.tooKuupaev);
  $("editConfirmationDate").value=formatObjectDate(o.kinnitamiseKuupaev);
  $("editReportNumber").value=o.aruandeNr||"";
@@ -1161,14 +1169,12 @@ async function createNewObject(){
   hideError();
   await ensureToken();
 
-  const uus=await runScript("lisaObjekt",[
-   objekt,
-   valjakuTyyp,
-   hindamiseLiik,
-   aadress,
-   tellija,
-   tooKuupaev
-  ]);
+  const uus=await runScript("psLooManuaalneObjekt",[{
+   objekt,valjakuTyyp,hindamiseLiik,aadress,tellija,tooKuupaev,
+   kontaktisik:$('manualContactName').value.trim(),
+   telefon:$('manualContactPhone').value.trim(),
+   email:$('manualContactEmail').value.trim()
+  }]);
 
   if(!uus?.nr){
    throw new Error("Uue objekti loomine ei tagastanud Jrk nr.");
@@ -1183,6 +1189,7 @@ async function createNewObject(){
   );
 
   toast(`Objekt nr ${uus.nr} loodud`);
+  if(uus.hoiatus)showError(uus.hoiatus);
 
   if(loodud){
    showObject(loodud);
