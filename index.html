@@ -401,7 +401,9 @@ body:has(#quoteView[style*="display: block"]) #openQuotesButton{display:none!imp
   </div>
 
   <div class="quoteTotals">
-    <div class="quoteTotalRow"><span>Summa km-ta</span><b id="quoteNet">0,00 €</b></div>
+    <div class="quoteTotalRow"><span>Summa KM-ta</span><b id="quoteBeforeDiscount">0,00 €</b></div>
+    <div class="quoteTotalRow"><span>Soodustus</span><b id="quoteDiscountTotal">−0,00 €</b></div>
+    <div class="quoteTotalRow"><span>Summa pärast soodustust (KM-ta)</span><b id="quoteNet">0,00 €</b></div>
     <div class="quoteTotalRow"><span>KM 24%</span><b id="quoteVat">0,00 €</b></div>
     <div class="quoteTotalRow quoteGrand"><span>Kokku</span><span id="quoteGross">0,00 €</span></div>
   </div>
@@ -2176,7 +2178,7 @@ function renderQuoteServices(){
        <div class="quoteLineSum">${euro(Number(line.kogus||0)*Number(line.uhikuhind||0))}</div>
       </div>
      </div>
-     ${/hindam|ülevaatus|ülevaatuse|kontroll|mänguväljak|välijõusaal|rulapark|parkuur|seiklusrada/i.test([category,nimetus,kirjeldus].join(" ")) && !/\bHIC\b|transport/i.test([category,nimetus,kirjeldus].join(" ")) ? `<div class="psDiscountFields" ${selected?"":"hidden"} style="margin-top:10px;padding:10px;border-radius:10px;background:#f6f2ff"><label style="display:flex;align-items:center;gap:8px"><input type="checkbox" class="psDiscountCheck" ${line.soodustusRakendub?"checked":""}> Kordushindamise soodustus</label><label style="display:flex;align-items:center;gap:8px;margin-top:8px">Soodustus (%) <input type="number" class="formInput psDiscountPct" min="0" max="100" step="0.1" inputmode="decimal" style="max-width:95px" value="${esc(line.soodustusProtsent??quoteDiscountDefault)}"></label><div class="muted psDiscountSum" style="margin-top:5px"></div></div>` : ""}
+     ${/hindam|ülevaatus|ülevaatuse|kontroll|mänguväljak|välijõusaal|rulapark|parkuur|seiklusrada/i.test([category,nimetus,kirjeldus].join(" ")) && !/\bHIC\b|transport/i.test([category,nimetus,kirjeldus].join(" ")) ? `<div class="psDiscountFields" ${selected?"":"hidden"} style="margin-top:10px;padding:10px;border-radius:10px;background:#f6f2ff"><label style="display:flex;align-items:center;gap:8px"><input type="checkbox" class="psDiscountCheck" ${line.soodustusRakendub?"checked":""}> Kordushindamise soodustus</label><label style="display:flex;align-items:center;gap:8px;margin-top:8px">Soodustus (%) <input type="number" class="formInput psDiscountPct" min="0" max="100" step="0.1" inputmode="decimal" style="width:120px;min-width:120px;max-width:none;flex:0 0 120px;box-sizing:border-box;text-align:center" value="${esc(line.soodustusProtsent??quoteDiscountDefault)}"></label><div class="muted psDiscountSum" style="margin-top:5px"></div></div>` : ""}
     </div>`;
 
    const cb=d.querySelector(".quoteServiceCheck");
@@ -2232,6 +2234,8 @@ function renderQuoteServices(){
 }
 function calculateQuote(){
  let net=0;
+ let beforeDiscount=0;
+ let totalDiscount=0;
  for(const id of selectedQuoteServices){
   const s=hinnakiri.find(x=>String(x.id)===String(id));
   if(!s)continue;
@@ -2239,18 +2243,23 @@ function calculateQuote(){
   const row=Math.round(Math.max(0,Number(line.kogus||0))*Math.max(0,Number(line.uhikuhind||0))*100)/100;
   const pct=Number(line.soodustusProtsent??quoteDiscountDefault);
   const discount=line.soodustusRakendub && Number.isFinite(pct) && pct>=0 && pct<=100 ? Math.round(row*pct)/100 : 0;
+  beforeDiscount+=row;
+  totalDiscount+=discount;
   net+=row-discount;
  }
  const transportKm=Math.max(0,Number($("quoteTransportKm")?.value||0));
  const transportKmHind=Math.max(0,Number($("quoteTransportPrice")?.value||0));
  const transportSumma=transportKm*transportKmHind;
  net+=transportSumma;
+ beforeDiscount+=transportSumma;
  const aadress=$("quoteAddress")?.value.trim()||"objekti aadress";
  const preview=$("quoteTransportPreview");
  if(preview) preview.textContent=transportKm>0
   ? `Transport (Tallinn – ${aadress} – Tallinn): ${transportKm} km × ${euro(transportKmHind)}/km = ${euro(transportSumma)}`
   : "";
  const vat=net*0.24;
+ $("quoteBeforeDiscount").textContent=euro(beforeDiscount);
+ $("quoteDiscountTotal").textContent="−"+euro(totalDiscount);
  $("quoteNet").textContent=euro(net);
  $("quoteVat").textContent=euro(vat);
  $("quoteGross").textContent=euro(net+vat);
