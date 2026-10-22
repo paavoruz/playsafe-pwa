@@ -3150,6 +3150,7 @@ $('psDbCancel').onclick=()=>{$('psDbEditor').style.display='none';};
   <p id="psMailInfo" style="font-size:13px;color:#666"></p>
   <label>Saatja</label><input id="psMailFrom" class="formInput" readonly style="margin:6px 0 12px">
   <label>Saaja</label><input id="psMailTo" class="formInput" type="email" style="margin:6px 0 12px">
+  <label>Kirjamall</label><select id="psMailTemplate" class="formInput" style="margin:6px 0 12px;width:100%"><option value="">Laadin malle…</option></select>
   <label>Teema</label><input id="psMailSubject" class="formInput" style="margin:6px 0 12px">
   <label>Kirja sisu</label><textarea id="psMailBody" class="formInput" rows="10" style="margin:6px 0 12px;width:100%;resize:vertical"></textarea>
   <div id="psMailAttachment" style="background:#f4f2f8;padding:12px;border-radius:10px;margin-bottom:12px"></div>
@@ -3163,6 +3164,13 @@ document.addEventListener('click',function(event){
  if(b){event.preventDefault();psOpenMail(b.dataset.nr);}
 });
 let psMailCurrentNr='';
+let psMailTemplates=[];
+$('psMailTemplate').onchange=()=>{
+ const t=psMailTemplates.find(x=>x.id===$('psMailTemplate').value);
+ if(!t)return;
+ $('psMailSubject').value=t.subject;
+ $('psMailBody').value=t.body;
+};
 async function psOpenMail(nr){
  psMailCurrentNr=nr;
  $('psMailModal').style.display='block';
@@ -3173,12 +3181,25 @@ async function psOpenMail(nr){
  $('psMailBody').value='';
  $('psMailAttachment').textContent='';
  $('psMailSend').disabled=true;
+ $('psMailTemplate').innerHTML='<option value="">Laadin malle…</option>';
+ psMailTemplates=[];
  try{
   const p=await runScript('psPakkumiseKirjaEelvaade',[nr]);
   $('psMailFrom').value=p.sender;
   $('psMailTo').value=p.recipient;
   $('psMailSubject').value=p.subject;
   $('psMailBody').value=p.body;
+  try{
+   psMailTemplates=await runScript('psGetKirjamallid',[nr]);
+   const sel=$('psMailTemplate');sel.replaceChildren();
+   psMailTemplates.forEach(t=>{const opt=document.createElement('option');opt.value=t.id;opt.textContent=t.name;sel.appendChild(opt);});
+   if(psMailTemplates.length){sel.value=psMailTemplates[0].id;sel.onchange();}
+   else{const opt=document.createElement('option');opt.textContent='Malle pole saadaval';opt.value='';sel.appendChild(opt);}
+  }catch(templateError){
+   const sel=$('psMailTemplate');sel.replaceChildren();
+   const opt=document.createElement('option');opt.value='';opt.textContent='Mallide laadimine ebaõnnestus – käsitsi sisestamine';sel.appendChild(opt);
+   console.error('Kirjamallide laadimine:',templateError);
+  }
   $('psMailAttachment').textContent='📎 '+p.pdfName+' (PDF manus)';
   $('psMailInfo').textContent=p.permitted?'Vaata kiri üle enne saatmist.':'Saatja info@playsafe.ee ei ole veel selle Google konto lubatud saatjate hulgas.';
   $('psMailSend').disabled=!p.permitted;
