@@ -2065,18 +2065,21 @@ function euro(v){
  return Number(v||0).toLocaleString("et-EE",{minimumFractionDigits:2,maximumFractionDigits:2})+" €";
 }
 
+let quoteDiscountDefault=30;
 async function loadHinnakiri(){
  await ensureToken();
  const result=await runScript("getHinnakiri");
  if(!Array.isArray(result))throw new Error("Hinnakirja ei saadud.");
- hinnakiri=result.filter(x=>String(x.aktiivne||"JAH").toUpperCase()!=="EI" && !/\bHIC\b/i.test(String(x.nimi||x.teenus||x.kirjeldus||"")));
+ const discountService=result.find(x=>/kordushindamise soodustus/i.test(String(x.nimetus||x.nimi||"")));
+ if(discountService && Number.isFinite(Number(discountService.hind)) && Number(discountService.hind)>=0 && Number(discountService.hind)<=100)quoteDiscountDefault=Number(discountService.hind);
+ hinnakiri=result.filter(x=>String(x.aktiivne||"JAH").toUpperCase()!=="EI" && !/\bHIC\b/i.test(String(x.nimetus||x.nimi||x.teenus||x.kirjeldus||"")) && !/kordushindamise soodustus/i.test(String(x.nimetus||x.nimi||"")));
  renderQuoteServices();
 }
 
 function quoteLineValue(id,s){
  const existing=quoteServiceValues.get(id);
  if(existing)return existing;
- const value={kogus:1,uhikuhind:Number(s.hind||0)};
+ const value={kogus:1,uhikuhind:Number(s.hind||0),soodustusRakendub:false,soodustusProtsent:quoteDiscountDefault};
  quoteServiceValues.set(id,value);
  return value;
 }
@@ -2173,6 +2176,7 @@ function renderQuoteServices(){
        <div class="quoteLineSum">${euro(Number(line.kogus||0)*Number(line.uhikuhind||0))}</div>
       </div>
      </div>
+     ${/hindam|ülevaatus|ülevaatuse|kontroll|mänguväljak|välijõusaal|rulapark|parkuur|seiklusrada/i.test([category,nimetus,kirjeldus].join(" ")) && !/\bHIC\b|transport/i.test([category,nimetus,kirjeldus].join(" ")) ? `<div class="psDiscountFields" ${selected?"":"hidden"} style="margin-top:10px;padding:10px;border-radius:10px;background:#f6f2ff"><label style="display:flex;align-items:center;gap:8px"><input type="checkbox" class="psDiscountCheck" ${line.soodustusRakendub?"checked":""}> Kordushindamise soodustus</label><label style="display:flex;align-items:center;gap:8px;margin-top:8px">Soodustus (%) <input type="number" class="formInput psDiscountPct" min="0" max="100" step="0.1" inputmode="decimal" style="max-width:95px" value="${esc(line.soodustusProtsent??quoteDiscountDefault)}"></label><div class="muted psDiscountSum" style="margin-top:5px"></div></div>` : ""}
     </div>`;
 
    const cb=d.querySelector(".quoteServiceCheck");
@@ -2180,12 +2184,19 @@ function renderQuoteServices(){
    const qty=d.querySelector(".quoteQty");
    const price=d.querySelector(".quotePrice");
    const sum=d.querySelector(".quoteLineSum");
+   const discountFields=d.querySelector(".psDiscountFields");
+   const discountCheck=d.querySelector(".psDiscountCheck");
+   const discountPct=d.querySelector(".psDiscountPct");
+   const discountSum=d.querySelector(".psDiscountSum");
 
    function updateLine(){
     const kogus=Math.max(0,Number(qty.value||0));
     const uhikuhind=Math.max(0,Number(price.value||0));
-    quoteServiceValues.set(id,{kogus,uhikuhind});
+    const soodustusRakendub=!!discountCheck?.checked;
+    const soodustusProtsent=discountPct?Number(discountPct.value):30;
+    quoteServiceValues.set(id,{kogus,uhikuhind,soodustusRakendub,soodustusProtsent});
     sum.textContent=euro(kogus*uhikuhind);
+    if(discountSum)discountSum.textContent=soodustusRakendub ? "Soodustus: −"+euro(Math.round(kogus*uhikuhind*soodustusProtsent)/100) : "";
     calculateQuote();
    }
 
@@ -2193,10 +2204,12 @@ function renderQuoteServices(){
     if(cb.checked){
      selectedQuoteServices.add(id);
      fields.hidden=false;
+     if(discountFields)discountFields.hidden=false;
      group.classList.add("open");
     }else{
      selectedQuoteServices.delete(id);
      fields.hidden=true;
+     if(discountFields)discountFields.hidden=true;
     }
     updateGroupStatus();
     calculateQuote();
@@ -2204,6 +2217,9 @@ function renderQuoteServices(){
 
    qty.oninput=updateLine;
    price.oninput=updateLine;
+   if(discountCheck)discountCheck.onchange=updateLine;
+   if(discountPct)discountPct.oninput=updateLine;
+   updateLine();
    body.appendChild(d);
   });
 
@@ -2220,7 +2236,10 @@ function calculateQuote(){
   const s=hinnakiri.find(x=>String(x.id)===String(id));
   if(!s)continue;
   const line=quoteLineValue(id,s);
-  net+=Math.max(0,Number(line.kogus||0))*Math.max(0,Number(line.uhikuhind||0));
+  const row=Math.round(Math.max(0,Number(line.kogus||0))*Math.max(0,Number(line.uhikuhind||0))*100)/100;
+  const pct=Number(line.soodustusProtsent??quoteDiscountDefault);
+  const discount=line.soodustusRakendub && Number.isFinite(pct) && pct>=0 && pct<=100 ? Math.round(row*pct)/100 : 0;
+  net+=row-discount;
  }
  const transportKm=Math.max(0,Number($("quoteTransportKm")?.value||0));
  const transportKmHind=Math.max(0,Number($("quoteTransportPrice")?.value||0));
@@ -2485,7 +2504,11 @@ async function saveQuote(){
      const line=quoteLineValue(String(s.id),s);
      const kogus=Math.max(0,Number(line.kogus||0));
      const uhikuhind=Math.max(0,Number(line.uhikuhind||0));
+     const soodustusProtsent=Number(line.soodustusProtsent??quoteDiscountDefault);
+     if(line.soodustusRakendub && (!Number.isFinite(soodustusProtsent)||soodustusProtsent<0||soodustusProtsent>100))throw new Error("Soodustus peab olema 0–100%.");
      return {
+      soodustusRakendub:!!line.soodustusRakendub,
+      soodustusProtsent,
       id:s.id,
       nimetus:s.nimetus||s.apiNimetus||s.id,
       kirjeldus:s.kirjeldus||s.wordiKirjeldus||"",
