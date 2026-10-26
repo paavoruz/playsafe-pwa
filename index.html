@@ -339,6 +339,8 @@ body:has(#quoteView[style*="display: block"]) #openQuotesButton{display:none!imp
       <div class="formGroup">
         <label class="formLabel" for="quoteCustomer">Tellija/asutus/ettevõte *</label>
         <input id="quoteCustomer" class="formInput" autocomplete="organization">
+        <button type="button" class="btn btnGray" id="psQuoteRegistryBtn" style="margin-top:6px">Otsi äriregistrist</button>
+        <div id="psQuoteRegistryResults" aria-live="polite"></div>
       </div>
       <div class="formGroup">
         <label class="formLabel" for="quoteObject">Objekt (nt Kelmiküla lasteaed, Paldiski madalseiklusrada) *</label>
@@ -3051,7 +3053,7 @@ function psDbEdit(id=''){
  $('psDbDelete').style.display=id?'inline-block':'none';
  $('psDbEditorTitle').textContent=(id?'Muuda ':'Lisa ')+(as?'klienti':'väljakut');
  let html=psDbField('nimi','Nimi *',x.nimi)+psDbField('aadress','Aadress',x.aadress);
- if(as){html+=psDbField('registrikood','Registrikood',x.registrikood)+psDbField('kontaktisik','Kontaktisik',x.kontaktisik)+psDbField('telefon','Telefon',x.telefon,'tel')+psDbField('email','E-post',x.email,'email');}
+ if(as){html+='<button type="button" class="btn btnGray" id="psDbRegistryBtn" style="margin-top:8px">Otsi äriregistrist</button><div id="psDbRegistryResults" aria-live="polite"></div>';html+=psDbField('registrikood','Registrikood',x.registrikood)+psDbField('kontaktisik','Kontaktisik',x.kontaktisik)+psDbField('telefon','Telefon',x.telefon,'tel')+psDbField('email','E-post',x.email,'email');}
  else{
   html+=`<label style="display:block;margin-top:10px;font-size:13px;font-weight:600">Asutus (valikuline)<select class="formInput" data-psfield="asutuseId" style="display:block;width:100%;margin-top:4px"><option value="">Asutus määramata</option>${psDbAsutused.map(a=>`<option value="${psDbSafe(a.id)}" ${a.id===x.asutuseId?'selected':''}>${psDbSafe(a.nimi)}</option>`).join('')}</select></label>`;
   const existingType=String(x.tyyp||'');
@@ -3063,7 +3065,7 @@ function psDbEdit(id=''){
   html+=`<label style="display:block;margin-top:10px;font-size:13px;font-weight:600">Staatus<select class="formInput" data-psfield="staatus" style="display:block;width:100%;margin-top:4px">${['Aktiivne','Mitteaktiivne'].map(v=>`<option ${v===(x.staatus||'Aktiivne')?'selected':''}>${v}</option>`).join('')}</select></label>`;
  }
  html+=`<label style="display:block;margin-top:10px;font-size:13px;font-weight:600">Märkused<textarea class="formInput" data-psfield="markused" style="display:block;width:100%;margin-top:4px">${psDbSafe(x.markused||'')}</textarea></label>`;
- $('psDbFields').innerHTML=html;if(!as)psDbBindAutoMap();$('psDbEditor').style.display='block';$('psDbEditor').scrollIntoView({behavior:'smooth',block:'start'});
+ $('psDbFields').innerHTML=html;if(as)psRegistryBindDb();else psDbBindAutoMap();$('psDbEditor').style.display='block';$('psDbEditor').scrollIntoView({behavior:'smooth',block:'start'});
 }
 async function psDbSave(){
  const data={id:psDbEditing||''};
@@ -3222,6 +3224,46 @@ $('psMailSend').onclick=async()=>{
 };
 
 
+
+/* Äriregistri otsing: kasutab Apps Scripti serveripoolset psOtsiAriregistrist teenust. */
+async function psRegistryLookup(query, target, onSelect){
+  const panel=document.getElementById(target);
+  if(!panel)return;
+  query=String(query||'').trim();
+  if(query.length<2){panel.textContent='Sisesta vähemalt kaks märki.';return;}
+  panel.textContent='Otsin äriregistrist…';
+  try{
+    const response=await runScript('psOtsiAriregistrist',[query]);
+    if(!response?.ok){panel.textContent=response?.message||'Äriregistri otsing ei ole seadistatud.';return;}
+    const items=Array.isArray(response.results)?response.results:[];
+    panel.innerHTML='';
+    if(!items.length){panel.textContent='Vasteid ei leitud.';return;}
+    items.forEach(item=>{
+      const b=document.createElement('button');b.type='button';b.className='btn btnGray';
+      b.style.cssText='display:block;width:100%;text-align:left;margin-top:6px;white-space:normal';
+      b.textContent=item.nimi+' · '+item.registrikood+(item.aadress?' · '+item.aadress:'');
+      b.onclick=()=>{onSelect(item);panel.textContent='Valitud: '+item.nimi;};
+      panel.appendChild(b);
+    });
+  }catch(e){panel.textContent='Äriregistri otsing ebaõnnestus: '+e.message;}
+}
+function psRegistryBindDb(){
+  const btn=document.getElementById('psDbRegistryBtn');if(!btn)return;
+  btn.onclick=()=>{
+    const get=k=>document.querySelector('#psDbFields [data-psfield="'+k+'"]');
+    psRegistryLookup(get('registrikood')?.value||get('nimi')?.value,'psDbRegistryResults',item=>{
+      get('nimi').value=item.nimi;get('registrikood').value=item.registrikood;
+      if(item.aadress)get('aadress').value=item.aadress;
+    });
+  };
+}
+document.getElementById('psQuoteRegistryBtn')?.addEventListener('click',()=>{
+  psRegistryLookup(document.getElementById('quoteRegCode').value||document.getElementById('quoteCustomer').value,'psQuoteRegistryResults',item=>{
+    document.getElementById('quoteCustomer').value=item.nimi;
+    document.getElementById('quoteRegCode').value=item.registrikood;
+    if(item.aadress)document.getElementById('quoteBillingAddress').value=item.aadress;
+  });
+});
 </script>
 </body>
 </html>
