@@ -3247,8 +3247,53 @@ async function psRegistryLookup(query, target, onSelect){
     });
   }catch(e){panel.textContent='Äriregistri otsing ebaõnnestus: '+e.message;}
 }
+/* Automaatne äriregistri soovituste loend PWA sisestusväljadel. */
+function psRegistryAutocomplete(input, panelId, onSelect){
+  if(!input)return;
+  let timer=null, sequence=0;
+  const panel=document.getElementById(panelId);
+  if(!panel)return;
+  panel.style.cssText+=';max-height:270px;overflow-y:auto;border-radius:12px;';
+  input.setAttribute('autocomplete','off');
+  input.addEventListener('input',()=>{
+    clearTimeout(timer);
+    const q=input.value.trim(), request=++sequence;
+    panel.replaceChildren();
+    if(q.length<3)return;
+    timer=setTimeout(async()=>{
+      if(request!==sequence||document.activeElement!==input)return;
+      panel.textContent='Otsin äriregistrist…';
+      try{
+        const result=await runScript('psOtsiAriregistrist',[q]);
+        if(request!==sequence||input.value.trim()!==q)return;
+        panel.replaceChildren();
+        if(!result?.ok){panel.textContent=result?.message||'Äriregistri otsing ei õnnestunud.';return;}
+        const matches=Array.isArray(result.results)?result.results:[];
+        if(!matches.length){panel.textContent='Vasteid ei leitud. Võid nime käsitsi sisestada.';return;}
+        matches.slice(0,10).forEach(item=>{
+          const option=document.createElement('button');
+          option.type='button';option.className='btn btnGray';
+          option.style.cssText='display:block;width:100%;text-align:left;margin:3px 0;padding:10px;white-space:normal;';
+          option.textContent=[item.nimi,item.registrikood,item.aadress].filter(Boolean).join(' · ');
+          option.addEventListener('click',()=>{
+            ++sequence;clearTimeout(timer);
+            onSelect(item);panel.replaceChildren();
+          });
+          panel.appendChild(option);
+        });
+      }catch(e){if(request===sequence)panel.textContent='Äriregistri otsing ebaõnnestus: '+e.message;}
+    },350);
+  });
+  input.addEventListener('keydown',e=>{if(e.key==='Escape'){++sequence;clearTimeout(timer);panel.replaceChildren();}});
+}
 function psRegistryBindDb(){
   const btn=document.getElementById('psDbRegistryBtn');if(!btn)return;
+  const get=k=>document.querySelector('#psDbFields [data-psfield="'+k+'"]');
+  psRegistryAutocomplete(get('nimi'),'psDbRegistryResults',item=>{
+    get('nimi').value=item.nimi;
+    get('registrikood').value=item.registrikood||'';
+    if(item.aadress)get('aadress').value=item.aadress;
+  });
   btn.onclick=()=>{
     const get=k=>document.querySelector('#psDbFields [data-psfield="'+k+'"]');
     psRegistryLookup(get('registrikood')?.value||get('nimi')?.value,'psDbRegistryResults',item=>{
@@ -3257,6 +3302,11 @@ function psRegistryBindDb(){
     });
   };
 }
+psRegistryAutocomplete(document.getElementById('quoteCustomer'),'psQuoteRegistryResults',item=>{
+  document.getElementById('quoteCustomer').value=item.nimi;
+  document.getElementById('quoteRegCode').value=item.registrikood||'';
+  if(item.aadress)document.getElementById('quoteBillingAddress').value=item.aadress;
+});
 document.getElementById('psQuoteRegistryBtn')?.addEventListener('click',()=>{
   psRegistryLookup(document.getElementById('quoteRegCode').value||document.getElementById('quoteCustomer').value,'psQuoteRegistryResults',item=>{
     document.getElementById('quoteCustomer').value=item.nimi;
