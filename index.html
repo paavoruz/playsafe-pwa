@@ -289,7 +289,7 @@ body:has(#quoteView[style*="display: block"]) #newObjectButton{display:none!impo
 .psQuoteFilter[data-status="Saadetud"]{background:#e6f1ff;color:#1675d1;border-color:#cce3ff}
 .psQuoteFilter[data-status="Kõik"]{background:#e9dcff;color:#6537c5}
 .psQuoteNew{background:#e9dcff!important;color:#6537c5!important;border:1px dashed #b18df7!important;font-size:30px;font-weight:500}
-.psQuoteRow{display:grid;grid-template-columns:minmax(0,1fr) 37px auto 35px 28px;align-items:center;gap:7px;border:1px solid #e1e2e8;border-radius:17px;padding:10px 11px;margin:7px 0;background:white;min-height:68px}
+.psQuoteRow{display:grid;grid-template-columns:minmax(0,1fr) 37px auto 35px 30px;align-items:center;gap:7px;border:1px solid #e1e2e8;border-radius:17px;padding:10px 11px;margin:7px 0;background:white;min-height:68px}
 .psQuoteRowMain{min-width:0;cursor:pointer}
 .psQuoteRowTitle{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .psQuoteRowName{font-size:14px;color:#3b4050;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px}
@@ -301,11 +301,11 @@ body:has(#quoteView[style*="display: block"]) #newObjectButton{display:none!impo
 .psQuoteStatusSelect[data-status="Tagasi lükatud"]{background:#ffe5e5;color:#cc3232}
 .psQuoteAction{border:0;background:transparent;cursor:pointer;padding:4px;display:inline-flex;justify-content:center;align-items:center;font-size:21px}
 .psQuotePdf{color:#d22e2e;text-decoration:none}
-.psQuoteExpand{font-size:22px;color:#3e4150}
+.psQuoteEnvelope{font-size:22px;color:#5e3eaa;min-width:30px}
 .psQuoteExtra{grid-column:1/-1;display:none;border-top:1px solid #eee;padding-top:9px;gap:8px;align-items:center;flex-wrap:wrap}
 .psQuoteRow.expanded .psQuoteExtra{display:flex}
 .psQuoteExtra .psQuoteAction{width:40px;height:38px;background:#f3f3f6;border-radius:10px}
-@media(max-width:390px){.psQuoteRow{gap:4px;padding:9px 7px;grid-template-columns:minmax(0,1fr) 32px auto 29px 20px}.psQuoteRowAmount{font-size:12px}.psQuoteRowTitle,.psQuoteRowName{font-size:12px}}
+@media(max-width:390px){.psQuoteRow{gap:4px;padding:9px 7px;grid-template-columns:minmax(0,1fr) 32px auto 29px 30px}.psQuoteRowAmount{font-size:12px}.psQuoteRowTitle,.psQuoteRowName{font-size:12px}}
 </style>
 
 <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -2387,6 +2387,33 @@ document.querySelectorAll('.psQuoteFilter').forEach(b=>b.addEventListener('click
 })();
 
 function crmEsc(x){return String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function psFixDuplicateEuro(root=document.body){
+ if(!root)return;
+ const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
+ const nodes=[];
+ while(walker.nextNode()){
+  const node=walker.currentNode, parent=node.parentElement;
+  if(parent&&!parent.closest('script,style,textarea,option'))nodes.push(node);
+ }
+ nodes.forEach(node=>{
+  const cleaned=node.nodeValue.replace(/€(?:\s|&nbsp;)*€+/gu,'€');
+  if(cleaned!==node.nodeValue)node.nodeValue=cleaned;
+ });
+}
+let psEuroFixScheduled=false;
+function psScheduleEuroFix(){
+ if(psEuroFixScheduled)return;
+ psEuroFixScheduled=true;
+ requestAnimationFrame(()=>{psEuroFixScheduled=false;psFixDuplicateEuro();});
+}
+window.addEventListener('DOMContentLoaded',()=>{
+ psFixDuplicateEuro();
+ new MutationObserver(psScheduleEuroFix).observe(document.body,{childList:true,subtree:true,characterData:true});
+});
+function psEuroOnce(value){
+ const str=String(value??'').trim();
+ return str.replace(/(?:\s*€)+\s*$/u,'').trim()+' €';
+}
 function crmRenderQuotes(){
  const q=($('quoteSearch').value||'').toLowerCase();
  document.querySelectorAll('.psQuoteFilter[data-status]').forEach(b=>{const n=crmQuoteCache.filter(x=>b.dataset.status==='Kõik'||x.staatus===b.dataset.status).length;let badge=b.querySelector('.psQuoteCount');if(!badge){badge=document.createElement('span');badge.className='psQuoteCount';b.appendChild(badge);}badge.textContent=n;});
@@ -2394,11 +2421,10 @@ function crmRenderQuotes(){
  $('quoteListContent').innerHTML=items.length?items.map(x=>{
  const statusIcon={'Koostatud':'▤','Saadetud':'➤','Aktsepteeritud':'✓','Tagasi lükatud':'✕'}[x.staatus]||'▤';
  const pdf=/^https:\/\//.test(x.pdf)?`<a class="psQuoteAction psQuotePdf" target="_blank" rel="noopener" href="${crmEsc(x.pdf)}" title="Ava PDF" aria-label="Ava PDF">▤</a>`:'<span></span>';
- return `<div class="psQuoteRow" data-nr="${crmEsc(x.nr)}"><div class="psQuoteRowMain" role="button" tabindex="0" aria-label="Ava pakkumise toimingud"><div class="psQuoteRowTitle"><b>${crmEsc(x.nr)}</b> · ${crmEsc(x.kuupaev)}</div><div class="psQuoteRowName">${crmEsc(x.tellija||x.objekt)}</div></div><select class="psQuoteStatusSelect crmStatus" data-nr="${crmEsc(x.nr)}" data-status="${crmEsc(x.staatus)}" title="Muuda staatust: ${crmEsc(x.staatus)}" aria-label="Muuda pakkumise staatust"><option value="Koostatud" ${x.staatus==='Koostatud'?'selected':''}>▤</option><option value="Saadetud" ${x.staatus==='Saadetud'?'selected':''}>➤</option><option value="Aktsepteeritud" ${x.staatus==='Aktsepteeritud'?'selected':''}>✓</option><option value="Tagasi lükatud" ${x.staatus==='Tagasi lükatud'?'selected':''}>✕</option></select><div class="psQuoteRowAmount">${crmEsc(x.kokku)} €</div>${pdf}<button type="button" class="psQuoteAction psQuoteExpand" aria-label="Ava toimingud" aria-expanded="false">›</button><div class="psQuoteExtra"><button type="button" class="psQuoteAction psMailOpen" data-nr="${crmEsc(x.nr)}" title="Saada pakkumine" aria-label="Saada pakkumine">✉</button>${x.staatus==='Aktsepteeritud'?`<button type="button" class="psQuoteAction psQuoteSites" data-nr="${crmEsc(x.nr)}" title="Lisa väljakud" aria-label="Lisa väljakud">▦</button><button type="button" class="psQuoteAction psWorkOpen" data-nr="${crmEsc(x.nr)}" title="Loo töö" aria-label="Loo töö">🔧</button>`:''}<span style="font-size:12px;color:#666">${crmEsc(x.objekt||'')}</span></div></div>`;
+ return `<div class="psQuoteRow" data-nr="${crmEsc(x.nr)}"><div class="psQuoteRowMain" role="button" tabindex="0" aria-label="Ava pakkumise toimingud"><div class="psQuoteRowTitle"><b>${crmEsc(x.nr)}</b> · ${crmEsc(x.kuupaev)}</div><div class="psQuoteRowName">${crmEsc(x.tellija||x.objekt)}</div></div><select class="psQuoteStatusSelect crmStatus" data-nr="${crmEsc(x.nr)}" data-status="${crmEsc(x.staatus)}" title="Muuda staatust: ${crmEsc(x.staatus)}" aria-label="Muuda pakkumise staatust"><option value="Koostatud" ${x.staatus==='Koostatud'?'selected':''}>▤</option><option value="Saadetud" ${x.staatus==='Saadetud'?'selected':''}>➤</option><option value="Aktsepteeritud" ${x.staatus==='Aktsepteeritud'?'selected':''}>✓</option><option value="Tagasi lükatud" ${x.staatus==='Tagasi lükatud'?'selected':''}>✕</option></select><div class="psQuoteRowAmount">${crmEsc(psEuroOnce(x.kokku))}</div>${pdf}<button type="button" class="psQuoteAction psMailOpen psQuoteEnvelope" data-nr="${crmEsc(x.nr)}" title="Saada pakkumine" aria-label="Saada pakkumine">✉</button><div class="psQuoteExtra">${x.staatus==='Aktsepteeritud'?`<button type="button" class="psQuoteAction psQuoteSites" data-nr="${crmEsc(x.nr)}" title="Lisa väljakud" aria-label="Lisa väljakud">▦</button><button type="button" class="psQuoteAction psWorkOpen" data-nr="${crmEsc(x.nr)}" title="Loo töö" aria-label="Loo töö">🔧</button>`:''}<span style="font-size:12px;color:#666">${crmEsc(x.objekt||'')}</span></div></div>`;
  }).join(''):'Pakkumisi ei leitud.';
  document.querySelectorAll('.psQuoteRow').forEach(row=>{
-  const toggle=()=>{row.classList.toggle('expanded');row.querySelector('.psQuoteExpand').setAttribute('aria-expanded',String(row.classList.contains('expanded')));};
-  row.querySelector('.psQuoteExpand').onclick=toggle;
+  const toggle=()=>{row.classList.toggle('expanded');row.querySelector('.psQuoteRowMain').setAttribute('aria-expanded',String(row.classList.contains('expanded')));};
   row.querySelector('.psQuoteRowMain').onclick=toggle;
   row.querySelector('.psQuoteRowMain').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle();}};
  });
