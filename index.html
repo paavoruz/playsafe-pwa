@@ -333,6 +333,7 @@ body:has(#quoteView[style*="display: block"]) #newObjectButton{display:none!impo
 .psDetailAction{display:grid;grid-template-columns:72px 1fr 72px;align-items:center;min-height:58px;border:0;border-radius:15px;background:linear-gradient(110deg,#f0ecff,#eee9ff);font:inherit;font-size:19px;color:#19171d;cursor:pointer;text-align:center}
 .psDetailAction svg{width:28px;height:28px;stroke:#50309e;stroke-width:2.1;fill:none;justify-self:center}
 .psDetailAction.work{background:#f0f1f5}.psDetailAction.work svg{stroke:#34343b}
+.psDetailAction.delete{background:#fff0f0;color:#b4232f}.psDetailAction.delete svg{stroke:#c52c3a}
 .psDetailNote{width:100%;min-height:125px;box-sizing:border-box;border:1px solid #d8d3e2;border-radius:12px;padding:12px;font:inherit;resize:vertical}
 .psDetailSmallButton{background:#eee9ff;color:#50309e;border:0;border-radius:12px;padding:12px 18px;font:inherit;font-weight:650;cursor:pointer}
 @media(max-width:390px){.psDetailNav{margin-left:-10px;margin-right:-10px}.psDetailBack{font-size:15px}.psDetailNavTitle{font-size:17px}.psDetailTab{font-size:14px}.psDetailAction{font-size:17px}}
@@ -2498,7 +2499,7 @@ function psOpenQuoteDetail(nr){
  detail.innerHTML=`<div class="psDetailNav"><button type="button" class="psDetailBack" id="psDetailBack"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 3-9 9 9 9"/></svg><span>Pakkumised</span></button><div class="psDetailNavTitle">${crmEsc(x.nr)}</div></div>
  <div class="psDetailBody"><div class="psDetailTabs" role="tablist"><button type="button" class="psDetailTab" data-tab="info" aria-selected="true">Üldinfo</button><button type="button" class="psDetailTab" data-tab="sites" aria-selected="false">${crmEsc(siteLabel)}</button><button type="button" class="psDetailTab" data-tab="notes" aria-selected="false">Märkused</button></div>
  <div data-detail-panel="info"><div class="psDetailCard"><h2 class="psDetailTitle">${crmEsc(x.objekt||x.tellija||'Pakkumine')}</h2><div class="psDetailSub">${crmEsc(x.aadress||x.objektiAadress||'')}</div><div class="psDetailInfoGrid"><div><div class="psDetailLabel">Kuupäev</div><div class="psDetailValue">${crmEsc(x.kuupaev||'—')}</div></div><div><div class="psDetailLabel">Summa</div><div class="psDetailAmount">${crmEsc(psEuroOnce(x.kokku))}</div></div></div><div class="psDetailLabel">Staatus</div><span class="psDetailStatus ${statusClass}">${statusIcon}${crmEsc(status)}</span>${pdf?`<div style="margin-top:14px">${pdf}</div>`:''}</div>
- <div class="psDetailActions"><button type="button" class="psDetailAction" id="psDetailMail">${mail}<span>Saada pakkumine</span><span></span></button><button type="button" class="psDetailAction" id="psDetailAddSite">${pin}<span>Lisa väljakud</span><span></span></button><button type="button" class="psDetailAction work" id="psDetailWork">${wrench}<span>Loo töö</span><span></span></button></div></div>
+ <div class="psDetailActions"><button type="button" class="psDetailAction" id="psDetailMail">${mail}<span>Saada pakkumine</span><span></span></button><button type="button" class="psDetailAction" id="psDetailAddSite">${pin}<span>Lisa väljakud</span><span></span></button><button type="button" class="psDetailAction work" id="psDetailWork">${wrench}<span>Loo töö</span><span></span></button><button type="button" class="psDetailAction delete" id="psDetailDelete">${'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15M10 10v7M14 10v7"/></svg>'}<span>Kustuta pakkumine</span><span></span></button></div></div>
  <div data-detail-panel="sites" style="display:none"><div class="psDetailCard"><h2 class="psDetailTitle">Pakkumise väljakud</h2><p style="color:#777680">Vaata või lisa pakkumisega seotud väljakuid.</p><button type="button" class="psDetailSmallButton" id="psDetailSites">${pin} Ava väljakud</button></div></div>
  <div data-detail-panel="notes" style="display:none"><div class="psDetailCard"><h2 class="psDetailTitle">Märkused</h2><textarea id="psDetailNote" class="psDetailNote" placeholder="Lisa märkused..."></textarea><p style="font-size:12px;color:#777">Märkused salvestuvad ainult selles seadmes.</p><button type="button" class="psDetailSmallButton" id="psDetailSaveNote">Salvesta märkused</button></div></div></div>`;
  document.querySelector('#quoteListPanel .psQuoteListShell').style.display='none';detail.style.display='block';
@@ -2508,9 +2509,21 @@ function psOpenQuoteDetail(nr){
  $('psDetailSites').onclick=()=>psOpenQuoteSites(nr);
  $('psDetailAddSite').onclick=()=>psOpenQuoteSites(nr);
  $('psDetailWork').onclick=()=>psOpenWork(nr);
+ $('psDetailDelete').onclick=()=>psDeleteQuote(nr);
  const noteKey='playsafe_quote_note_'+nr;
  $('psDetailNote').value=localStorage.getItem(noteKey)||'';
  $('psDetailSaveNote').onclick=()=>{try{localStorage.setItem(noteKey,$('psDetailNote').value);toast('Märkus salvestatud selles seadmes');}catch(e){showError('Märkuse salvestamine ebaõnnestus: '+e.message);}};
+}
+async function psDeleteQuote(nr){
+ if(!confirm('Kas soovid pakkumise '+nr+' jäädavalt kustutada?\n\nSeda toimingut ei saa tagasi võtta. Seotud tööga pakkumist ei saa kustutada.'))return;
+ if(!confirm('Kinnita lõplik kustutamine: '+nr))return;
+ const btn=$('psDetailDelete');if(btn)btn.disabled=true;
+ try{
+  await runScript('crmKustutaPakkumine',[nr]);
+  try{localStorage.removeItem('playsafe_quote_note_'+nr);}catch(_e){}
+  toast('Pakkumine kustutatud');psCloseQuoteDetail();await crmLoadQuotes();
+ }catch(e){showError('Pakkumise kustutamine ebaõnnestus: '+e.message);}
+ finally{if(btn&&btn.isConnected)btn.disabled=false;}
 }
 async function crmLoadQuotes(){
  $('quoteListContent').textContent='Laadin...';
