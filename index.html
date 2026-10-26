@@ -309,15 +309,33 @@ body:has(#quoteView[style*="display: block"]) #newObjectButton{display:none!impo
 .psQuoteExtra .psQuoteAction{width:40px;height:38px;background:#f3f3f6;border-radius:10px}
 @media(max-width:390px){.psQuoteRow{gap:4px;padding:9px 7px;grid-template-columns:minmax(0,1fr) 32px auto 29px 30px}.psQuoteRowAmount{font-size:12px}.psQuoteRowTitle,.psQuoteRowName{font-size:12px}}
 
-/* Pakkumise eraldi detailvaade */
-#psQuoteDetail{display:none;padding:12px 2px 24px}
-.psDetailBack{border:0;background:none;color:#6240a7;font-weight:700;font-size:15px;padding:9px 3px 17px;cursor:pointer}
-.psDetailCard{background:white;border:1px solid #e4e0ed;border-radius:17px;padding:17px;margin-bottom:12px}
-.psDetailTitle{font-size:21px;font-weight:800;margin:0 0 6px}.psDetailSub{color:#6c6a75;font-size:13px}
-.psDetailTabs{display:flex;gap:7px;margin:16px 0}.psDetailTab{flex:1;border:0;border-radius:11px;background:#f0edf6;color:#655e70;padding:12px 4px;font-weight:700;cursor:pointer}.psDetailTab[aria-selected="true"]{background:#dac7ff;color:#43207d}
-.psDetailLine{display:flex;justify-content:space-between;gap:15px;padding:11px 0;border-bottom:1px solid #efedf2;font-size:14px}.psDetailLine span:first-child{color:#74717c}.psDetailLine span:last-child{text-align:right;font-weight:600;overflow-wrap:anywhere}
-.psDetailActions{display:flex;gap:10px;margin-top:15px}.psDetailActions button{border:0;border-radius:12px;padding:12px 16px;background:#eee6fc;color:#59339e;font-weight:700;cursor:pointer}
-.psDetailNote{width:100%;min-height:110px;box-sizing:border-box;border:1px solid #d8d3e2;border-radius:12px;padding:12px;font:inherit;resize:vertical}
+/* Pakkumise detailvaade – iOS mockup */
+#psQuoteDetail{display:none;padding:0 0 28px;background:#fff;min-height:70vh}
+.psDetailNav{display:flex;align-items:center;position:relative;min-height:65px;margin:-12px -12px 0;padding:8px 16px;background:linear-gradient(110deg,#e8dbff,#f0e8ff);border-bottom:1px solid #e7e0f2}
+.psDetailBack{border:0;background:none;color:#6840db;font-size:17px;font-weight:500;display:flex;align-items:center;gap:7px;cursor:pointer;padding:10px 0;z-index:1;white-space:nowrap}
+.psDetailBack svg{width:21px;height:25px;stroke:#6840db;stroke-width:2.7;fill:none}
+.psDetailNavTitle{position:absolute;left:0;right:0;text-align:center;font-size:19px;font-weight:750;color:#141218;pointer-events:none;padding-left:110px;padding-right:14px;white-space:nowrap}
+.psDetailBody{padding:18px 12px 20px}
+.psDetailTabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 16px}
+.psDetailTab{min-height:53px;padding:8px 2px;border:0;border-radius:14px;background:#f6f6f9;color:#34313b;font-size:16px;font-weight:550;cursor:pointer;white-space:nowrap}
+.psDetailTab[aria-selected="true"]{background:linear-gradient(135deg,#7028f7,#5512df);color:white;box-shadow:0 2px 5px #6c2be933}
+.psDetailCard{background:#fff;border:1px solid #ecebf1;border-radius:17px;padding:17px 15px;margin:0 0 12px;box-shadow:0 1px 3px #25203d07}
+.psDetailTitle{font-size:20px;font-weight:800;line-height:1.2;margin:0 0 5px;color:#141414}
+.psDetailSub{font-size:16px;color:#777680;margin-bottom:19px;line-height:1.4}
+.psDetailInfoGrid{display:grid;grid-template-columns:1.2fr .8fr;gap:12px;margin-bottom:13px}
+.psDetailLabel{font-size:16px;color:#777680;line-height:1.3;margin-bottom:3px}
+.psDetailValue{font-size:17px;color:#26242a;font-weight:500}
+.psDetailAmount{font-weight:800;color:#111;font-size:19px}
+.psDetailStatus{display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border-radius:999px;font-size:16px;font-weight:650;background:#e6f3ff;color:#1683e7}
+.psDetailStatus svg{width:22px;height:22px;stroke:currentColor;stroke-width:2;fill:none}
+.psDetailStatus.accepted{background:#e5f6e9;color:#188743}.psDetailStatus.archived{background:#efeff1;color:#666}.psDetailStatus.draft{background:#fff5d8;color:#ab7b00}
+.psDetailActions{display:flex;flex-direction:column;gap:9px;margin-top:12px}
+.psDetailAction{display:grid;grid-template-columns:72px 1fr 72px;align-items:center;min-height:58px;border:0;border-radius:15px;background:linear-gradient(110deg,#f0ecff,#eee9ff);font:inherit;font-size:19px;color:#19171d;cursor:pointer;text-align:center}
+.psDetailAction svg{width:28px;height:28px;stroke:#50309e;stroke-width:2.1;fill:none;justify-self:center}
+.psDetailAction.work{background:#f0f1f5}.psDetailAction.work svg{stroke:#34343b}
+.psDetailNote{width:100%;min-height:125px;box-sizing:border-box;border:1px solid #d8d3e2;border-radius:12px;padding:12px;font:inherit;resize:vertical}
+.psDetailSmallButton{background:#eee9ff;color:#50309e;border:0;border-radius:12px;padding:12px 18px;font:inherit;font-weight:650;cursor:pointer}
+@media(max-width:390px){.psDetailNav{margin-left:-10px;margin-right:-10px}.psDetailBack{font-size:15px}.psDetailNavTitle{font-size:17px}.psDetailTab{font-size:14px}.psDetailAction{font-size:17px}}
 </style>
 
 <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -2465,24 +2483,31 @@ function psCloseQuoteDetail(){
 function psOpenQuoteDetail(nr){
  const x=crmQuoteCache.find(q=>String(q.nr)===String(nr));if(!x)return;
  psCurrentQuoteDetail=nr;
- const line=(k,v)=>`<div class="psDetailLine"><span>${crmEsc(k)}</span><span>${crmEsc(v||'—')}</span></div>`;
  const detail=$('psQuoteDetail');
- const pdf=/^https:\/\//.test(x.pdf||'')?`<a href="${crmEsc(x.pdf)}" target="_blank" rel="noopener" style="color:#bb2831">Ava PDF ↗</a>`:'PDF puudub';
- const fields=[['Pakkumise number',x.nr],['Kuupäev',x.kuupaev],['Tellija',x.tellija],['Objekt',x.objekt],['Staatus',x.staatus],['Summa',psEuroOnce(x.kokku)]];
- detail.innerHTML=`<button type="button" class="psDetailBack" id="psDetailBack">← Pakkumised</button>
- <div class="psDetailCard"><h2 class="psDetailTitle">${crmEsc(x.nr)}</h2><div class="psDetailSub">${crmEsc(x.tellija||x.objekt||'')} · ${crmEsc(x.kuupaev||'')}</div>
- <div class="psDetailTabs" role="tablist"><button class="psDetailTab" data-tab="info" aria-selected="true">Üldinfo</button><button class="psDetailTab" data-tab="sites" aria-selected="false">Väljakud</button><button class="psDetailTab" data-tab="notes" aria-selected="false">Märkused</button></div>
- <div data-detail-panel="info">${fields.map(a=>line(...a)).join('')}<div class="psDetailLine"><span>Dokument</span><span>${pdf}</span></div></div>
- <div data-detail-panel="sites" style="display:none"><p style="color:#6e6876;font-size:14px">Pakkumisega seotud väljakuid saad vaadata ja lisada väljakute registris.</p><button type="button" class="btn btnGray" id="psDetailSites">⌖ Ava väljakud</button></div>
- <div data-detail-panel="notes" style="display:none"><label for="psDetailNote" style="display:block;margin-bottom:8px;font-weight:650">Pakkumise märkused</label><textarea id="psDetailNote" class="psDetailNote" placeholder="Lisa märkused..."></textarea><p style="font-size:12px;color:#777">Märkused salvestatakse ainult selle seadme brauserisse.</p><button type="button" class="btn btnGray" id="psDetailSaveNote">Salvesta märkused</button></div>
- <div class="psDetailActions"><button type="button" id="psDetailMail" title="Saada pakkumine" aria-label="Saada pakkumine">✉</button>${x.staatus==='Aktsepteeritud'?'<button type="button" id="psDetailAddSite" title="Lisa väljak" aria-label="Lisa väljak">⌖</button><button type="button" id="psDetailWork" title="Loo töö" aria-label="Loo töö">🔧</button>':''}</div></div>`;
+ const pin='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>';
+ const mail='<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="1"/><path d="m3 6 9 7 9-7"/></svg>';
+ const wrench='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 7a6 6 0 0 1-8 5.7L6.1 19.6a2.1 2.1 0 0 1-3-3L10 9.7A6 6 0 0 1 17 2l-3.5 3.5 5 5Z"/></svg>';
+ const plane='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>';
+ const check='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 12 5 5L20 6"/></svg>';
+ const status=x.staatus||'Koostatud';
+ const statusClass=status==='Aktsepteeritud'?'accepted':status==='Arhiveeritud'?'archived':status==='Koostatud'?'draft':'';
+ const statusIcon=status==='Aktsepteeritud'?check:plane;
+ const sitesCount=Number(x.valjakuteArv||x.valjakuid||x.sitesCount||0);
+ const siteLabel='Väljakud'+(sitesCount?' ('+sitesCount+')':'');
+ const pdf=/^https:\/\//.test(x.pdf||'')?`<a href="${crmEsc(x.pdf)}" target="_blank" rel="noopener" style="color:#6740d9;font-weight:600">Ava PDF ↗</a>`:'';
+ detail.innerHTML=`<div class="psDetailNav"><button type="button" class="psDetailBack" id="psDetailBack"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 3-9 9 9 9"/></svg><span>Pakkumised</span></button><div class="psDetailNavTitle">${crmEsc(x.nr)}</div></div>
+ <div class="psDetailBody"><div class="psDetailTabs" role="tablist"><button type="button" class="psDetailTab" data-tab="info" aria-selected="true">Üldinfo</button><button type="button" class="psDetailTab" data-tab="sites" aria-selected="false">${crmEsc(siteLabel)}</button><button type="button" class="psDetailTab" data-tab="notes" aria-selected="false">Märkused</button></div>
+ <div data-detail-panel="info"><div class="psDetailCard"><h2 class="psDetailTitle">${crmEsc(x.objekt||x.tellija||'Pakkumine')}</h2><div class="psDetailSub">${crmEsc(x.aadress||x.objektiAadress||'')}</div><div class="psDetailInfoGrid"><div><div class="psDetailLabel">Kuupäev</div><div class="psDetailValue">${crmEsc(x.kuupaev||'—')}</div></div><div><div class="psDetailLabel">Summa</div><div class="psDetailAmount">${crmEsc(psEuroOnce(x.kokku))}</div></div></div><div class="psDetailLabel">Staatus</div><span class="psDetailStatus ${statusClass}">${statusIcon}${crmEsc(status)}</span>${pdf?`<div style="margin-top:14px">${pdf}</div>`:''}</div>
+ <div class="psDetailActions"><button type="button" class="psDetailAction" id="psDetailMail">${mail}<span>Saada pakkumine</span><span></span></button><button type="button" class="psDetailAction" id="psDetailAddSite">${pin}<span>Lisa väljakud</span><span></span></button><button type="button" class="psDetailAction work" id="psDetailWork">${wrench}<span>Loo töö</span><span></span></button></div></div>
+ <div data-detail-panel="sites" style="display:none"><div class="psDetailCard"><h2 class="psDetailTitle">Pakkumise väljakud</h2><p style="color:#777680">Vaata või lisa pakkumisega seotud väljakuid.</p><button type="button" class="psDetailSmallButton" id="psDetailSites">${pin} Ava väljakud</button></div></div>
+ <div data-detail-panel="notes" style="display:none"><div class="psDetailCard"><h2 class="psDetailTitle">Märkused</h2><textarea id="psDetailNote" class="psDetailNote" placeholder="Lisa märkused..."></textarea><p style="font-size:12px;color:#777">Märkused salvestuvad ainult selles seadmes.</p><button type="button" class="psDetailSmallButton" id="psDetailSaveNote">Salvesta märkused</button></div></div></div>`;
  document.querySelector('#quoteListPanel .psQuoteListShell').style.display='none';detail.style.display='block';
  $('psDetailBack').onclick=psCloseQuoteDetail;
  detail.querySelectorAll('.psDetailTab').forEach(b=>b.onclick=()=>psQuoteDetailTab(b.dataset.tab));
  $('psDetailMail').onclick=()=>psOpenMail(nr);
  $('psDetailSites').onclick=()=>psOpenQuoteSites(nr);
- if($('psDetailAddSite'))$('psDetailAddSite').onclick=()=>psOpenQuoteSites(nr);
- if($('psDetailWork'))$('psDetailWork').onclick=()=>psOpenWork(nr);
+ $('psDetailAddSite').onclick=()=>psOpenQuoteSites(nr);
+ $('psDetailWork').onclick=()=>psOpenWork(nr);
  const noteKey='playsafe_quote_note_'+nr;
  $('psDetailNote').value=localStorage.getItem(noteKey)||'';
  $('psDetailSaveNote').onclick=()=>{try{localStorage.setItem(noteKey,$('psDetailNote').value);toast('Märkus salvestatud selles seadmes');}catch(e){showError('Märkuse salvestamine ebaõnnestus: '+e.message);}};
