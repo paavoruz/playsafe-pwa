@@ -308,6 +308,16 @@ body:has(#quoteView[style*="display: block"]) #newObjectButton{display:none!impo
 .psQuoteRow[data-status="Arhiveeritud"] .psQuoteExtra{display:none!important}
 .psQuoteExtra .psQuoteAction{width:40px;height:38px;background:#f3f3f6;border-radius:10px}
 @media(max-width:390px){.psQuoteRow{gap:4px;padding:9px 7px;grid-template-columns:minmax(0,1fr) 32px auto 29px 30px}.psQuoteRowAmount{font-size:12px}.psQuoteRowTitle,.psQuoteRowName{font-size:12px}}
+
+/* Pakkumise eraldi detailvaade */
+#psQuoteDetail{display:none;padding:12px 2px 24px}
+.psDetailBack{border:0;background:none;color:#6240a7;font-weight:700;font-size:15px;padding:9px 3px 17px;cursor:pointer}
+.psDetailCard{background:white;border:1px solid #e4e0ed;border-radius:17px;padding:17px;margin-bottom:12px}
+.psDetailTitle{font-size:21px;font-weight:800;margin:0 0 6px}.psDetailSub{color:#6c6a75;font-size:13px}
+.psDetailTabs{display:flex;gap:7px;margin:16px 0}.psDetailTab{flex:1;border:0;border-radius:11px;background:#f0edf6;color:#655e70;padding:12px 4px;font-weight:700;cursor:pointer}.psDetailTab[aria-selected="true"]{background:#dac7ff;color:#43207d}
+.psDetailLine{display:flex;justify-content:space-between;gap:15px;padding:11px 0;border-bottom:1px solid #efedf2;font-size:14px}.psDetailLine span:first-child{color:#74717c}.psDetailLine span:last-child{text-align:right;font-weight:600;overflow-wrap:anywhere}
+.psDetailActions{display:flex;gap:10px;margin-top:15px}.psDetailActions button{border:0;border-radius:12px;padding:12px 16px;background:#eee6fc;color:#59339e;font-weight:700;cursor:pointer}
+.psDetailNote{width:100%;min-height:110px;box-sizing:border-box;border:1px solid #d8d3e2;border-radius:12px;padding:12px;font:inherit;resize:vertical}
 </style>
 
 <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -447,7 +457,7 @@ body:has(#quoteView[style*="display: block"]) #newObjectButton{display:none!impo
     <button id="saveQuote" class="btn btnDark">Salvesta pakkumine</button>
   </div>
 
-</div><div id="quoteListPanel" style="display:none"><div class="psQuoteListShell"><div id="quoteStatusFilters" class="psQuoteFilters" role="group" aria-label="Pakkumiste staatuse filtrid"><button type="button" class="psQuoteFilter" data-status="Kõik" title="Kõik" aria-label="Kõik" aria-pressed="true"><svg xmlns="http://www.w3.org/2000/svg" width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button><button type="button" class="psQuoteFilter" data-status="Koostatud" title="Koostatud" aria-label="Koostatud" aria-pressed="false"><svg xmlns="http://www.w3.org/2000/svg" width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L9 17l-4 1 1-4Z"/></svg></button><button type="button" class="psQuoteFilter" data-status="Saadetud" title="Saadetud" aria-label="Saadetud" aria-pressed="false"><svg xmlns="http://www.w3.org/2000/svg" width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="m3 6 9 7 9-7"/></svg></button><button type="button" class="psQuoteFilter" data-status="Aktsepteeritud" title="Aktsepteeritud" aria-label="Aktsepteeritud" aria-pressed="false"><svg xmlns="http://www.w3.org/2000/svg" width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></button><button type="button" class="psQuoteFilter" data-status="Arhiveeritud" title="Arhiveeritud" aria-label="Arhiveeritud" aria-pressed="false"><svg xmlns="http://www.w3.org/2000/svg" width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v11h14V9M10 14h4"/></svg></button></div><input id="quoteSearch" class="formInput" placeholder="Otsi pakkumist..." style="margin:12px 0"><button id="quoteRefresh" class="btn btnGray" type="button">Värskenda</button><div id="quoteListContent" style="margin-top:12px"></div></div></div>
+</div><div id="quoteListPanel" style="display:none"><div class="psQuoteListShell"><div id="quoteStatusFilters" class="psQuoteFilters" role="group" aria-label="Pakkumiste staatuse filtrid"><button type="button" class="psQuoteFilter" data-status="Kõik" title="Kõik" aria-label="Kõik" aria-pressed="true"><svg xmlns="http://www.w3.org/2000/svg" width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button><button type="button" class="psQuoteFilter" data-status="Koostatud" title="Koostatud" aria-label="Koostatud" aria-pressed="false"><svg xmlns="http://www.w3.org/2000/svg" width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L9 17l-4 1 1-4Z"/></svg></button><button type="button" class="psQuoteFilter" data-status="Saadetud" title="Saadetud" aria-label="Saadetud" aria-pressed="false"><svg xmlns="http://www.w3.org/2000/svg" width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="m3 6 9 7 9-7"/></svg></button><button type="button" class="psQuoteFilter" data-status="Aktsepteeritud" title="Aktsepteeritud" aria-label="Aktsepteeritud" aria-pressed="false"><svg xmlns="http://www.w3.org/2000/svg" width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></button><button type="button" class="psQuoteFilter" data-status="Arhiveeritud" title="Arhiveeritud" aria-label="Arhiveeritud" aria-pressed="false"><svg xmlns="http://www.w3.org/2000/svg" width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v11h14V9M10 14h4"/></svg></button></div><input id="quoteSearch" class="formInput" placeholder="Otsi pakkumist..." style="margin:12px 0"><button id="quoteRefresh" class="btn btnGray" type="button">Värskenda</button><div id="quoteListContent" style="margin-top:12px"></div></div><section id="psQuoteDetail" aria-label="Pakkumise detailvaade"></section></div>
 <div id="psWorkPanel" class="card" style="display:none;margin-top:12px">
  <div class="detailTitle" id="psWorkTitle">Loo tööd</div>
  <p class="muted">Vali üks või mitu väljakut ning hindamise liik.</p>
@@ -2423,14 +2433,12 @@ function crmRenderQuotes(){
  $('quoteListContent').innerHTML=items.length?items.map(x=>{
  const statusIcon={'Koostatud':'▤','Saadetud':'➤','Aktsepteeritud':'✓','Arhiveeritud':'▣'}[x.staatus]||'▤';
  const pdf=/^https:\/\//.test(x.pdf)?`<a class="psQuoteAction psQuotePdf" target="_blank" rel="noopener" href="${crmEsc(x.pdf)}" title="Ava PDF" aria-label="Ava PDF"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 32" width="25" height="29" aria-hidden="true"><path d="M4 1h14l7 7v22H4a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2Z" fill="#fff" stroke="#d52c32" stroke-width="1.8"/><path d="M18 1v8h7" fill="none" stroke="#d52c32" stroke-width="1.8"/><rect x="5" y="16" width="19" height="9" rx="2" fill="#d52c32"/><text x="14.5" y="22.6" font-size="6.8" font-weight="800" text-anchor="middle" fill="white" font-family="Arial,sans-serif">PDF</text></svg></a>`:'<span></span>';
- return `<div class="psQuoteRow" data-status="${crmEsc(x.staatus)}" data-nr="${crmEsc(x.nr)}"><div class="psQuoteRowMain" ${x.staatus==='Aktsepteeritud'?'role="button" tabindex="0" aria-label="Ava pakkumise toimingud" aria-expanded="false"':''}><div class="psQuoteRowTitle"><b>${crmEsc(x.nr)}</b> · ${crmEsc(x.kuupaev)}</div><div class="psQuoteRowName">${crmEsc(x.tellija||x.objekt)}</div></div><select class="psQuoteStatusSelect crmStatus" data-nr="${crmEsc(x.nr)}" data-status="${crmEsc(x.staatus)}" title="Muuda staatust: ${crmEsc(x.staatus)}" aria-label="Muuda pakkumise staatust"><option value="Koostatud" ${x.staatus==='Koostatud'?'selected':''}>▤</option><option value="Saadetud" ${x.staatus==='Saadetud'?'selected':''}>➤</option><option value="Aktsepteeritud" ${x.staatus==='Aktsepteeritud'?'selected':''}>✓</option><option value="Arhiveeritud" ${x.staatus==='Arhiveeritud'?'selected':''}>▣</option></select><div class="psQuoteRowAmount">${crmEsc(psEuroOnce(x.kokku))}</div>${pdf}<button type="button" class="psQuoteAction psMailOpen psQuoteEnvelope" data-nr="${crmEsc(x.nr)}" title="Saada pakkumine" aria-label="Saada pakkumine">✉</button><div class="psQuoteExtra">${x.staatus==='Aktsepteeritud'?`<button type="button" class="psQuoteAction psQuoteSites" data-nr="${crmEsc(x.nr)}" title="Lisa väljakud" aria-label="Lisa väljakud"><svg xmlns="http://www.w3.org/2000/svg" width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg></button><button type="button" class="psQuoteAction psWorkOpen" data-nr="${crmEsc(x.nr)}" title="Loo töö" aria-label="Loo töö">🔧</button>`:''}</div></div>`;
+ return `<div class="psQuoteRow" data-status="${crmEsc(x.staatus)}" data-nr="${crmEsc(x.nr)}"><div class="psQuoteRowMain" role="button" tabindex="0" aria-label="Ava pakkumise detailvaade"><div class="psQuoteRowTitle"><b>${crmEsc(x.nr)}</b> · ${crmEsc(x.kuupaev)}</div><div class="psQuoteRowName">${crmEsc(x.tellija||x.objekt)}</div></div><select class="psQuoteStatusSelect crmStatus" data-nr="${crmEsc(x.nr)}" data-status="${crmEsc(x.staatus)}" title="Muuda staatust: ${crmEsc(x.staatus)}" aria-label="Muuda pakkumise staatust"><option value="Koostatud" ${x.staatus==='Koostatud'?'selected':''}>▤</option><option value="Saadetud" ${x.staatus==='Saadetud'?'selected':''}>➤</option><option value="Aktsepteeritud" ${x.staatus==='Aktsepteeritud'?'selected':''}>✓</option><option value="Arhiveeritud" ${x.staatus==='Arhiveeritud'?'selected':''}>▣</option></select><div class="psQuoteRowAmount">${crmEsc(psEuroOnce(x.kokku))}</div>${pdf}<button type="button" class="psQuoteAction psMailOpen psQuoteEnvelope" data-nr="${crmEsc(x.nr)}" title="Saada pakkumine" aria-label="Saada pakkumine">✉</button><div class="psQuoteExtra">${x.staatus==='Aktsepteeritud'?`<button type="button" class="psQuoteAction psQuoteSites" data-nr="${crmEsc(x.nr)}" title="Lisa väljakud" aria-label="Lisa väljakud"><svg xmlns="http://www.w3.org/2000/svg" width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg></button><button type="button" class="psQuoteAction psWorkOpen" data-nr="${crmEsc(x.nr)}" title="Loo töö" aria-label="Loo töö">🔧</button>`:''}</div></div>`;
  }).join(''):'Pakkumisi ei leitud.';
- document.querySelectorAll('.psQuoteRow').forEach(row=>{
-  if(row.dataset.status!=='Aktsepteeritud')return;
-  if(!row.querySelector('.psQuoteSites'))return;
-  const toggle=()=>{row.classList.toggle('expanded');row.querySelector('.psQuoteRowMain').setAttribute('aria-expanded',String(row.classList.contains('expanded')));};
-  row.querySelector('.psQuoteRowMain').onclick=toggle;
-  row.querySelector('.psQuoteRowMain').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle();}};
+ document.querySelectorAll('.psQuoteRowMain').forEach(el=>{
+  const open=()=>psOpenQuoteDetail(el.closest('.psQuoteRow').dataset.nr);
+  el.onclick=open;
+  el.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();open();}};
  });
 
  document.querySelectorAll('.psWorkOpen').forEach(b=>b.onclick=()=>psOpenWork(b.dataset.nr));
@@ -2444,12 +2452,48 @@ function crmRenderQuotes(){
  catch(e){el.value=old;showError('Staatuse salvestamise viga: '+e.message);}finally{el.disabled=false;}
  });
 }
+let psCurrentQuoteDetail='';
+function psQuoteDetailTab(tab){
+ document.querySelectorAll('#psQuoteDetail .psDetailTab').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.tab===tab)));
+ document.querySelectorAll('#psQuoteDetail [data-detail-panel]').forEach(p=>p.style.display=p.dataset.detailPanel===tab?'block':'none');
+}
+function psCloseQuoteDetail(){
+ psCurrentQuoteDetail='';$('psQuoteDetail').style.display='none';
+ const shell=document.querySelector('#quoteListPanel .psQuoteListShell');if(shell)shell.style.display='block';
+ crmRenderQuotes();
+}
+function psOpenQuoteDetail(nr){
+ const x=crmQuoteCache.find(q=>String(q.nr)===String(nr));if(!x)return;
+ psCurrentQuoteDetail=nr;
+ const line=(k,v)=>`<div class="psDetailLine"><span>${crmEsc(k)}</span><span>${crmEsc(v||'—')}</span></div>`;
+ const detail=$('psQuoteDetail');
+ const pdf=/^https:\/\//.test(x.pdf||'')?`<a href="${crmEsc(x.pdf)}" target="_blank" rel="noopener" style="color:#bb2831">Ava PDF ↗</a>`:'PDF puudub';
+ const fields=[['Pakkumise number',x.nr],['Kuupäev',x.kuupaev],['Tellija',x.tellija],['Objekt',x.objekt],['Staatus',x.staatus],['Summa',psEuroOnce(x.kokku)]];
+ detail.innerHTML=`<button type="button" class="psDetailBack" id="psDetailBack">← Pakkumised</button>
+ <div class="psDetailCard"><h2 class="psDetailTitle">${crmEsc(x.nr)}</h2><div class="psDetailSub">${crmEsc(x.tellija||x.objekt||'')} · ${crmEsc(x.kuupaev||'')}</div>
+ <div class="psDetailTabs" role="tablist"><button class="psDetailTab" data-tab="info" aria-selected="true">Üldinfo</button><button class="psDetailTab" data-tab="sites" aria-selected="false">Väljakud</button><button class="psDetailTab" data-tab="notes" aria-selected="false">Märkused</button></div>
+ <div data-detail-panel="info">${fields.map(a=>line(...a)).join('')}<div class="psDetailLine"><span>Dokument</span><span>${pdf}</span></div></div>
+ <div data-detail-panel="sites" style="display:none"><p style="color:#6e6876;font-size:14px">Pakkumisega seotud väljakuid saad vaadata ja lisada väljakute registris.</p><button type="button" class="btn btnGray" id="psDetailSites">⌖ Ava väljakud</button></div>
+ <div data-detail-panel="notes" style="display:none"><label for="psDetailNote" style="display:block;margin-bottom:8px;font-weight:650">Pakkumise märkused</label><textarea id="psDetailNote" class="psDetailNote" placeholder="Lisa märkused..."></textarea><p style="font-size:12px;color:#777">Märkused salvestatakse ainult selle seadme brauserisse.</p><button type="button" class="btn btnGray" id="psDetailSaveNote">Salvesta märkused</button></div>
+ <div class="psDetailActions"><button type="button" id="psDetailMail" title="Saada pakkumine" aria-label="Saada pakkumine">✉</button>${x.staatus==='Aktsepteeritud'?'<button type="button" id="psDetailAddSite" title="Lisa väljak" aria-label="Lisa väljak">⌖</button><button type="button" id="psDetailWork" title="Loo töö" aria-label="Loo töö">🔧</button>':''}</div></div>`;
+ document.querySelector('#quoteListPanel .psQuoteListShell').style.display='none';detail.style.display='block';
+ $('psDetailBack').onclick=psCloseQuoteDetail;
+ detail.querySelectorAll('.psDetailTab').forEach(b=>b.onclick=()=>psQuoteDetailTab(b.dataset.tab));
+ $('psDetailMail').onclick=()=>psOpenMail(nr);
+ $('psDetailSites').onclick=()=>psOpenQuoteSites(nr);
+ if($('psDetailAddSite'))$('psDetailAddSite').onclick=()=>psOpenQuoteSites(nr);
+ if($('psDetailWork'))$('psDetailWork').onclick=()=>psOpenWork(nr);
+ const noteKey='playsafe_quote_note_'+nr;
+ $('psDetailNote').value=localStorage.getItem(noteKey)||'';
+ $('psDetailSaveNote').onclick=()=>{try{localStorage.setItem(noteKey,$('psDetailNote').value);toast('Märkus salvestatud selles seadmes');}catch(e){showError('Märkuse salvestamine ebaõnnestus: '+e.message);}};
+}
 async function crmLoadQuotes(){
  $('quoteListContent').textContent='Laadin...';
  try{crmQuoteCache=await runScript('crmHinnapakkumised',[]);crmQuoteCache.forEach(x=>{if(x.staatus==='Tagasi lükatud')x.staatus='Arhiveeritud';});crmRenderQuotes();}
  catch(e){showError('Pakkumiste laadimise viga: '+e.message);$('quoteListContent').textContent='Laadimine ebaõnnestus.';}
 }
 function crmSwitchTab(list){
+ if(psCurrentQuoteDetail)psCloseQuoteDetail();
  $('quoteCreatePanel').style.display=list?'none':'block';$('quoteListPanel').style.display=list?'block':'none';
  $('quoteCreateTab').className='btn '+(list?'btnGray':'btnDark');$('quoteListTab').className='btn '+(list?'btnDark':'btnGray');
  if(list)crmLoadQuotes();
