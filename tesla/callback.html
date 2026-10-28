@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="et">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Playsafe – Tesla ühendus</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #f5f5f7;
+      text-align: center;
+      padding: 60px 20px;
+      color: #1d1d1f;
+    }
+    .card {
+      max-width: 420px;
+      margin: auto;
+      padding: 32px;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+    }
+    h1 { font-size: 24px; }
+    p { line-height: 1.6; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>🚘 Tesla ühendus</h1>
+    <p id="status">Kontrollin Tesla vastust...</p>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
+    const state = params.get("state");
+    const error = params.get("error");
+
+    if (error) {
+      document.getElementById("status").textContent =
+        "Tesla ühendamine ebaõnnestus: " + error;
+    } else if (code && state) {
+      document.getElementById("status").textContent =
+        "Tesla autoriseerimine õnnestus. Jätkame ühenduse seadistamist.";
+
+      // OAuth-koodi töötlemise lisame järgmises etapis.
+      // Koodi ei salvestata ega kuvata.
+    } else {
+      document.getElementById("status").textContent =
+        "Ootan Tesla autoriseerimise vastust.";
+    }
+  </script>
+</body>
+</html>
