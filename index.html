@@ -53,6 +53,9 @@ h1{font-size:30px;margin:0;font-weight:800}
 .objectMapsLink{background:transparent;color:#2a64b6}
 .objectMapsLink svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .objectMapsLink:focus-visible{outline:2px solid #1763a9;outline-offset:2px}
+.objectTeslaButton{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:29px;height:29px;border:1px solid #ddd5e9;border-radius:9px;background:#f2ecff;color:#27212d;cursor:pointer;padding:4px}
+.objectTeslaButton svg{width:20px;height:20px;fill:currentColor}
+.objectTeslaButton:disabled{opacity:.45;cursor:wait}
 .objectCardNew{background:#fff7d6;border-color:#f3df93}
 .objectCardVisited{background:#e7f3ff;border-color:#bdddf9}
 .objectCardReady{background:#e6f7eb;border-color:#b9e5c5}
@@ -640,7 +643,7 @@ const SCRIPT_ID =
 "AKfycbxaB2LDck7cQBhwVrevU3_3NbiIlCck9qieD-26Z6jlzcDC0nQJ8SviTh5TPaxd_Ci05A";
 
 const SCOPES =
-"https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/documents";
+"https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/documents https://www.googleapis.com/auth/userinfo.email";
 
 const DEFAULT_TYPES = [
 "Kombineeritud mänguvahend","Kiik","Liumägi","Ronimisvahend",
@@ -954,7 +957,7 @@ function renderObjects(){
   d.className="card objectCard "+(objectStatus(o)==="Valmis"?"objectCardReady":objectStatus(o)==="Objektil käidud"?"objectCardVisited":"objectCardNew");
   d.innerHTML=`<div class="small">NR ${esc(o.nr)}</div>
   <div class="objectName">${esc(objectName(o))}</div>
-  <div class="objectAddressLine">${String(o.aadress||"").trim()?`<a class="objectMapsLink" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(o.aadress)}" target="_blank" rel="noopener noreferrer" aria-label="Ava aadress Google Mapsis" title="Ava Google Mapsis"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg></a><span class="muted">${esc(o.aadress)}</span>`:''}</div>
+  <div class="objectAddressLine">${String(o.aadress||"").trim()?`<a class="objectMapsLink" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(o.aadress)}" target="_blank" rel="noopener noreferrer" aria-label="Ava aadress Google Mapsis" title="Ava Google Mapsis"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg></a><button type="button" class="objectTeslaButton" aria-label="Saada aadress Teslasse" title="Saada Teslasse"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5c-3.5 0-6.7.6-9.5 1.9L4 7.8c2.1-.9 4.8-1.4 8-1.4s5.9.5 8 1.4l1.5-3.4C18.7 3.1 15.5 2.5 12 2.5Zm0 5.4c-2.6 0-4.9.4-6.7 1.2.8.8 1.7 1.4 2.6 1.9.8-.3 1.7-.5 2.6-.6l1.5 11.1 1.5-11.1c.9.1 1.8.3 2.6.6.9-.5 1.8-1.1 2.6-1.9C16.9 8.3 14.6 7.9 12 7.9Z"/></svg></button><span class="muted">${esc(o.aadress)}</span>`:''}</div>
   <div class="objectStatusActions">
     <span class="objectStatusBadge ${isReady(o)?'objectStatusReady':objectStatus(o)==='Objektil käidud'?'objectStatusWorking':'objectStatusNew'}">${objectStatus(o)}</span>
   </div>
@@ -962,8 +965,37 @@ function renderObjects(){
   d.onclick=()=>showObject(o);
   const mapsLink=d.querySelector(".objectMapsLink");
   if(mapsLink)mapsLink.onclick=e=>e.stopPropagation();
+  const teslaButton=d.querySelector(".objectTeslaButton");
+  if(teslaButton)teslaButton.onclick=e=>{e.stopPropagation();sendAddressToTesla(o.aadress,teslaButton);};
   $("objectList").appendChild(d);
  });
+}
+
+async function sendAddressToTesla(address,button){
+ if(!navigator.onLine){toast("Tesla jaoks on vaja internetiühendust.");return;}
+ if(!accessToken){toast("Ühenda esmalt Google'i konto.");$("authBox").style.display="block";return;}
+ button.disabled=true;
+ toast("Saadan aadressi Teslasse…");
+ try{
+  const endpoint="https://playsafe-tesla.paavo-ruzits.workers.dev/pwa/navigate";
+  const send=token=>fetch(endpoint,{
+   method:"POST",
+   headers:{Authorization:`Bearer ${token}`,"Content-Type":"application/json"},
+   body:JSON.stringify({address:String(address).trim()})
+  });
+  let response=await send(accessToken);
+  if(response.status===401 || response.status===403){
+   // Varem salvestatud tokenil ei pruugi olla e-posti lugemise õigust.
+   const freshToken=await getToken();
+   response=await send(freshToken);
+  }
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok || !data.ok)throw new Error(data.error||`HTTP ${response.status}`);
+  toast("Aadress saadetud Teslasse ✓");
+ }catch(error){
+  console.error("Tesla navigation:",error);
+  toast("Tesla: "+(error.message||"Saatmine ebaõnnestus"));
+ }finally{button.disabled=false;}
 }
 
 function detailRow(label,value){
