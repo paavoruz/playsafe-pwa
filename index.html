@@ -3507,7 +3507,7 @@ document.getElementById('psQuoteRegistryBtn')?.addEventListener('click',()=>{
   });
 });
 
-// ===== PLAYSAFE – AI PÄRINGUD / GMAIL =====
+// ===== PLAYSAFE – GMAILI PÄRINGUD JA VESTLUSE LUGEMINE =====
 (function psInitAiParingud() {
   const quotePanel = document.getElementById('quoteListPanel');
   if (!quotePanel || document.getElementById('psAiParingudBtn')) return;
@@ -3537,44 +3537,111 @@ document.getElementById('psQuoteRegistryBtn')?.addEventListener('click',()=>{
   shell.parentNode.insertBefore(button, shell);
   shell.parentNode.insertBefore(panel, shell);
 
+  let threadsCache = null;
+  let requestCounter = 0;
+  const make = (tag, text, style) => {
+    const el = document.createElement(tag);
+    if (text !== undefined) el.textContent = String(text);
+    if (style) el.style.cssText = style;
+    return el;
+  };
+  const gmailUrl = threadId =>
+    'https://mail.google.com/mail/u/0/#all/' + encodeURIComponent(threadId);
+  const gmailButton = threadId => {
+    const open = make('button', 'Ava Gmailis', 'margin-top:8px');
+    open.type = 'button';
+    open.className = 'btn btnGray';
+    open.onclick = () => window.open(gmailUrl(threadId), '_blank', 'noopener,noreferrer');
+    return open;
+  };
+
+  function renderList(threads) {
+    heading.textContent = 'Gmaili kliendipäringud';
+    content.replaceChildren();
+    if (!threads.length) {
+      content.textContent = 'Viimase 30 päeva kirjavahetusi ei leitud.';
+      return;
+    }
+    threads.forEach(thread => {
+      const item = make('div', undefined, 'padding:13px 0;border-bottom:1px solid #eee');
+      const subject = make('div', thread.teema || '(Teema puudub)', 'font-weight:650');
+      const sender = make('div', thread.saatja || '', 'font-size:13px;color:#666;margin-top:5px');
+      const details = make('div',
+        (thread.kuupaev || '') + ' · Kirju: ' + (thread.kirjadeArv || 1),
+        'font-size:12px;color:#888;margin-top:5px');
+      const actions = make('div', undefined, 'display:flex;gap:8px;flex-wrap:wrap;margin-top:8px');
+      const read = make('button', 'Loe vestlust');
+      read.type = 'button';
+      read.className = 'btn btnDark';
+      read.onclick = () => showConversation(thread);
+      actions.append(read, gmailButton(thread.threadId));
+      item.append(subject, sender, details, actions);
+      content.appendChild(item);
+    });
+  }
+
+  async function showConversation(thread) {
+    const requestId = ++requestCounter;
+    heading.textContent = thread.teema || 'Kirjavahetus';
+    content.replaceChildren();
+    const listBack = make('button', '← Tagasi päringute loendisse');
+    listBack.type = 'button';
+    listBack.className = 'btn btnGray';
+    listBack.onclick = () => {
+      ++requestCounter;
+      renderList(threadsCache || []);
+    };
+    const status = make('div', 'Laadin kirjavahetust…', 'margin-top:14px');
+    content.append(listBack, status);
+    try {
+      const result = await runScript('psGmailVestlus', [thread.threadId]);
+      if (requestId !== requestCounter || panel.style.display === 'none') return;
+      status.remove();
+      const messages = result && Array.isArray(result.sonumid) ? result.sonumid : [];
+      if (!messages.length) {
+        content.appendChild(make('p', 'Sõnumeid ei leitud.'));
+        return;
+      }
+      content.appendChild(make('p', 'Sõnumeid: ' + messages.length, 'color:#777;font-size:13px'));
+      messages.forEach(message => {
+        const card = make('article', undefined,
+          'border:1px solid #e8e1f1;border-radius:12px;padding:14px;margin:12px 0;background:#fcfbff');
+        card.append(
+          make('div', message.saatja || 'Saatja teadmata', 'font-weight:650;overflow-wrap:anywhere'),
+          make('div', 'Saaja: ' + (message.saaja || '—'), 'font-size:12px;color:#777;margin-top:4px;overflow-wrap:anywhere'),
+          make('div', message.kuupaev || '', 'font-size:12px;color:#777;margin-top:4px')
+        );
+        const body = make('div', message.tekst || message.eelvaade || '(Kirja tekst puudub)',
+          'white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5;margin-top:14px;font-size:14px');
+        card.appendChild(body);
+        content.appendChild(card);
+      });
+      content.appendChild(gmailButton(thread.threadId));
+    } catch (error) {
+      if (requestId !== requestCounter) return;
+      status.textContent = 'Kirjavahetuse laadimine ebaõnnestus: ' + (error.message || error);
+    }
+  }
+
   button.onclick = async () => {
     shell.style.display = 'none';
     button.style.display = 'none';
     panel.style.display = 'block';
+    heading.textContent = 'Gmaili kliendipäringud';
     content.textContent = 'Laadin Gmaili kirjavahetusi…';
+    const requestId = ++requestCounter;
     try {
       const threads = await runScript('psGmailParingud', []);
-      content.replaceChildren();
-      if (!Array.isArray(threads) || threads.length === 0) {
-        content.textContent = 'Viimase 30 päeva kirjavahetusi ei leitud.';
-        return;
-      }
-      threads.forEach(thread => {
-        const item = document.createElement('div');
-        item.style.cssText = 'padding:13px 0;border-bottom:1px solid #eee';
-        const subject = document.createElement('div');
-        subject.style.fontWeight = '650';
-        subject.textContent = thread.teema || '(Teema puudub)';
-        const sender = document.createElement('div');
-        sender.style.cssText = 'font-size:13px;color:#666;margin-top:5px';
-        sender.textContent = thread.saatja || '';
-        const details = document.createElement('div');
-        details.style.cssText = 'font-size:12px;color:#888;margin-top:5px';
-        details.textContent = (thread.kuupaev || '') + ' · Kirju: ' + (thread.kirjadeArv || 1);
-        const open = document.createElement('button');
-        open.type = 'button';
-        open.className = 'btn btnGray';
-        open.style.marginTop = '8px';
-        open.textContent = 'Ava Gmailis';
-        open.onclick = () => window.open('https://mail.google.com/mail/u/0/#all/' + encodeURIComponent(thread.threadId), '_blank', 'noopener,noreferrer');
-        item.append(subject, sender, details, open);
-        content.appendChild(item);
-      });
+      if (requestId !== requestCounter || panel.style.display === 'none') return;
+      threadsCache = Array.isArray(threads) ? threads : [];
+      renderList(threadsCache);
     } catch (error) {
-      content.textContent = 'Gmaili päringute laadimine ebaõnnestus: ' + error.message;
+      if (requestId !== requestCounter) return;
+      content.textContent = 'Gmaili päringute laadimine ebaõnnestus: ' + (error.message || error);
     }
   };
   back.onclick = () => {
+    ++requestCounter;
     panel.style.display = 'none';
     button.style.display = '';
     shell.style.display = '';
