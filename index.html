@@ -3649,8 +3649,41 @@ document.getElementById('psQuoteRegistryBtn')?.addEventListener('click',()=>{
             wrap.appendChild(input);
             notice.appendChild(wrap);
           });
+          const createQuoteButton = make('button', '🟢 Koosta hinnapakkumine');
+          createQuoteButton.type = 'button';
+          createQuoteButton.className = 'btn btnDark';
+          createQuoteButton.style.cssText = 'margin-top:14px;background:#258653;color:white;width:100%;';
+          createQuoteButton.onclick = async () => {
+            // Kasuta redigeeritud väärtusi, mitte AI esialgset vastust.
+            const value = key => (edits[key]?.value || '').trim();
+            crmSwitchTab(false);
+            const prefill = {
+              quoteCustomer: value('tellija'),
+              quoteContact: value('kontaktisik'),
+              quoteEmail: value('email'),
+              quotePhone: value('telefon'),
+              quoteObject: value('objekt'),
+              quoteAddress: value('aadress')
+            };
+            Object.entries(prefill).forEach(([id, text]) => {
+              const el = document.getElementById(id);
+              if (el) { el.value = text; el.dispatchEvent(new Event('change', {bubbles:true})); }
+            });
+            // Hinnakirja, väljaku tüübi ja hindamise liigi valib kasutaja.
+            try {
+              if (!hinnakiri.length) await loadHinnakiri();
+              await loadValjakuTyypid();
+            } catch (error) { showError('Hinnakirja laadimine: ' + error.message); }
+            ++requestCounter;
+            panel.style.display = 'none';
+            button.style.display = '';
+            shell.style.display = '';
+            document.getElementById('quoteCreatePanel')?.scrollIntoView({behavior:'smooth',block:'start'});
+            toast('AI andmed lisatud. Vali väljaku tüüp ja teenused.');
+          };
+          notice.appendChild(createQuoteButton);
           notice.appendChild(make('p',
-            'Kontrolli ja täienda välju. Muudatusi ei salvestata ega hinnapakkumist saadeta automaatselt.',
+            'Kontrolli ja täienda välju. Pakkumist ei salvestata ega saadeta automaatselt.',
             'font-size:12px;color:#665575;margin-top:10px'));
         } catch (error) {
           if (requestId !== requestCounter) return;
