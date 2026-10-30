@@ -2731,7 +2731,14 @@ async function saveQuote(){
   }]);
 
   if(result?.pakkumiseNr){
-
+    if(psAiPendingThread){
+      try{
+        await runScript('psSeoPakkumineGmailiga',[result.pakkumiseNr,psAiPendingThread]);
+        psAiPendingThread='';
+      }catch(linkError){
+        showError('Pakkumine salvestati, kuid Gmaili seose salvestamine ebaõnnestus: '+linkError.message);
+      }
+    }
     toast(`Pakkumine ${result.pakkumiseNr} salvestatud`);
 
     try{
@@ -3344,6 +3351,12 @@ $('psDbCancel').onclick=()=>{$('psDbEditor').style.display='none';};
   <p id="psMailInfo" style="font-size:13px;color:#666"></p>
   <label>Saatja</label><input id="psMailFrom" class="formInput" readonly style="margin:6px 0 12px">
   <label>Saaja</label><input id="psMailTo" class="formInput" type="email" style="margin:6px 0 12px">
+  <div style="padding:12px;background:#f6f2ff;border-radius:12px;margin:0 0 12px">
+   <div style="font-weight:650;margin-bottom:8px">Saatmisviis</div>
+   <label style="display:block;margin-bottom:8px"><input type="radio" name="psMailMode" id="psMailReply" value="reply"> Vasta algsele Gmaili päringule</label>
+   <label style="display:block"><input type="radio" name="psMailMode" id="psMailNew" value="new" checked> Saada uue e-kirjana</label>
+   <div id="psMailThreadInfo" style="font-size:12px;color:#695b7d;margin-top:8px"></div>
+  </div>
   <label>Kirjamall</label><select id="psMailTemplate" class="formInput" style="margin:6px 0 12px;width:100%"><option value="">Laadin malle…</option></select>
   <label>Teema</label><input id="psMailSubject" class="formInput" style="margin:6px 0 12px">
   <label>Kirja sisu</label><textarea id="psMailBody" class="formInput" rows="10" style="margin:6px 0 12px;width:100%;resize:vertical"></textarea>
@@ -3358,15 +3371,35 @@ document.addEventListener('click',function(event){
  if(b){event.preventDefault();psOpenMail(b.dataset.nr);}
 });
 let psMailCurrentNr='';
+let psMailCurrentThread='';
+let psMailOriginalSubject='';
+let psAiPendingThread='';
+function psMailUpdateMode(){
+ const reply=$('psMailReply').checked;
+ $('psMailSubject').readOnly=reply;
+ if(reply && psMailOriginalSubject) $('psMailSubject').value=psMailOriginalSubject;
+ else if(!reply){
+  const t=psMailTemplates.find(x=>x.id===$('psMailTemplate').value);
+  if(t) $('psMailSubject').value=t.subject;
+ }
+}
+$('psMailReply').onchange=psMailUpdateMode;
+$('psMailNew').onchange=psMailUpdateMode;
 let psMailTemplates=[];
 $('psMailTemplate').onchange=()=>{
  const t=psMailTemplates.find(x=>x.id===$('psMailTemplate').value);
  if(!t)return;
- $('psMailSubject').value=t.subject;
+ if(!$('psMailReply').checked) $('psMailSubject').value=t.subject;
  $('psMailBody').value=t.body;
 };
 async function psOpenMail(nr){
  psMailCurrentNr=nr;
+ psMailCurrentThread='';
+ psMailOriginalSubject='';
+ $('psMailNew').checked=true;
+ $('psMailReply').disabled=true;
+ $('psMailThreadInfo').textContent='Kontrollin seotud Gmaili päringut…';
+ $('psMailSubject').readOnly=false;
  $('psMailModal').style.display='block';
  $('psMailInfo').textContent='Laadin pakkumise andmeid…';
  $('psMailFrom').value='info@playsafe.ee';
@@ -3394,6 +3427,24 @@ async function psOpenMail(nr){
    const opt=document.createElement('option');opt.value='';opt.textContent='Mallide laadimine ebaõnnestus – käsitsi sisestamine';sel.appendChild(opt);
    console.error('Kirjamallide laadimine:',templateError);
   }
+  try{
+   const link=await runScript('psPakkumiseGmailSeos',[nr]);
+   psMailCurrentThread=link?.threadId||'';
+   if(psMailCurrentThread){
+    const emailOf=x=>(String(x||'').match(/<([^<>]+)>/)?.[1]||String(x||'')).trim().toLowerCase();
+    if(emailOf(link.saatja)===emailOf($('psMailTo').value) && link.teema){
+     psMailOriginalSubject=link.teema;
+     $('psMailReply').disabled=false;
+     $('psMailReply').checked=true;
+     $('psMailThreadInfo').textContent='Algne Gmaili vestlus: '+link.teema;
+     psMailUpdateMode();
+    }else{
+     $('psMailThreadInfo').textContent='Algse päringu saatja ei ühti pakkumise saajaga. Saad saata uue kirjana.';
+    }
+   }else $('psMailThreadInfo').textContent='Selle pakkumisega ei ole algset Gmaili päringut seotud.';
+  }catch(e){
+   $('psMailThreadInfo').textContent='Gmaili seose kontroll ebaõnnestus: '+e.message;
+  }
   $('psMailAttachment').textContent='📎 '+p.pdfName+' (PDF manus)';
   $('psMailInfo').textContent=p.permitted?'Vaata kiri üle enne saatmist.':'Saatja info@playsafe.ee ei ole veel selle Google konto lubatud saatjate hulgas.';
   $('psMailSend').disabled=!p.permitted;
@@ -3404,10 +3455,14 @@ async function psOpenMail(nr){
 $('psMailClose').onclick=()=>$('psMailModal').style.display='none';
 $('psMailSend').onclick=async()=>{
  const b=$('psMailSend');
- if(!confirm('Kas saadad pakkumise PDF-manusega aadressile '+$('psMailTo').value+'?'))return;
+ const sendMode=$('psMailReply').checked?'reply':'new';
+ if(sendMode==='reply' && (!psMailCurrentThread || $('psMailReply').disabled)){
+  showError('Algset Gmaili vestlust ei saa kasutada.');return;
+ }
+ if(!confirm('Kas saadad pakkumise '+(sendMode==='reply'?'vastusena algsele päringule':'uue kirjana')+' PDF-manusega aadressile '+$('psMailTo').value+'?'))return;
  b.disabled=true;b.textContent='Saadan...';
  try{
-  await runScript('psSaadaPakkumineGmailiga',[{nr:psMailCurrentNr,recipient:$('psMailTo').value,subject:$('psMailSubject').value,body:$('psMailBody').value}]);
+  await runScript('psSaadaPakkumineGmailiga',[{nr:psMailCurrentNr,recipient:$('psMailTo').value,subject:$('psMailSubject').value,body:$('psMailBody').value,sendMode,threadId:sendMode==='reply'?psMailCurrentThread:''}]);
   $('psMailModal').style.display='none';
   toast('Pakkumine saadetud Gmailiga');
   await crmLoadQuotes();
@@ -3656,6 +3711,7 @@ document.getElementById('psQuoteRegistryBtn')?.addEventListener('click',()=>{
           createQuoteButton.onclick = async () => {
             // Kasuta redigeeritud väärtusi, mitte AI esialgset vastust.
             const value = key => (edits[key]?.value || '').trim();
+            psAiPendingThread=thread.threadId;
             crmSwitchTab(false);
             const prefill = {
               quoteCustomer: value('tellija'),
