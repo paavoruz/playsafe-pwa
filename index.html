@@ -3606,14 +3606,58 @@ document.getElementById('psQuoteRegistryBtn')?.addEventListener('click',()=>{
       analyzeButton.type = 'button';
       analyzeButton.className = 'btn btnDark';
       analyzeButton.style.margin = '12px 0 4px';
-      analyzeButton.onclick = () => {
+      analyzeButton.onclick = async () => {
         const oldNotice = document.getElementById('psAiAnalysisNotice');
         if (oldNotice) oldNotice.remove();
-        const notice = make('div',
-          'AI analüüs ei ole veel ühendatud. Järgmises etapis lisame päringu andmete tuvastamise ja hinnapakkumise eeltäitmise.',
-          'padding:12px;margin:8px 0 12px;border-radius:10px;background:#f3ecff;color:#39265b;font-size:13px;line-height:1.5');
+        const notice = make('div', 'AI analüüsib kogu kirjavahetust…',
+          'padding:14px;margin:8px 0 12px;border-radius:10px;background:#f3ecff;color:#39265b;font-size:13px;line-height:1.5');
         notice.id = 'psAiAnalysisNotice';
         analyzeButton.insertAdjacentElement('afterend', notice);
+        analyzeButton.disabled = true;
+        try {
+          const response = await runScript('psAnalyysiGmailParing', [thread.threadId]);
+          if (requestId !== requestCounter || panel.style.display === 'none') return;
+          if (!response || !response.ok || !response.analyys) {
+            throw new Error('AI analüüs ei tagastanud andmeid.');
+          }
+          const a = response.analyys;
+          notice.replaceChildren();
+          notice.appendChild(make('div', '✨ Päringu analüüs · ' +
+            (response.kirjadeArv || messages.length) + ' kirja · kindlus: ' +
+            (a.kindlus || 'määramata'), 'font-weight:700;margin-bottom:12px'));
+          const fields = [
+            ['tellija','Tellija'], ['kontaktisik','Kontaktisik'],
+            ['email','E-post'], ['telefon','Telefon'],
+            ['objekt','Objekt'], ['aadress','Aadress'],
+            ['teenused','Teenused'], ['seadmeteArv','Seadmete arv'],
+            ['soovitudTahtaeg','Soovitud tähtaeg'],
+            ['lisainfo','Lisainfo'], ['kokkuvote','Kokkuvõte'],
+            ['puuduvadAndmed','Puuduvad andmed']
+          ];
+          const edits = {};
+          fields.forEach(([key,label]) => {
+            const wrap = make('label', undefined, 'display:block;margin:10px 0;font-weight:600');
+            wrap.appendChild(make('span', label, 'display:block;margin-bottom:4px'));
+            const multiline = ['teenused','lisainfo','kokkuvote','puuduvadAndmed'].includes(key);
+            const input = document.createElement(multiline ? 'textarea' : 'input');
+            if (!multiline) input.type = 'text';
+            if (multiline) input.rows = key === 'lisainfo' || key === 'kokkuvote' ? 3 : 2;
+            const value = a[key];
+            input.value = Array.isArray(value) ? value.join(', ') : value == null ? '' : String(value);
+            input.style.cssText = 'box-sizing:border-box;width:100%;padding:9px;border:1px solid #c9bbdb;border-radius:8px;font:inherit;background:white;color:#222';
+            edits[key] = input;
+            wrap.appendChild(input);
+            notice.appendChild(wrap);
+          });
+          notice.appendChild(make('p',
+            'Kontrolli ja täienda välju. Muudatusi ei salvestata ega hinnapakkumist saadeta automaatselt.',
+            'font-size:12px;color:#665575;margin-top:10px'));
+        } catch (error) {
+          if (requestId !== requestCounter) return;
+          notice.textContent = 'AI analüüs ebaõnnestus: ' + (error.message || error);
+        } finally {
+          analyzeButton.disabled = false;
+        }
       };
       content.appendChild(analyzeButton);
       content.appendChild(make('p', 'Sõnumeid: ' + messages.length, 'color:#777;font-size:13px'));
