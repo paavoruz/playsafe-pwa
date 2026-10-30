@@ -3602,6 +3602,20 @@ document.getElementById('psQuoteRegistryBtn')?.addEventListener('click',()=>{
         content.appendChild(make('p', 'Sõnumeid ei leitud.'));
         return;
       }
+      const analyzeButton = make('button', '✨ Analüüsi päringut');
+      analyzeButton.type = 'button';
+      analyzeButton.className = 'btn btnDark';
+      analyzeButton.style.margin = '12px 0 4px';
+      analyzeButton.onclick = () => {
+        const oldNotice = document.getElementById('psAiAnalysisNotice');
+        if (oldNotice) oldNotice.remove();
+        const notice = make('div',
+          'AI analüüs ei ole veel ühendatud. Järgmises etapis lisame päringu andmete tuvastamise ja hinnapakkumise eeltäitmise.',
+          'padding:12px;margin:8px 0 12px;border-radius:10px;background:#f3ecff;color:#39265b;font-size:13px;line-height:1.5');
+        notice.id = 'psAiAnalysisNotice';
+        analyzeButton.insertAdjacentElement('afterend', notice);
+      };
+      content.appendChild(analyzeButton);
       content.appendChild(make('p', 'Sõnumeid: ' + messages.length, 'color:#777;font-size:13px'));
       messages.forEach(message => {
         const card = make('article', undefined,
