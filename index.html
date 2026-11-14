@@ -3318,19 +3318,37 @@ async function psOpenAcceptedSites(quoteNr,asutuseId){
  psDbEdit();
  const field=name=>$('psDbFields').querySelector('[data-psfield="'+name+'"]');
  const asutus=field('asutuseId');if(asutus)asutus.value=asutuseId;
- // Pakkumise objekt ja aadress on teada ka siis, kui väljak tuleb käsitsi eristada.
  try{
   const plan=await runScript('psPakkumiseAutomaatikaEelvaade',[quoteNr]);
+  // Server tagastab teenused võtmes "read" (mitte "read()" ega "rows").
+  const entries=Array.isArray(plan.read)?plan.read:[];
   const nimi=field('nimi'),aadress=field('aadress'),tyyp=field('tyyp');
-  if(nimi&&plan.objekt)nimi.value=plan.objekt;
-  if(aadress&&plan.aadress){aadress.value=plan.aadress;aadress.dispatchEvent(new Event('input',{bubbles:true}));}
-  const remaining=(plan.read||[]).filter(r=>r.tegevus==='Uus väljak');
-  const unique=[...new Set(remaining.map(r=>r.valjakuTyyp))];
-  if(tyyp&&unique.length===1)tyyp.value=unique[0];
-  if(unique.length>1)toast('Pakkumisel on mitu väljaku tüüpi. Vali tüüp käsitsi.');
+  const arv=field('seadmeteArv'),markused=field('markused');
+  const baseName=String(plan.objekt||'').trim();
+  const pending=entries.filter(r=>r.tegevus==='Uus väljak');
+  const choices=pending.length?pending:entries;
+  const unique=[...new Set(choices.map(r=>r.valjakuTyyp).filter(Boolean))];
+  if(nimi&&baseName)nimi.value=baseName+(unique.length===1?' – '+unique[0]:'');
+  if(aadress&&plan.aadress){
+   aadress.value=plan.aadress;
+   aadress.dispatchEvent(new Event('input',{bubbles:true}));
+  }
+  if(tyyp&&unique.length===1&&[...tyyp.options].some(o=>o.value===unique[0]))tyyp.value=unique[0];
+  // Seadmete arvu ei tohi tuletada hinnakirja vahemikust (nt 6–10 ei tähenda 10 seadet).
+  if(arv)arv.placeholder='Täida tegelik seadmete arv (kui teada)';
+  if(markused){
+   const teenused=choices.map(r=>r.teenus).filter(Boolean);
+   markused.value='Pakkumine '+quoteNr+(teenused.length?'\nTeenused: '+teenused.join('; '):'');
+  }
+  if(unique.length>1){
+   toast('Pakkumisel on mitu väljaku tüüpi. Vali õige tüüp.');
+   if(tyyp)tyyp.value='';
+  }
+  if(!baseName||!plan.aadress)toast('Pakkumisel puudub osa väljaku andmetest. Täida puuduvad väljad.');
  }catch(e){toast('Pakkumise andmete eeltäitmine ei õnnestunud: '+e.message);}
  $('psDbEditorTitle').textContent='Lisa pakkumise '+quoteNr+' väljak';
 }
+
 function psUpdateClientHeader(){ /* Kõigil vaadetel sama päis. */ }
 
 /* Playsafe: manuaalne töö otse väljaku vaates. */
