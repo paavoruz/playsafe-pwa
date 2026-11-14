@@ -656,6 +656,9 @@ let currentObject=null;
 let currentElements=[];
 let currentPhotoElement=null;
 let accessToken=null;
+let psTokenExpiresAt=0;
+let psTokenRequest=null;
+let psLastAuthAttempt=0;
 let tokenClient=null;
 let gisReady=false;
 let syncing=false;
@@ -777,6 +780,7 @@ function waitGoogle(){
 
 async function clearSavedToken(){
  accessToken=null;
+ psTokenExpiresAt=0;
  try{
   await setMeta("googleAccessToken",null);
   await setMeta("googleAccessTokenExpiresAt",null);
@@ -791,6 +795,7 @@ async function restoreSavedToken(){
   // Väike 60 s varu, et kohe aeguvat tokenit mitte kasutada.
   if(saved&&expiresAt>Date.now()+60000){
    accessToken=saved;
+   psTokenExpiresAt=expiresAt;
    $("authBox").style.display="none";
    return true;
   }
@@ -800,38 +805,48 @@ async function restoreSavedToken(){
  return false;
 }
 
+// GIS OAuth token flow. Google ei väljasta brauseri PWA-le refresh token'it.
+// prompt:"" võib töötada olemasoleva Google'i sessiooniga, kuid brauser võib
+// taustal avatava autentimisakna blokeerida. Sel juhul tuleb kasutajal vajutada nuppu.
 function getToken(){
- return new Promise((resolve,reject)=>{
+ if(psTokenRequest)return psTokenRequest;
+ psLastAuthAttempt=Date.now();
+ psTokenRequest=new Promise((resolve,reject)=>{
   if(!navigator.onLine)return reject(new Error("Internetiühendus puudub."));
-  if(!gisReady)return reject(new Error("Google'i teenus pole valmis."));
-
+  if(!gisReady||!tokenClient)return reject(new Error("Google'i teenus pole valmis."));
+  let settled=false;
+  const timeout=setTimeout(()=>finish(new Error("Google'i autentimine ei vastanud. Vajuta Google'i ühendamise nuppu.")),20000);
+  function finish(error,value){
+   if(settled)return;
+   settled=true;
+   clearTimeout(timeout);
+   if(error)reject(error);else resolve(value);
+  }
   tokenClient.callback=async r=>{
-   if(r.error)return reject(new Error(r.error_description||r.error));
-
+   if(r.error)return finish(new Error(r.error_description||r.error));
    accessToken=r.access_token;
-
-   // Google access token on tavaliselt lühiajaline. Hoiame seda ainult
-   // tema kehtivusaja lõpuni, et PWA sulgemine ei sunniks kohe uuesti sisse logima.
-   const expiresIn=Math.max(0,Number(r.expires_in||3600));
-   const expiresAt=Date.now()+expiresIn*1000;
-
+   psTokenExpiresAt=Date.now()+Math.max(0,Number(r.expires_in||3600))*1000;
    try{
     await setMeta("googleAccessToken",accessToken);
-    await setMeta("googleAccessTokenExpiresAt",expiresAt);
+    await setMeta("googleAccessTokenExpiresAt",psTokenExpiresAt);
    }catch(e){console.warn(e)}
-
    $("authBox").style.display="none";
-   resolve(accessToken);
+   finish(null,accessToken);
   };
+  tokenClient.error_callback=e=>finish(new Error("Google'i autoriseerimine vajab kasutaja kinnitust ("+(e?.type||"aken blokeeritud")+")."));
+  try{tokenClient.requestAccessToken({prompt:""})}catch(e){finish(e)}
+ }).finally(()=>{psTokenRequest=null});
+ return psTokenRequest;
+}
 
-  // Ära küsi iga kord uut consent'i. Kui kasutaja on loa juba andnud,
-  // kasutab Google olemasolevat sessiooni nii sujuvalt kui brauser lubab.
-  tokenClient.requestAccessToken({prompt:""});
- });
+async function ensureToken(){
+ if(accessToken && psTokenExpiresAt>Date.now()+60000)return accessToken;
+ if(accessToken)await clearSavedToken();
+ return getToken();
 }
 
 async function runScript(fn,parameters=[]){
- if(!accessToken)throw new Error("Google'i autoriseerimine on vajalik.");
+ await ensureToken();
 
 const res=await fetch(
   `https://script.googleapis.com/v1/scripts/${encodeURIComponent(SCRIPT_ID)}:run`,
@@ -1873,10 +1888,6 @@ async function photoToBase64(p){
  throw new Error("Foto binaarandmeid ei leitud.");
 }
 
-async function ensureToken(){
- if(accessToken)return;
- await getToken();
-}
 
 async function syncPending(){
  if(syncing||!navigator.onLine)return;
@@ -2803,12 +2814,15 @@ $("saveQuote").onclick=saveQuote;
 
 /* ================= MAIN SYNC ================= */
 
+let psMainSyncRunning=false;
 async function synchronize(){
+ if(psMainSyncRunning)return;
  if(!navigator.onLine){
   toast("Offline — töö on telefonis");
   return;
  }
 
+ psMainSyncRunning=true;
  hideError();
  $("syncButton").disabled=true;
  $("syncButton").textContent="Sünkroniseerin...";
@@ -2826,6 +2840,7 @@ async function synchronize(){
   if(!accessToken)$("authBox").style.display="block";
  }
  finally{
+  psMainSyncRunning=false;
   $("syncButton").disabled=false;
   $("syncButton").textContent="↻ Sünkroniseeri";
   updateConnection();
@@ -2929,6 +2944,8 @@ $("googleButton").onclick=async()=>{
 window.addEventListener("online",()=>{
  updateConnection();
  toast("Internetiühendus taastatud");
+ // Proovi ka aegunud tokenit uuendada; kasutaja kinnitust vajades kuvatakse nupp.
+ if(!psMainSyncRunning && Date.now()-psLastAuthAttempt>30000)void synchronize();
 });
 
 window.addEventListener("offline",()=>{
@@ -3163,10 +3180,11 @@ async function start(){
   const ready=await waitGoogle();
 
   // Taasta eelmine veel kehtiv Google access token, kui see on olemas.
-  // Kui tokenit pole, ei näita käivitamisel kollast Google'i kasti:
-  // autoriseerimine küsitakse alles siis, kui kasutaja vajutab Sünkroniseeri.
-  await restoreSavedToken();
+  // Ka aegunud tokeni korral proovitakse olemasoleva Google'i sessiooniga uuesti.
+  const psTokenRestored=await restoreSavedToken();
   $("authBox").style.display="none";
+  // Käivitamisel sünkroniseeri automaatselt; ära ava Google OAuth akent taustal.
+  if(navigator.onLine)void synchronize();
 
   if(navigator.onLine&&!ready){
    showError("Google'i sisselogimisteenust ei õnnestunud laadida.");
