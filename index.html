@@ -3316,8 +3316,19 @@ async function psOpenAcceptedSites(quoteNr,asutuseId){
  await psDbLoad();
  psSetSiteMode('add');
  psDbEdit();
- const select=$('psDbFields').querySelector('[data-psfield="asutuseId"]');
- if(select)select.value=asutuseId;
+ const field=name=>$('psDbFields').querySelector('[data-psfield="'+name+'"]');
+ const asutus=field('asutuseId');if(asutus)asutus.value=asutuseId;
+ // Pakkumise objekt ja aadress on teada ka siis, kui väljak tuleb käsitsi eristada.
+ try{
+  const plan=await runScript('psPakkumiseAutomaatikaEelvaade',[quoteNr]);
+  const nimi=field('nimi'),aadress=field('aadress'),tyyp=field('tyyp');
+  if(nimi&&plan.objekt)nimi.value=plan.objekt;
+  if(aadress&&plan.aadress){aadress.value=plan.aadress;aadress.dispatchEvent(new Event('input',{bubbles:true}));}
+  const remaining=(plan.read||[]).filter(r=>r.tegevus==='Uus väljak');
+  const unique=[...new Set(remaining.map(r=>r.valjakuTyyp))];
+  if(tyyp&&unique.length===1)tyyp.value=unique[0];
+  if(unique.length>1)toast('Pakkumisel on mitu väljaku tüüpi. Vali tüüp käsitsi.');
+ }catch(e){toast('Pakkumise andmete eeltäitmine ei õnnestunud: '+e.message);}
  $('psDbEditorTitle').textContent='Lisa pakkumise '+quoteNr+' väljak';
 }
 function psUpdateClientHeader(){ /* Kõigil vaadetel sama päis. */ }
