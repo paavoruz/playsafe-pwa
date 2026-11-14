@@ -2499,7 +2499,12 @@ function crmRenderQuotes(){
  const old=item.staatus;
  if(el.value==='Aktsepteeritud'&&!confirm('Kas märgid pakkumise aktsepteerituks ja kliendi aktiivseks?')){el.value=old;return;}
  el.disabled=true;
- try{const result=await runScript('crmMuudaPakkumiseStaatus',[item.nr,el.value]);item.staatus=el.value;toast('Staatus salvestatud');crmRenderQuotes();if(el.value==='Aktsepteeritud')await psOpenAcceptedSites(item.nr,result.asutuseId);}
+ try{await runScript('crmMuudaPakkumiseStaatus',[item.nr,el.value]);item.staatus=el.value;toast('Staatus salvestatud');crmRenderQuotes();if(el.value==='Aktsepteeritud'){
+   try{const a=await runScript('psPakkumiseAutomaatneLoomine',[item.nr]);
+    if(a.vajabKontrolli)alert('Pakkumine on aktsepteeritud, kuid automaatne tööde loomine vajab kontrolli:\n'+(a.hoiatused||[]).join('\n')+'\n\nKontrolli väljakuid ja loo puuduvad tööd käsitsi.');
+    else alert('Pakkumine aktsepteeritud. Loodud töid: '+a.loodud.length+'. Juba olemas: '+a.olemas.length+'.');
+   }catch(err){alert('Pakkumine aktsepteeriti, kuid tööde automaatika ebaõnnestus: '+err.message+'\nKontrolli registrit enne uuesti proovimist.');}
+  }}
  catch(e){el.value=old;showError('Staatuse salvestamise viga: '+e.message);}finally{el.disabled=false;}
  });
 }
@@ -2611,7 +2616,7 @@ $('psWorkSave').onclick=async()=>{
  const types=[];
  if($('psWorkInspection').checked)types.push($('psWorkInspectionType').value);
  const feedback=$('psWorkFeedback');
- if(!nr||!ids.length||!paev||!types.length){feedback.textContent='Vali vähemalt üks väljak, kuupäev ja teenus.';return;}
+ if(!nr||!ids.length||!types.length){feedback.textContent='Vali vähemalt üks väljak ja teenus.';return;}
  const count=ids.length*types.length;
  if(!confirm(`Kas töödelda ${count} tööd (${ids.length} väljakut × ${types.length} teenust)?`))return;
  const btn=$('psWorkSave');btn.disabled=true;
@@ -3316,9 +3321,52 @@ async function psOpenAcceptedSites(quoteNr,asutuseId){
  $('psDbEditorTitle').textContent='Lisa pakkumise '+quoteNr+' väljak';
 }
 function psUpdateClientHeader(){ /* Kõigil vaadetel sama päis. */ }
+
+/* Playsafe: manuaalne töö otse väljaku vaates. */
+async function psOpenManualWork(valjakuId){
+ const sites=await runScript('psGetValjakud',[]);
+ const options=await runScript('psRegistriValikud',[]);
+ const selected=sites.find(v=>v.id===valjakuId)||sites[0];
+ if(!sites.length){alert('Lisa esmalt väljak.');return;}
+ if(!(options.hindamiseLiigid||[]).length){alert('Hindamise liigid puuduvad tööde registrist.');return;}
+ let panel=document.getElementById('psManualWorkPanel');
+ if(!panel){
+  panel=document.createElement('section');panel.id='psManualWorkPanel';
+  panel.style.cssText='padding:16px;margin:12px 0;border:1px solid #ddd;border-radius:14px;background:white';
+  document.getElementById('psDatabaseView').prepend(panel);
+ }
+ const esc=crmEsc;
+ panel.innerHTML='<h3>+ Uus töö (ilma pakkumiseta)</h3>'+
+ '<label>Väljak<select id="psManualSite" class="formInput">'+sites.map(v=>'<option value="'+esc(v.id)+'">'+esc(v.nimi)+' · '+esc(v.aadress)+'</option>').join('')+'</select></label>'+
+ '<label>Hindamise liik<select id="psManualType" class="formInput">'+options.hindamiseLiigid.map(v=>'<option value="'+esc(v)+'">'+esc(v)+'</option>').join('')+'</select></label>'+
+ '<label>Töö kuupäev (võib jääda tühjaks)<input id="psManualDate" type="date" class="formInput"></label>'+
+ '<div style="display:flex;gap:8px;margin-top:12px"><button id="psManualSave" class="btn btnDark">Loo töö</button><button id="psManualCancel" class="btn btnGray">Tühista</button></div>'+
+ '<div id="psManualFeedback" style="margin-top:8px"></div>';
+ document.getElementById('psManualSite').value=selected.id;
+ document.getElementById('psManualCancel').onclick=()=>panel.remove();
+ document.getElementById('psManualSave').onclick=async()=>{
+  const b=document.getElementById('psManualSave');b.disabled=true;
+  try{
+   const r=await runScript('psLooKasitsiToo',[{valjakuId:document.getElementById('psManualSite').value,liik:document.getElementById('psManualType').value,kuupaev:document.getElementById('psManualDate').value}]);
+   document.getElementById('psManualFeedback').textContent='Töö loodud, nr '+r.tooNr;
+   toast('Töö loodud, nr '+r.tooNr);
+  }catch(e){document.getElementById('psManualFeedback').textContent='Viga: '+e.message;}
+  finally{b.disabled=false;}
+ };
+ panel.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function psEnsureManualWorkButton(){
+ const area=document.getElementById('psDatabaseView');
+ if(!area||document.getElementById('psManualWorkOpen'))return;
+ const b=document.createElement('button');b.id='psManualWorkOpen';b.type='button';b.className='btn btnDark';b.textContent='+ Uus töö';
+ b.style.margin='8px';b.onclick=()=>psOpenManualWork('');
+ area.insertBefore(b,area.firstChild);
+}
+
 function psDbOpen(tab){
  if(tab==='asutused'||tab==='valjakud')psDbTab=tab;
  $('psDbEditor').style.display='none';
+ psEnsureManualWorkButton();
  psSiteMode='list';psSetSiteMode('list');
  $('psDbSearch').value='';
  if(!psQuoteSitesReturnNr)$('psDbQuoteBack').style.display='none';
