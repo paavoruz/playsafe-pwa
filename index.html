@@ -3833,6 +3833,77 @@ document.getElementById('psQuoteRegistryBtn')?.addEventListener('click',()=>{
             toast('AI andmed lisatud. Vali väljaku tüüp ja teenused.');
           };
           notice.appendChild(createQuoteButton);
+
+          const orderButton = make('button', '📋 AI → Loo tellimus');
+          orderButton.type = 'button';
+          orderButton.className = 'btn btnDark';
+          orderButton.style.cssText = 'margin-top:10px;width:100%;';
+          orderButton.onclick = async () => {
+            orderButton.disabled = true;
+            try {
+              const order = await runScript('psGmailTellimuseAnalyys', [thread.threadId]);
+              if (requestId !== requestCounter || panel.style.display === 'none') return;
+              const d = order.analyys || {};
+              const form = make('div', undefined, 'margin-top:12px;padding:12px;border:1px solid #ddd;border-radius:10px;background:#fff');
+              form.appendChild(make('strong', 'Tellimuse mustand · kinnitus: ' + (d.kinnitus||'ebaselge')));
+              form.appendChild(make('p', d.pohjendus||'', 'font-size:13px'));
+              const inputs = {};
+              const field = (host,key,label,value) => {
+                const w=make('label',undefined,'display:block;margin:8px 0;font-size:13px');
+                w.appendChild(make('span',label,'display:block;font-weight:600'));
+                const input=make('input'); input.type='text';input.value=value||'';
+                input.style.cssText='box-sizing:border-box;width:100%;padding:8px;border:1px solid #ccc;border-radius:7px';
+                w.appendChild(input);host.appendChild(w);inputs[key]=input;return input;
+              };
+              ['tellija','registrikood','kontaktisik','email','telefon'].forEach(k=>field(form,k,k,d[k]));
+              const opts=await runScript('psRegistriValikud',[]);
+              const siteFields=[];
+              const siteHost=make('div');form.appendChild(siteHost);
+              const addSite=(o={})=>{const i=siteFields.length;
+                const site=make('div',undefined,'border-top:1px solid #ddd;margin-top:12px;padding-top:10px');
+                site.appendChild(make('strong','Väljak '+(i+1)));
+                const f={};
+                ['nimi','aadress','tyyp','hindamiseLiik','kuupaev','hind','kontaktisik','telefon','email','markused'].forEach(k=>{
+                  const inp=field(site,'site'+i+k,k,k==='hindamiseLiik'?(o[k]||'AP'):o[k]); f[k]=inp;
+                  if(k==='tyyp'||k==='hindamiseLiik'){
+                    const choices=k==='tyyp'?opts.valjakuTyypid:opts.hindamiseLiigid;
+                    const list=make('datalist');list.id='psOrderChoices'+i+k;
+                    (choices||[]).forEach(x=>{const option=make('option');option.value=x;list.appendChild(option);});
+                    inp.setAttribute('list',list.id);site.appendChild(list);
+                  }
+                });
+                const remove=make('button','Eemalda see väljak');remove.type='button';remove.className='btn';remove.style.marginTop='8px';
+                const entry={fields:f,site:site};
+                remove.onclick=()=>{site.remove();const ix=siteFields.indexOf(entry);if(ix>=0)siteFields.splice(ix,1);confirm.disabled=d.kinnitus!=='jah'||!siteFields.length;};
+                site.appendChild(remove);siteFields.push(entry);siteHost.appendChild(site);
+              };
+              (Array.isArray(d.objektid)?d.objektid:[]).forEach(o=>addSite(o));
+              const addButton=make('button','+ Lisa väljak');addButton.type='button';addButton.className='btn';addButton.style.marginTop='10px';
+              addButton.onclick=()=>{addSite({hindamiseLiik:'AP'});confirm.disabled=d.kinnitus!=='jah'||!siteFields.length;};
+              form.appendChild(addButton);
+              if(!siteFields.length)form.appendChild(make('p','AI ei leidnud ühtegi objekti. Kontrolli kirjavahetust; tellimust ei saa veel luua.'));
+              const confirm=make('button','Kinnita ja loo klient, väljakud ning tööd');
+              confirm.type='button';confirm.className='btn btnDark';confirm.style.marginTop='12px';
+              confirm.disabled=d.kinnitus!=='jah'||!siteFields.length;
+              confirm.onclick=async()=>{
+                if(!window.confirm('Kas oled andmed kontrollinud ja soovid luua tööd Google Sheetsis?'))return;
+                confirm.disabled=true;
+                try{
+                  const payload={threadId:thread.threadId,kinnitus:d.kinnitus,kinnitatud:true,
+                    objektid:siteFields.map(entry=>Object.fromEntries(Object.entries(entry.fields).map(([k,v])=>[k,v.value.trim()]))) };
+                  ['tellija','registrikood','kontaktisik','email','telefon'].forEach(k=>payload[k]=inputs[k].value.trim());
+                  const r=await runScript('psGmailTellimuseLoo',[payload]);
+                  form.appendChild(make('p','Loodud tööd: '+r.tood.map(t=>t.tooNr).join(', '),'font-weight:700;color:green'));
+                  toast('Tellimuse tööd loodud');
+                }catch(e){showError('Tellimuse loomine: '+e.message);confirm.disabled=false;}
+              };
+              form.appendChild(confirm);
+              notice.appendChild(form);
+            }catch(e){showError('Tellimuse AI analüüs: '+e.message);}
+            finally{orderButton.disabled=false;}
+          };
+          notice.appendChild(orderButton);
+
           notice.appendChild(make('p',
             'Kontrolli ja täienda välju. Pakkumist ei salvestata ega saadeta automaatselt.',
             'font-size:12px;color:#665575;margin-top:10px'));
