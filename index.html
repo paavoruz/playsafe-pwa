@@ -1148,8 +1148,8 @@ async function deleteObject(o, triggerButton=null){
       return;
     }
     await ensureToken();
-    const tulemus=await runScript("kustutaObjekt",[o.nr,nimi]);
-    if(!tulemus?.ok)throw new Error("Server ei kinnitanud kustutamist.");
+    const kustutatud=await psDeleteWithRelations("too",nr);
+    if(!kustutatud)return;
     for(const e of local)await del("elements",e.localId);
     const allPhotos=await pendingPhotosFor(o.nr);
     for(const p of allPhotos)await del("photos",p.id);
@@ -2563,15 +2563,8 @@ function psOpenQuoteDetail(nr){
  $('psDetailSaveNote').onclick=()=>{try{localStorage.setItem(noteKey,$('psDetailNote').value);toast('Märkus salvestatud selles seadmes');}catch(e){showError('Märkuse salvestamine ebaõnnestus: '+e.message);}};
 }
 async function psDeleteQuote(nr){
- if(!confirm('Kas soovid pakkumise '+nr+' jäädavalt kustutada?\n\nSeda toimingut ei saa tagasi võtta. Seotud tööga pakkumist ei saa kustutada.'))return;
- if(!confirm('Kinnita lõplik kustutamine: '+nr))return;
- const btn=$('psDetailDelete');if(btn)btn.disabled=true;
- try{
-  await runScript('crmKustutaPakkumine',[nr]);
-  try{localStorage.removeItem('playsafe_quote_note_'+nr);}catch(_e){}
-  toast('Pakkumine kustutatud');psCloseQuoteDetail();await crmLoadQuotes();
- }catch(e){showError('Pakkumise kustutamine ebaõnnestus: '+e.message);}
- finally{if(btn&&btn.isConnected)btn.disabled=false;}
+ try{const ok=await psDeleteWithRelations('pakkumine',nr);if(ok){try{localStorage.removeItem('playsafe_quote_note_'+nr);}catch(_e){}psCloseQuoteDetail();await crmLoadQuotes();}}
+ catch(e){showError('Kustutamine ebaõnnestus: '+e.message);}
 }
 async function crmLoadQuotes(){
  $('quoteListContent').textContent='Laadin...';
@@ -3300,19 +3293,42 @@ async function psDbSave(){
   $('psDbEditor').style.display='none';toast('Salvestatud');await psDbLoad();
  }catch(e){alert('Salvestamine ebaõnnestus: '+e.message);}finally{btn.disabled=false;}
 }
+async function psDeleteWithRelations(tyyp,id){
+ if(!navigator.onLine)throw new Error('Kustutamiseks on vaja internetiühendust.');
+ const data=await runScript('psKustutamiseEelvaade',[tyyp,id]);
+ return new Promise((resolve,reject)=>{
+  const shade=document.createElement('div');shade.style.cssText='position:fixed;inset:0;background:#0009;z-index:99999;display:flex;align-items:center;justify-content:center;padding:15px';
+  const panel=document.createElement('div');panel.style.cssText='background:white;color:#202124;border-radius:18px;padding:20px;max-width:520px;width:100%;max-height:90vh;overflow:auto';
+  const heading=document.createElement('h2');heading.textContent='Vali kustutatavad kirjed';panel.appendChild(heading);
+  const info=document.createElement('p');info.textContent='Vaikimisi on valitud ainult algne kirje. Muud seotud kirjed kustutatakse üksnes sinu valikul.';panel.appendChild(info);
+  const list=document.createElement('div');panel.appendChild(list);
+  const checks=[];
+  data.items.forEach(item=>{
+   const label=document.createElement('label');label.style.cssText='display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid #eee';
+   const cb=document.createElement('input');cb.type='checkbox';cb.checked=!!item.valitud;cb.disabled=!!item.valitud;
+   const desc=document.createElement('span');desc.textContent=({pakkumine:'Hinnapakkumine',asutus:'Klient / asutus',valjak:'Väljak',too:'Töö'}[item.tyyp]||item.tyyp)+' · '+item.nimi+' ('+item.id+')';
+   label.append(cb,desc);list.appendChild(label);checks.push({cb,item});
+  });
+  const warning=document.createElement('p');warning.style.cssText='font-size:13px;color:#a33';warning.textContent=data.hoiatus;panel.appendChild(warning);
+  const btns=document.createElement('div');btns.style.cssText='display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap';
+  const cancel=document.createElement('button');cancel.className='btn btnGray';cancel.textContent='Tühista';
+  const go=document.createElement('button');go.className='btn';go.style.cssText='background:#b42318;color:white';go.textContent='Jätka kustutamisega';
+  btns.append(cancel,go);panel.appendChild(btns);shade.appendChild(panel);document.body.appendChild(shade);
+  const close=()=>shade.remove();cancel.onclick=()=>{close();resolve(false);};
+  go.onclick=async()=>{
+   const selected=checks.filter(x=>x.cb.checked).map(x=>({tyyp:x.item.tyyp,id:x.item.id}));
+   const names=checks.filter(x=>x.cb.checked).map(x=>x.item.nimi);
+   if(!confirm('Kinnita '+selected.length+' kirje kustutamine:\n\n'+names.join('\n')+'\n\nTöö kustutamisel liigub ka Drive’i kaust prügikasti. Seda ei saa rakenduses ühe nupuga tagasi võtta.'))return;
+   go.disabled=true;cancel.disabled=true;
+   try{const result=await runScript('psKustutaValitudKirjed',[tyyp,id,selected]);close();toast('Kustutatud '+result.kustutatud.length+' kirjet');resolve(true);}
+   catch(e){close();reject(e);}
+  };
+ });
+}
 async function psDbDeleteCurrent(){
- const id=psDbEditing,as=psDbTab==='asutused';
- if(!id)return;
- const x=(as?psDbAsutused:psDbValjakud).find(o=>o.id===id);
- if(!x)return;
- if(!confirm('Kas soovid '+(as?'kliendi':'väljaku')+' „'+x.nimi+'” jäädavalt kustutada?'))return;
- const b=$('psDbDelete');b.disabled=true;
- try{
-  await runScript(as?'psKustutaAsutus':'psKustutaValjak',[id]);
-  $('psDbEditor').style.display='none';psDbEditing=null;
-  toast('Kustutatud');await psDbLoad();
- }catch(e){alert('Kustutamine ebaõnnestus: '+e.message);}
- finally{b.disabled=false;}
+ const id=psDbEditing,tyyp=psDbTab==='asutused'?'asutus':'valjak';if(!id)return;
+ try{await psDeleteWithRelations(tyyp,id);$('psDbEditor').style.display='none';psDbEditing=null;await psDbLoad();}
+ catch(e){alert('Kustutamine ebaõnnestus: '+e.message);}
 }
 $('psDbDelete').onclick=psDbDeleteCurrent;
 let psQuoteSitesReturnNr='';
