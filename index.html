@@ -519,6 +519,10 @@ body:has(#quoteView[style*="display: block"]) #newObjectButton{display:none!impo
     <button type="button" class="btn btnDark" id="psSiteCreate" style="width:100%">＋ Lisa uus väljak</button>
   </div>
  </div>
+ <div class="card" id="psClientCard" style="display:none;margin-top:12px">
+   <button type="button" class="btn btnGray" id="psClientBack">← Kõik kliendid</button>
+   <div id="psClientCardContent" style="margin-top:14px"></div>
+ </div>
  <div class="card" id="psDbEditor" style="display:none;margin-top:12px">
   <div class="detailTitle" id="psDbEditorTitle">Lisa asutus</div>
   <div id="psDbFields"></div>
@@ -3224,9 +3228,12 @@ function psDbRender(){
  const items=(as?psDbAsutused:psDbValjakud).filter(x=>[x.nimi,x.aadress].some(v=>String(v||'').toLocaleLowerCase('et-EE').includes(query)));
  $('psDbList').innerHTML=items.length?items.map(x=>{
   const institution=as?'':(psDbAsutused.find(a=>a.id===x.asutuseId)?.nimi||'Asutus määramata');
-  return `<div style="border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin:8px 0;display:flex;align-items:center;justify-content:space-between;gap:10px"><div><b>${psDbSafe(x.nimi)}</b><div class="muted">${psDbSafe(x.aadress||'')}${institution?' · '+psDbSafe(institution):''}</div></div><button type="button" class="btn btnGray psDbEdit" data-id="${psDbSafe(x.id)}" title="Muuda" aria-label="Muuda ${as?'klienti':'väljakut'}" style="min-width:44px;min-height:44px;padding:8px;font-size:21px">✎</button></div>`;
+  return `<div style="border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin:8px 0;display:flex;align-items:center;justify-content:space-between;gap:10px"><div ${as?'role="button" tabindex="0" data-client-open="'+psDbSafe(x.id)+'" style="cursor:pointer;flex:1"':''}><b>${psDbSafe(x.nimi)}</b><div class="muted">${psDbSafe(x.aadress||'')}${institution?' · '+psDbSafe(institution):''}</div></div><button type="button" class="btn btnGray psDbEdit" data-id="${psDbSafe(x.id)}" title="Muuda" aria-label="Muuda ${as?'klienti':'väljakut'}" style="min-width:44px;min-height:44px;padding:8px;font-size:21px">✎</button></div>`;
  }).join(''):'<div class="muted" style="padding:15px">Kirjeid ei leitud.</div>';
  $('psDbList').querySelectorAll('.psDbEdit').forEach(b=>b.onclick=()=>psDbEdit(b.dataset.id));
+ if(as){
+  $('psDbList').querySelectorAll('[data-client-open]').forEach(b=>b.onclick=()=>psOpenClientCard(b.dataset.clientOpen));
+ }
 }
 async function psDbLoad(){
  $('psDbList').textContent='Laadin andmeid...';
@@ -3384,6 +3391,44 @@ async function psOpenAcceptedSites(quoteNr,asutuseId){
  $('psDbEditorTitle').textContent='Lisa pakkumise '+quoteNr+' väljak';
 }
 
+let psClientCardData=null;
+function psClientCardTab(tab){
+ const d=psClientCardData;if(!d)return;
+ const esc=psDbSafe;
+ const body=$('psClientCardPanel');
+ $('psClientCardContent').querySelectorAll('[data-client-tab]').forEach(b=>{b.className='btn '+(b.dataset.clientTab===tab?'btnDark':'btnGray');});
+ if(tab==='info'){
+  const a=d.asutus;
+  body.innerHTML='<div class="psDetailCard"><h2 class="psDetailTitle">'+esc(a.nimi)+'</h2>'+[
+   ['Aadress',a.aadress],['Registrikood',a.registrikood],['Kontaktisik',a.kontaktisik],['Telefon',a.telefon],['E-post',a.email],['Märkused',a.markused]
+  ].map(([k,v])=>'<div style="padding:10px 0;border-bottom:1px solid #eee"><div class="psDetailLabel">'+esc(k)+'</div><div class="psDetailValue">'+esc(v||'—')+'</div></div>').join('')+
+  '<button type="button" class="btn btnDark" id="psClientEdit" style="margin-top:14px">Muuda andmeid</button></div>';
+  $('psClientEdit').onclick=()=>{$('psClientCard').style.display='none';$('psDbListPanel').style.display='block';psDbEdit(a.id);};
+ } else if(tab==='sites'){
+  body.innerHTML=d.valjakud.length?d.valjakud.map(v=>'<div class="psDetailCard"><b>'+esc(v.nimi)+'</b><div class="muted">'+esc(v.aadress||'')+' · '+esc(v.tyyp||'')+'</div><button type="button" class="btn btnGray" data-site-edit="'+esc(v.id)+'">Ava väljak</button></div>').join(''):'<p class="muted">Seotud väljakuid ei leitud.</p>';
+  body.querySelectorAll('[data-site-edit]').forEach(b=>b.onclick=()=>{psDbTab='valjakud';$('psClientCard').style.display='none';psDbOpen('valjakud');psDbEdit(b.dataset.siteEdit);});
+ } else if(tab==='quotes'){
+  body.innerHTML=d.pakkumised.length?d.pakkumised.map(q=>'<div class="psDetailCard"><b>'+esc(q.nr)+'</b><div>'+esc(q.objekt||'')+'</div><div class="muted">'+esc(q.staatus||'')+' · '+esc(q.kokku||'')+' €</div><button type="button" class="btn btnGray" data-quote-open="'+esc(q.nr)+'">Ava pakkumine</button></div>').join(''):'<p class="muted">Pakkumisi ei leitud.</p>';
+  body.querySelectorAll('[data-quote-open]').forEach(b=>b.onclick=async()=>{await openQuotes();psOpenQuoteDetail(b.dataset.quoteOpen);});
+ } else {
+  body.innerHTML=d.tood.length?d.tood.map(t=>'<div class="psDetailCard"><b>Nr '+esc(t.nr)+' · '+esc(t.nimi)+'</b><div class="muted">'+esc(t.liik||'')+' · '+esc(t.staatus||'')+' · '+esc(t.aadress||'')+'</div></div>').join(''):'<p class="muted">Seotud töid ei leitud.</p>';
+ }
+}
+async function psOpenClientCard(id){
+ $('psDbEditor').style.display='none';$('psDbListPanel').style.display='none';
+ $('psClientCard').style.display='block';$('psClientCardContent').textContent='Laadin kliendi andmeid...';
+ try{
+  const d=await runScript('psKliendiKaart',[id]);psClientCardData=d;
+  $('psClientCardContent').innerHTML='<h2 class="psDetailTitle">'+psDbSafe(d.asutus.nimi)+'</h2>'+
+   '<div class="psDetailInfoGrid" style="margin:12px 0"><div><b>'+d.valjakud.length+'</b><div class="psDetailLabel">Väljakud</div></div><div><b>'+d.pakkumised.length+'</b><div class="psDetailLabel">Pakkumised</div></div><div><b>'+d.tood.length+'</b><div class="psDetailLabel">Tööd</div></div></div>'+
+   '<div style="display:flex;gap:7px;flex-wrap:wrap;margin:12px 0">'+[['info','Üldinfo'],['sites','Väljakud'],['quotes','Pakkumised'],['jobs','Tööd']].map(([k,n])=>'<button type="button" class="btn btnGray" data-client-tab="'+k+'">'+n+'</button>').join('')+'</div><div id="psClientCardPanel"></div>';
+  $('psClientCardContent').querySelectorAll('[data-client-tab]').forEach(b=>b.onclick=()=>psClientCardTab(b.dataset.clientTab));
+  psClientCardTab('info');
+ }catch(e){$('psClientCardContent').textContent='Kliendikaardi laadimine ebaõnnestus: '+e.message;}
+ $('psClientCard').scrollIntoView({behavior:'smooth',block:'start'});
+}
+$('psClientBack').onclick=()=>{$('psClientCard').style.display='none';$('psDbListPanel').style.display='block';};
+
 function psUpdateClientHeader(){ /* Kõigil vaadetel sama päis. */ }
 
 /* Playsafe: manuaalne töö otse väljaku vaates. */
@@ -3430,6 +3475,8 @@ function psEnsureManualWorkButton(){
 function psDbOpen(tab){
  if(tab==='asutused'||tab==='valjakud')psDbTab=tab;
  $('psDbEditor').style.display='none';
+ $('psClientCard').style.display='none';
+ $('psDbListPanel').style.display='block';
  psEnsureManualWorkButton();
  psSiteMode='list';psSetSiteMode('list');
  $('psDbSearch').value='';
