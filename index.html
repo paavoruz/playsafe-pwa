@@ -3320,7 +3320,8 @@ async function psDeleteWithRelations(tyyp,id){
    const names=checks.filter(x=>x.cb.checked).map(x=>x.item.nimi);
    if(!confirm('Kinnita '+selected.length+' kirje kustutamine:\n\n'+names.join('\n')+'\n\nTöö kustutamisel liigub ka Drive’i kaust prügikasti. Seda ei saa rakenduses ühe nupuga tagasi võtta.'))return;
    go.disabled=true;cancel.disabled=true;
-   try{const result=await runScript('psKustutaValitudKirjed',[tyyp,id,selected]);close();toast('Kustutatud '+result.kustutatud.length+' kirjet');resolve(true);}
+   try{const check=await runScript('psKustutamiseKontroll',[tyyp,id,selected]);if(!check.ok)throw new Error(check.probleemid.join('\n'));
+   const result=await runScript('psKustutaValitudKirjed',[tyyp,id,selected]);close();toast('Kustutatud '+result.kustutatud.length+' kirjet. Varukoopia loodud.');if(result.varukoopia)alert('Enne kustutamist loodi Google Sheetsi varukoopia.\nTaastamiseks ava see link ja kopeeri vajalikud andmed tagasi:\n'+result.varukoopia);resolve(true);}
    catch(e){close();reject(e);}
   };
  });
