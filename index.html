@@ -421,7 +421,8 @@ body:has(#quoteView[style*="display: block"]) #newObjectButton{display:none!impo
   <button id="invoiceBack" class="btn btnGray" type="button" style="margin-bottom:12px">← Arved</button>
   <div class="card"><div class="detailTitle">Arve mustand</div>
    <div class="formGrid">
-    <div class="formGroup"><label class="formLabel" for="invoiceClient">Klient *</label><input class="formInput" id="invoiceClient" autocomplete="organization"></div>
+    <div class="formGroup"><label class="formLabel" for="invoiceClient">Klient *</label><input class="formInput" id="invoiceClient" autocomplete="organization" list="invoiceCustomerOptions"><datalist id="invoiceCustomerOptions"></datalist></div>
+    <div class="formGroup"><label class="formLabel" for="invoiceKmkr">KMKR number</label><input class="formInput" id="invoiceKmkr" placeholder="EE123456789"></div>
     <div class="formGroup"><label class="formLabel" for="invoiceReg">Registrikood</label><input class="formInput" id="invoiceReg"></div>
     <div class="formGroup"><label class="formLabel" for="invoiceAddress">Arveldusaadress</label><input class="formInput" id="invoiceAddress"></div>
     <div class="formGroup"><label class="formLabel" for="invoiceEmail">Arve e-post</label><input class="formInput" id="invoiceEmail" type="email"></div>
@@ -4087,7 +4088,23 @@ document.getElementById('psQuoteRegistryBtn')?.addEventListener('click',()=>{
 (function(){
  const el=id=>document.getElementById(id);
  const KEY='playsafe_invoice_drafts_v1';
- const fields=['Client','Reg','Address','Email','Object','Quote','Date','Due','Notes'];
+ const fields=['Client','Reg','Kmkr','Address','Email','Object','Quote','Date','Due','Notes'];
+ let invoiceCustomers=[];
+ async function loadInvoiceCustomers(){
+  try{const data=await runScript('crmKliendid',[]);invoiceCustomers=Array.isArray(data)?data:[];el('invoiceCustomerOptions').innerHTML=invoiceCustomers.map(c=>`<option value="${esc(c.nimi)}"></option>`).join('');}catch(e){console.warn('Kliendiregistrit ei saanud laadida',e);}
+ }
+ function fillInvoiceCustomer(){
+  const name=el('invoiceClient').value.trim().toLocaleLowerCase('et-EE');
+  const matches=invoiceCustomers.filter(c=>String(c.nimi||'').trim().toLocaleLowerCase('et-EE')===name);
+  if(matches.length!==1)return;
+  const c=matches[0];
+  el('invoiceReg').value=c.registrikood||'';
+  el('invoiceKmkr').value=c.kmkr||'';
+  el('invoiceAddress').value=c.arveAadress||'';
+  el('invoiceEmail').value=c.email||'';
+  invoiceMarkChanged();
+ }
+ el('invoiceClient').addEventListener('change',fillInvoiceCustomer);
  let currentId=null;
  let rows=[];
  let previewFingerprint=null;
@@ -4170,13 +4187,13 @@ document.getElementById('psQuoteRegistryBtn')?.addEventListener('click',()=>{
   calc();
  }
  function calc(){let sum=0;rows.forEach((r,i)=>{const n=Math.max(0,Number(r.kogus)||0)*Math.max(0,Number(r.uhikuhind)||0)*(1-Math.min(100,Math.max(0,Number(r.soodustusProtsent)||0))/100);const v=Math.round(n*100)/100;sum+=v;const x=el('invoiceLines').querySelector(`[data-line-total="${i}"]`);if(x)x.textContent=money(v)});sum=Math.round(sum*100)/100;const vat=Math.round(sum*24)/100;el('invoiceNet').textContent=money(sum);el('invoiceVat').textContent=money(vat);el('invoiceTotal').textContent=money(sum+vat)}
- function edit(d){previewFingerprint=null;el('invoiceIssue').disabled=true;el('invoicePreviewStatus').textContent='';el('invoicePreviewLink').replaceChildren();currentId=d?.id||((typeof crypto!=='undefined'&&crypto.randomUUID)?crypto.randomUUID():String(Date.now())+'-'+Math.random());fields.forEach(f=>el('invoice'+f).value=d?.[f]||'');if(!d){const now=new Date();const iso=new Date(now.getTime()-now.getTimezoneOffset()*60000).toISOString().slice(0,10);el('invoiceDate').value=iso;el('invoiceDue').value=iso}rows=(d?.read||[]).map(x=>({...x,tooNr:x.liik==='transport'?'':(x.tooNr||''),uhik:x.uhik||(x.liik==='transport'?'km':'tk')}));if(!rows.length)rows=[{nimi:'',liik:'teenus',kogus:1,uhikuhind:0,soodustusProtsent:0}];renderLines();loadInvoiceWorks();el('invoiceHome').style.display='none';el('invoiceEditor').style.display='block'}
+ function edit(d){loadInvoiceCustomers();previewFingerprint=null;el('invoiceIssue').disabled=true;el('invoicePreviewStatus').textContent='';el('invoicePreviewLink').replaceChildren();currentId=d?.id||((typeof crypto!=='undefined'&&crypto.randomUUID)?crypto.randomUUID():String(Date.now())+'-'+Math.random());fields.forEach(f=>el('invoice'+f).value=d?.[f]||'');if(!d){const now=new Date();const iso=new Date(now.getTime()-now.getTimezoneOffset()*60000).toISOString().slice(0,10);el('invoiceDate').value=iso;el('invoiceDue').value=iso}rows=(d?.read||[]).map(x=>({...x,tooNr:x.liik==='transport'?'':(x.tooNr||''),uhik:x.uhik||(x.liik==='transport'?'km':'tk')}));if(!rows.length)rows=[{nimi:'',liik:'teenus',kogus:1,uhikuhind:0,soodustusProtsent:0}];renderLines();loadInvoiceWorks();el('invoiceHome').style.display='none';el('invoiceEditor').style.display='block'}
  function show(){['listView','detailView','workView','quoteView','todoView','psDatabaseView'].forEach(id=>{const x=el(id);if(x)x.style.display='none'});el('invoiceView').style.display='block';el('pageTitle').textContent='Arved';if(typeof setActiveTab==='function')setActiveTab('register');openHome();loadInvoiceRegistry();window.scrollTo(0,0)}
  el('openInvoicesButton').addEventListener('click',show);
  function invoicePayload(){
   const address=el('invoiceAddress').value.trim().split(/\n/).map(x=>x.trim()).filter(Boolean);
   return {
-   klient:{nimi:el('invoiceClient').value.trim(),registrikood:el('invoiceReg').value.trim(),aadress1:address[0]||'',aadress2:address[1]||'',aadress3:address.slice(2).join(', '),riik:'Eesti'},
+   klient:{nimi:el('invoiceClient').value.trim(),registrikood:el('invoiceReg').value.trim(),kmkr:el('invoiceKmkr').value.trim(),aadress1:address[0]||'',aadress2:address[1]||'',aadress3:address.slice(2).join(', '),riik:'Eesti'},
    kuupaev:el('invoiceDate').value,maksetahtaeg:el('invoiceDue').value,
    selgitus:el('invoiceNotes').value.trim(),objekt:el('invoiceObject').value.trim(),hinnapakkumiseNr:el('invoiceQuote').value.trim(),
    saajaEmail:el('invoiceEmail').value.trim(),markused:el('invoiceNotes').value.trim(),
@@ -4231,7 +4248,7 @@ document.getElementById('psQuoteRegistryBtn')?.addEventListener('click',()=>{
   }
   const address=el('invoiceAddress').value.trim().split(/\n/).map(x=>x.trim()).filter(Boolean);
   const payload={
-   klient:{nimi:el('invoiceClient').value.trim(),registrikood:el('invoiceReg').value.trim(),aadress1:address[0]||'',aadress2:address[1]||'',aadress3:address.slice(2).join(', '),riik:'Eesti'},
+   klient:{nimi:el('invoiceClient').value.trim(),registrikood:el('invoiceReg').value.trim(),kmkr:el('invoiceKmkr').value.trim(),aadress1:address[0]||'',aadress2:address[1]||'',aadress3:address.slice(2).join(', '),riik:'Eesti'},
    kuupaev:el('invoiceDate').value,maksetahtaeg:el('invoiceDue').value,
    selgitus:el('invoiceNotes').value.trim(),objekt:el('invoiceObject').value.trim(),hinnapakkumiseNr:el('invoiceQuote').value.trim(),
    teenusteSoodustusProtsent:0,fikseeritudSoodustus:0,
@@ -4264,7 +4281,7 @@ document.getElementById('psQuoteRegistryBtn')?.addEventListener('click',()=>{
   if(!nr){status.textContent='Vali esmalt hinnapakkumine.';return;}
   btn.disabled=true;status.textContent='Loen pakkumise teenuseid…';
   try{const q=await runScript('psPakkumisestArveAndmed',[nr]);if(!q||q.ok!==true||!q.read?.length)throw new Error('Pakkumise arveread puuduvad.');
-   edit(null);el('invoiceClient').value=q.tellija||'';el('invoiceObject').value=q.objekt||'';el('invoiceQuote').value=q.nr||'';
+   edit(null);el('invoiceClient').value=q.tellija||'';fillInvoiceCustomer();el('invoiceObject').value=q.objekt||'';el('invoiceQuote').value=q.nr||'';
    rows=q.read.map(r=>({...r}));renderLines();
    el('invoiceQuoteImport').style.display='none';
    if(q.hinnaErinevus!==null&&Math.abs(q.hinnaErinevus)>0.01){el('invoicePreviewStatus').textContent='Tähelepanu: pakkumise ja arve netosummad erinevad '+money(Math.abs(q.hinnaErinevus))+'. Kontrolli ridu enne eelvaadet.';}
