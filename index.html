@@ -422,6 +422,7 @@ body:has(#quoteView[style*="display: block"]) #newObjectButton{display:none!impo
   <div class="card"><div class="detailTitle">Arve mustand</div>
    <div class="formGrid">
     <div class="formGroup"><label class="formLabel" for="invoiceClient">Klient *</label><input class="formInput" id="invoiceClient" autocomplete="organization" list="invoiceCustomerOptions"><datalist id="invoiceCustomerOptions"></datalist></div>
+    <div class="formGroup"><button type="button" class="btn btnGray" id="invoiceRegistryBtn">Otsi äriregistrist</button><div id="invoiceRegistryResults" aria-live="polite"></div></div>
     <div class="formGroup"><label class="formLabel" for="invoiceKmkr">KMKR number</label><input class="formInput" id="invoiceKmkr" placeholder="EE123456789"></div>
     <div class="formGroup"><label class="formLabel" for="invoiceReg">Registrikood</label><input class="formInput" id="invoiceReg"></div>
     <div class="formGroup"><label class="formLabel" for="invoiceAddress">Juriidiline aadress</label><textarea class="formInput" id="invoiceAddress" rows="3"></textarea></div>
@@ -4140,6 +4141,23 @@ document.getElementById('psQuoteRegistryBtn')?.addEventListener('click',()=>{
   el('invoiceEmail').value=c.email||'';
   invoiceMarkChanged();
  }
+ // Kasutab sama äriregistri teenust ja valikuloendit nagu Kliendid vaade.
+ const invoiceRegistrySelect=item=>{
+  el('invoiceClient').value=item.nimi||'';
+  el('invoiceReg').value=item.registrikood||'';
+  if(item.aadress)el('invoiceAddress').value=invoiceAddressLines(item.aadress).join('\n');
+  // Täida olemasolevast kliendiregistrist KMKR ja e-post, kui klient on juba olemas.
+  const existing=invoiceCustomers.find(c=>
+   (item.registrikood&&String(c.registrikood||'').trim()===String(item.registrikood).trim())||
+   String(c.nimi||'').trim().toLocaleLowerCase('et-EE')===String(item.nimi||'').trim().toLocaleLowerCase('et-EE'));
+  el('invoiceKmkr').value=existing?psNormalizeKmkr(existing.kmkr||''):'';
+  el('invoiceEmail').value=existing?.email||'';
+  invoiceMarkChanged();
+ };
+ psRegistryAutocomplete(el('invoiceClient'),'invoiceRegistryResults',invoiceRegistrySelect);
+ el('invoiceRegistryBtn').addEventListener('click',()=>{
+  psRegistryLookup(el('invoiceReg').value.trim()||el('invoiceClient').value.trim(),'invoiceRegistryResults',invoiceRegistrySelect);
+ });
  el('invoiceClient').addEventListener('change',fillInvoiceCustomer);
  el('invoiceKmkr').addEventListener('blur',()=>{el('invoiceKmkr').value=psNormalizeKmkr(el('invoiceKmkr').value);});
  let currentId=null;
