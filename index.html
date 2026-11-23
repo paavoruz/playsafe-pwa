@@ -4258,10 +4258,28 @@ document.getElementById('psQuoteRegistryBtn')?.addEventListener('click',()=>{
  function edit(d){loadInvoiceCustomers();previewFingerprint=null;el('invoiceIssue').disabled=true;el('invoicePreviewStatus').textContent='';el('invoicePreviewLink').replaceChildren();currentId=d?.id||((typeof crypto!=='undefined'&&crypto.randomUUID)?crypto.randomUUID():String(Date.now())+'-'+Math.random());fields.forEach(f=>el('invoice'+f).value=d?.[f]||'');if(!d){const now=new Date();const iso=new Date(now.getTime()-now.getTimezoneOffset()*60000).toISOString().slice(0,10);el('invoiceDate').value=iso;const due=new Date(now.getFullYear(),now.getMonth(),now.getDate()+7);el('invoiceDue').value=[due.getFullYear(),String(due.getMonth()+1).padStart(2,'0'),String(due.getDate()).padStart(2,'0')].join('-')}rows=(d?.read||[]).map(x=>({...x,tooNr:x.liik==='transport'?'':(x.tooNr||''),uhik:x.uhik||(x.liik==='transport'?'km':'tk')}));if(!rows.length)rows=[{nimi:'',liik:'teenus',kogus:1,uhikuhind:0,soodustusProtsent:0}];renderLines();loadInvoiceWorks();el('invoiceHome').style.display='none';el('invoiceEditor').style.display='block'}
  function show(){['listView','detailView','workView','quoteView','todoView','psDatabaseView'].forEach(id=>{const x=el(id);if(x)x.style.display='none'});el('invoiceView').style.display='block';el('pageTitle').textContent='Arved';if(typeof setActiveTab==='function')setActiveTab('register');openHome();loadInvoiceRegistry();window.scrollTo(0,0)}
  el('openInvoicesButton').addEventListener('click',show);
- function invoicePayload(){
-  const address=invoiceAddressLines(el('invoiceAddress').value);
+ // Arvemalli aadress võetakse kliendiregistri M:Q veergudest.
+ // Käsitsi sisestatud uue kliendi puhul kasutatakse senist aadressi varulahendusena.
+ function invoiceTemplateAddress(){
+  const reg=el('invoiceReg').value.trim();
+  const name=el('invoiceClient').value.trim().toLocaleLowerCase('et-EE');
+  const customer=invoiceCustomers.find(c=>reg&&String(c.registrikood||'').trim()===reg)
+    ||invoiceCustomers.find(c=>String(c.nimi||'').trim().toLocaleLowerCase('et-EE')===name);
+  const manual=invoiceAddressLines(el('invoiceAddress').value);
+  if(!customer||![customer.tanav,customer.sihtnumber,customer.linn,customer.maakond,customer.riik].some(v=>String(v||'').trim())){
+   return {aadress1:manual[0]||'',aadress2:manual[1]||'',aadress3:manual.slice(2).join(', '),riik:'Eesti'};
+  }
   return {
-   klient:{nimi:el('invoiceClient').value.trim(),registrikood:el('invoiceReg').value.trim(),kmkr:psNormalizeKmkr(el('invoiceKmkr').value),aadress1:address[0]||'',aadress2:address[1]||'',aadress3:address.slice(2).join(', '),riik:'Eesti'},
+   aadress1:String(customer.tanav||'').trim(),
+   aadress2:[customer.sihtnumber,customer.linn].map(v=>String(v||'').trim()).filter(Boolean).join(' '),
+   aadress3:[customer.maakond,customer.riik].map(v=>String(v||'').trim()).filter(Boolean).join(', '),
+   riik:String(customer.riik||'').trim()
+  };
+ }
+ function invoicePayload(){
+  const templateAddress=invoiceTemplateAddress();
+  return {
+   klient:{nimi:el('invoiceClient').value.trim(),registrikood:el('invoiceReg').value.trim(),kmkr:psNormalizeKmkr(el('invoiceKmkr').value),...templateAddress},
    kuupaev:el('invoiceDate').value,maksetahtaeg:el('invoiceDue').value,
    selgitus:el('invoiceNotes').value.trim(),objekt:el('invoiceObject').value.trim(),hinnapakkumiseNr:el('invoiceQuote').value.trim(),
    saajaEmail:el('invoiceEmail').value.trim(),markused:el('invoiceNotes').value.trim(),
@@ -4314,9 +4332,9 @@ document.getElementById('psQuoteRegistryBtn')?.addEventListener('click',()=>{
   if(!rows.length||rows.some(r=>!String(r.nimi||'').trim()||!(Number(r.kogus)>0)||!(Number(r.uhikuhind)>=0)||!(Number(r.soodustusProtsent)>=0)||Number(r.soodustusProtsent)>100)){
    alert('Kontrolli arveridu: kirjeldus, positiivne kogus, hind ja soodustus 0–100%.');return;
   }
-  const address=invoiceAddressLines(el('invoiceAddress').value);
+  const templateAddress=invoiceTemplateAddress();
   const payload={
-   klient:{nimi:el('invoiceClient').value.trim(),registrikood:el('invoiceReg').value.trim(),kmkr:psNormalizeKmkr(el('invoiceKmkr').value),aadress1:address[0]||'',aadress2:address[1]||'',aadress3:address.slice(2).join(', '),riik:'Eesti'},
+   klient:{nimi:el('invoiceClient').value.trim(),registrikood:el('invoiceReg').value.trim(),kmkr:psNormalizeKmkr(el('invoiceKmkr').value),...templateAddress},
    kuupaev:el('invoiceDate').value,maksetahtaeg:el('invoiceDue').value,
    selgitus:el('invoiceNotes').value.trim(),objekt:el('invoiceObject').value.trim(),hinnapakkumiseNr:el('invoiceQuote').value.trim(),
    teenusteSoodustusProtsent:0,fikseeritudSoodustus:0,
