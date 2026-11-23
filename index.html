@@ -405,10 +405,15 @@ body:has(#quoteView[style*="display: block"]) #newObjectButton{display:none!impo
  <div id="invoiceHome">
   <div class="card" style="margin-bottom:12px">
    <div class="detailTitle">Arved</div>
-   <p class="muted">Arvete koostamise vaade. Päris arvete registri sünkroonimine ja väljastamine ühendatakse järgmises etapis.</p>
+   <p class="muted">Arvete koostamine ja Google Sheetsi arvete register. Väljastamine ühendatakse järgmises etapis.</p>
    <button class="btn btnDark" id="invoiceNew" type="button">+ Uus arve</button>
   </div>
   <div class="card"><b>Salvestatud mustandid selles seadmes</b><div id="invoiceDraftList" style="margin-top:12px"></div></div>
+  <div class="card" style="margin-top:12px">
+   <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"><b>Registris olevad arved</b><button class="btn btnGray" id="invoiceRefresh" type="button">↻ Värskenda</button></div>
+   <div id="invoiceRegistryStatus" class="muted" role="status" style="margin-top:10px">Registrit ei ole veel laaditud.</div>
+   <div id="invoiceRegistryList" style="margin-top:10px"></div>
+  </div>
  </div>
  <div id="invoiceEditor" style="display:none">
   <button id="invoiceBack" class="btn btnGray" type="button" style="margin-bottom:12px">← Arved</button>
@@ -4086,12 +4091,49 @@ document.getElementById('psQuoteRegistryBtn')?.addEventListener('click',()=>{
  function drafts(){try{return JSON.parse(localStorage.getItem(KEY)||'[]')}catch{return []}}
  function renderDrafts(){const a=drafts();el('invoiceDraftList').innerHTML=a.length?a.map(d=>`<div class="row" style="display:flex;justify-content:space-between;gap:8px;align-items:center"><button class="btn btnGray" data-invoice-open="${esc(d.id)}" type="button" style="text-align:left;flex:1">${esc(d.Client||'Nimetu klient')} · ${esc(d.Object||'Objekt puudub')}</button><button class="btn btnGray" data-invoice-delete="${esc(d.id)}" type="button" aria-label="Kustuta mustand">✕</button></div>`).join(''):'<div class="muted">Mustandeid veel ei ole.</div>'}
  function openHome(){el('invoiceHome').style.display='block';el('invoiceEditor').style.display='none';renderDrafts()}
+ let registryLoaded=false;
+ let registryLoading=false;
+ async function loadInvoiceRegistry(){
+  if(registryLoading)return;
+  registryLoading=true;
+  const button=el('invoiceRefresh');
+  const status=el('invoiceRegistryStatus');
+  const list=el('invoiceRegistryList');
+  button.disabled=true;
+  status.textContent='Laadin arveid Google Sheetsist…';
+  try{
+   const result=await runScript('psArvedRegistriNimekiri',[]);
+   if(!result||result.ok!==true||!Array.isArray(result.arved))throw new Error('Registri vastus ei ole oodatud kujul.');
+   registryLoaded=true;
+   list.replaceChildren();
+   status.textContent=`Arveid registris: ${result.kokku ?? result.arved.length}`;
+   if(!result.arved.length){const empty=document.createElement('div');empty.className='muted';empty.textContent='Väljastatud arveid veel ei ole.';list.appendChild(empty);}
+   result.arved.forEach(arve=>{
+    const card=document.createElement('div');card.className='row';card.style.cssText='padding:12px 0;border-bottom:1px solid #e5e5ea';
+    const heading=document.createElement('div');heading.style.cssText='font-weight:700;overflow-wrap:anywhere';heading.textContent=`Arve ${arve.arveNr || '—'} · ${arve.klient || 'Klient puudub'}`;
+    const meta=document.createElement('div');meta.className='muted';meta.style.cssText='margin-top:4px;overflow-wrap:anywhere';
+    const total=Number(arve.kokku);
+    meta.textContent=[arve.kuupaev,arve.staatus,Number.isFinite(total)?money(total):'',arve.objekt].filter(Boolean).join(' · ');
+    card.append(heading,meta);
+    if(arve.pdfUrl){
+     try{const url=new URL(arve.pdfUrl);if(url.protocol==='https:'){
+      const a=document.createElement('a');a.href=url.href;a.target='_blank';a.rel='noopener noreferrer';a.className='btn btnGray';a.style.cssText='display:inline-block;margin-top:8px;text-decoration:none';a.textContent='Ava PDF';card.appendChild(a);
+     }}catch(_){}
+    }
+    list.appendChild(card);
+   });
+  }catch(err){
+   status.textContent='Registri laadimine ebaõnnestus: '+(err?.message||String(err));
+   if(!registryLoaded)list.replaceChildren();
+  }finally{registryLoading=false;button.disabled=false;}
+ }
  function addLine(data={}){rows.push({nimi:data.nimi||'',liik:data.liik||'teenus',kogus:data.kogus??1,uhikuhind:data.uhikuhind??0,soodustusProtsent:data.soodustusProtsent??0});renderLines()}
  function renderLines(){el('invoiceLines').innerHTML=rows.map((r,i)=>`<div class="invoiceLine"><div class="formGroup"><label class="formLabel">Kirjeldus</label><input class="formInput" data-idx="${i}" data-field="nimi" value="${esc(r.nimi)}"></div><div class="invoiceLineGrid"><div><label class="formLabel">Liik</label><select class="formInput" data-idx="${i}" data-field="liik"><option value="teenus" ${r.liik==='teenus'?'selected':''}>Teenus</option><option value="transport" ${r.liik==='transport'?'selected':''}>Transport</option></select></div><div><label class="formLabel">Kogus</label><input class="formInput" type="number" min="0" step="any" data-idx="${i}" data-field="kogus" value="${esc(r.kogus)}"></div><div><label class="formLabel">Ühiku hind €</label><input class="formInput" type="number" min="0" step="0.01" data-idx="${i}" data-field="uhikuhind" value="${esc(r.uhikuhind)}"></div><div><label class="formLabel">Soodustus %</label><input class="formInput" type="number" min="0" max="100" step="any" data-idx="${i}" data-field="soodustusProtsent" value="${esc(r.soodustusProtsent)}"></div></div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:9px"><b data-line-total="${i}"></b><button class="btn btnGray" type="button" data-remove="${i}">Eemalda</button></div></div>`).join('');calc()}
  function calc(){let sum=0;rows.forEach((r,i)=>{const n=Math.max(0,Number(r.kogus)||0)*Math.max(0,Number(r.uhikuhind)||0)*(1-Math.min(100,Math.max(0,Number(r.soodustusProtsent)||0))/100);const v=Math.round(n*100)/100;sum+=v;const x=el('invoiceLines').querySelector(`[data-line-total="${i}"]`);if(x)x.textContent=money(v)});sum=Math.round(sum*100)/100;const vat=Math.round(sum*24)/100;el('invoiceNet').textContent=money(sum);el('invoiceVat').textContent=money(vat);el('invoiceTotal').textContent=money(sum+vat)}
  function edit(d){currentId=d?.id||((typeof crypto!=='undefined'&&crypto.randomUUID)?crypto.randomUUID():String(Date.now())+'-'+Math.random());fields.forEach(f=>el('invoice'+f).value=d?.[f]||'');if(!d){const now=new Date();const iso=new Date(now.getTime()-now.getTimezoneOffset()*60000).toISOString().slice(0,10);el('invoiceDate').value=iso;el('invoiceDue').value=iso}rows=(d?.read||[]).map(x=>({...x}));if(!rows.length)rows=[{nimi:'',liik:'teenus',kogus:1,uhikuhind:0,soodustusProtsent:0}];renderLines();el('invoiceHome').style.display='none';el('invoiceEditor').style.display='block'}
- function show(){['listView','detailView','workView','quoteView','todoView','psDatabaseView'].forEach(id=>{const x=el(id);if(x)x.style.display='none'});el('invoiceView').style.display='block';el('pageTitle').textContent='Arved';if(typeof setActiveTab==='function')setActiveTab('register');openHome();window.scrollTo(0,0)}
+ function show(){['listView','detailView','workView','quoteView','todoView','psDatabaseView'].forEach(id=>{const x=el(id);if(x)x.style.display='none'});el('invoiceView').style.display='block';el('pageTitle').textContent='Arved';if(typeof setActiveTab==='function')setActiveTab('register');openHome();loadInvoiceRegistry();window.scrollTo(0,0)}
  el('openInvoicesButton').addEventListener('click',show);
+ el('invoiceRefresh').addEventListener('click',loadInvoiceRegistry);
  el('invoiceNew').addEventListener('click',()=>edit(null));el('invoiceBack').addEventListener('click',openHome);el('invoiceAddLine').addEventListener('click',()=>addLine());
  el('invoiceLines').addEventListener('input',e=>{const t=e.target;if(t.dataset.idx===undefined)return;rows[Number(t.dataset.idx)][t.dataset.field]=t.value;calc()});
  el('invoiceLines').addEventListener('change',e=>{const t=e.target;if(t.dataset.idx!==undefined)rows[Number(t.dataset.idx)][t.dataset.field]=t.value});
