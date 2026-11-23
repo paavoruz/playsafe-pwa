@@ -436,8 +436,10 @@ body:has(#quoteView[style*="display: block"]) #newObjectButton{display:none!impo
    <div class="quoteTotalRow quoteGrand"><span>Kokku</span><b id="invoiceTotal">0,00 €</b></div>
   </div>
   <div class="card" style="margin-top:12px"><label class="formLabel" for="invoiceNotes">Märkused</label><textarea id="invoiceNotes" class="formInput" rows="2"></textarea></div>
-  <div class="quoteActions"><button id="invoiceSave" class="btn btnDark" type="button">Salvesta mustand</button><button class="btn btnGray" type="button" disabled title="Ühendatakse järgmises etapis">PDF eelvaade (varsti)</button></div>
-  <p class="muted" style="margin:12px 0">Mustand salvestatakse ainult selle brauseri seadmesse. Arvenumbrit ei reserveerita ja arvet ei väljastata.</p>
+  <div class="quoteActions"><button id="invoiceSave" class="btn btnDark" type="button">Salvesta mustand</button><button id="invoicePreview" class="btn btnGray" type="button">PDF eelvaade</button></div>
+  <div id="invoicePreviewStatus" class="muted" role="status" style="margin-top:10px"></div>
+  <div id="invoicePreviewLink" style="margin-top:8px"></div>
+  <p class="muted" style="margin:12px 0">Mustand salvestatakse ainult selle brauseri seadmesse. PDF-i eelvaade loob testfailid Google Drive’i eelvaadete kausta, kuid ei reserveeri arvenumbrit ega väljasta arvet.</p>
  </div>
 </section>
 
@@ -4130,9 +4132,35 @@ document.getElementById('psQuoteRegistryBtn')?.addEventListener('click',()=>{
  function addLine(data={}){rows.push({nimi:data.nimi||'',liik:data.liik||'teenus',kogus:data.kogus??1,uhikuhind:data.uhikuhind??0,soodustusProtsent:data.soodustusProtsent??0});renderLines()}
  function renderLines(){el('invoiceLines').innerHTML=rows.map((r,i)=>`<div class="invoiceLine"><div class="formGroup"><label class="formLabel">Kirjeldus</label><input class="formInput" data-idx="${i}" data-field="nimi" value="${esc(r.nimi)}"></div><div class="invoiceLineGrid"><div><label class="formLabel">Liik</label><select class="formInput" data-idx="${i}" data-field="liik"><option value="teenus" ${r.liik==='teenus'?'selected':''}>Teenus</option><option value="transport" ${r.liik==='transport'?'selected':''}>Transport</option></select></div><div><label class="formLabel">Kogus</label><input class="formInput" type="number" min="0" step="any" data-idx="${i}" data-field="kogus" value="${esc(r.kogus)}"></div><div><label class="formLabel">Ühiku hind €</label><input class="formInput" type="number" min="0" step="0.01" data-idx="${i}" data-field="uhikuhind" value="${esc(r.uhikuhind)}"></div><div><label class="formLabel">Soodustus %</label><input class="formInput" type="number" min="0" max="100" step="any" data-idx="${i}" data-field="soodustusProtsent" value="${esc(r.soodustusProtsent)}"></div></div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:9px"><b data-line-total="${i}"></b><button class="btn btnGray" type="button" data-remove="${i}">Eemalda</button></div></div>`).join('');calc()}
  function calc(){let sum=0;rows.forEach((r,i)=>{const n=Math.max(0,Number(r.kogus)||0)*Math.max(0,Number(r.uhikuhind)||0)*(1-Math.min(100,Math.max(0,Number(r.soodustusProtsent)||0))/100);const v=Math.round(n*100)/100;sum+=v;const x=el('invoiceLines').querySelector(`[data-line-total="${i}"]`);if(x)x.textContent=money(v)});sum=Math.round(sum*100)/100;const vat=Math.round(sum*24)/100;el('invoiceNet').textContent=money(sum);el('invoiceVat').textContent=money(vat);el('invoiceTotal').textContent=money(sum+vat)}
- function edit(d){currentId=d?.id||((typeof crypto!=='undefined'&&crypto.randomUUID)?crypto.randomUUID():String(Date.now())+'-'+Math.random());fields.forEach(f=>el('invoice'+f).value=d?.[f]||'');if(!d){const now=new Date();const iso=new Date(now.getTime()-now.getTimezoneOffset()*60000).toISOString().slice(0,10);el('invoiceDate').value=iso;el('invoiceDue').value=iso}rows=(d?.read||[]).map(x=>({...x}));if(!rows.length)rows=[{nimi:'',liik:'teenus',kogus:1,uhikuhind:0,soodustusProtsent:0}];renderLines();el('invoiceHome').style.display='none';el('invoiceEditor').style.display='block'}
+ function edit(d){el('invoicePreviewStatus').textContent='';el('invoicePreviewLink').replaceChildren();currentId=d?.id||((typeof crypto!=='undefined'&&crypto.randomUUID)?crypto.randomUUID():String(Date.now())+'-'+Math.random());fields.forEach(f=>el('invoice'+f).value=d?.[f]||'');if(!d){const now=new Date();const iso=new Date(now.getTime()-now.getTimezoneOffset()*60000).toISOString().slice(0,10);el('invoiceDate').value=iso;el('invoiceDue').value=iso}rows=(d?.read||[]).map(x=>({...x}));if(!rows.length)rows=[{nimi:'',liik:'teenus',kogus:1,uhikuhind:0,soodustusProtsent:0}];renderLines();el('invoiceHome').style.display='none';el('invoiceEditor').style.display='block'}
  function show(){['listView','detailView','workView','quoteView','todoView','psDatabaseView'].forEach(id=>{const x=el(id);if(x)x.style.display='none'});el('invoiceView').style.display='block';el('pageTitle').textContent='Arved';if(typeof setActiveTab==='function')setActiveTab('register');openHome();loadInvoiceRegistry();window.scrollTo(0,0)}
  el('openInvoicesButton').addEventListener('click',show);
+ el('invoicePreview').addEventListener('click',async()=>{
+  const btn=el('invoicePreview'),status=el('invoicePreviewStatus'),links=el('invoicePreviewLink');
+  if(!el('invoiceClient').value.trim()){alert('Sisesta kliendi nimi.');return;}
+  if(!el('invoiceDate').value||!el('invoiceDue').value){alert('Sisesta arve kuupäev ja maksetähtaeg.');return;}
+  if(!rows.length||rows.some(r=>!String(r.nimi||'').trim()||!(Number(r.kogus)>0)||!(Number(r.uhikuhind)>=0)||!(Number(r.soodustusProtsent)>=0)||Number(r.soodustusProtsent)>100)){
+   alert('Kontrolli arveridu: kirjeldus, positiivne kogus, hind ja soodustus 0–100%.');return;
+  }
+  const address=el('invoiceAddress').value.trim().split(/\n/).map(x=>x.trim()).filter(Boolean);
+  const payload={
+   klient:{nimi:el('invoiceClient').value.trim(),registrikood:el('invoiceReg').value.trim(),aadress1:address[0]||'',aadress2:address[1]||'',aadress3:address.slice(2).join(', '),riik:'Eesti'},
+   kuupaev:el('invoiceDate').value,maksetahtaeg:el('invoiceDue').value,
+   selgitus:el('invoiceNotes').value.trim(),objekt:el('invoiceObject').value.trim(),hinnapakkumiseNr:el('invoiceQuote').value.trim(),
+   teenusteSoodustusProtsent:0,fikseeritudSoodustus:0,
+   read:rows.map(r=>({kirjeldus:String(r.nimi).trim(),liik:r.liik||'teenus',kogus:Number(r.kogus),uhik:'tk',uhikuhind:Number(r.uhikuhind),soodustusProtsent:Number(r.soodustusProtsent||0),kmMaar:0.24}))
+  };
+  btn.disabled=true;status.textContent='Koostan PDF-i eelvaadet…';links.replaceChildren();
+  try{
+   const result=await runScript('psArveLooPdfEelvaade',[payload]);
+   if(!result||result.ok!==true||!result.pdfUrl)throw new Error('PDF-i link puudub API vastusest.');
+   const url=new URL(result.pdfUrl);
+   if(url.protocol!=='https:')throw new Error('PDF-i link ei ole turvaline.');
+   const a=document.createElement('a');a.href=url.href;a.target='_blank';a.rel='noopener noreferrer';a.className='btn btnDark';a.textContent='Ava PDF-i eelvaade';a.style.cssText='display:inline-block;text-decoration:none';links.appendChild(a);
+   status.textContent='Eelvaade valmis. Arvenumbrit ei reserveeritud. Kokku: '+money(Number(result.kokku)||0);
+  }catch(e){status.textContent='PDF-i eelvaate loomine ebaõnnestus: '+(e?.message||String(e));}
+  finally{btn.disabled=false;}
+ });
  el('invoiceRefresh').addEventListener('click',loadInvoiceRegistry);
  el('invoiceNew').addEventListener('click',()=>edit(null));el('invoiceBack').addEventListener('click',openHome);el('invoiceAddLine').addEventListener('click',()=>addLine());
  el('invoiceLines').addEventListener('input',e=>{const t=e.target;if(t.dataset.idx===undefined)return;rows[Number(t.dataset.idx)][t.dataset.field]=t.value;calc()});
