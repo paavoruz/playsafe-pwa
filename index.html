@@ -4340,7 +4340,28 @@ document.getElementById('psQuoteRegistryBtn')?.addEventListener('click',()=>{
  el('invoiceLines').addEventListener('input',e=>{const t=e.target;if(t.dataset.idx===undefined)return;rows[Number(t.dataset.idx)][t.dataset.field]=t.value;if(t.dataset.field==='liik'){rows[Number(t.dataset.idx)].uhik=t.value==='transport'?'km':'tk';if(t.value==='transport')rows[Number(t.dataset.idx)].tooNr='';renderLines()}else calc()});
  el('invoiceLines').addEventListener('change',e=>{const t=e.target;if(t.dataset.idx!==undefined){rows[Number(t.dataset.idx)][t.dataset.field]=t.value;if(t.dataset.field==='liik'){rows[Number(t.dataset.idx)].uhik=t.value==='transport'?'km':'tk';if(t.value==='transport')rows[Number(t.dataset.idx)].tooNr='';renderLines()}else if(t.dataset.field==='tooNr'){renderLines()}}});
  el('invoiceLines').addEventListener('click',e=>{const b=e.target.closest('[data-remove]');if(!b)return;rows.splice(Number(b.dataset.remove),1);renderLines()});
- el('invoiceSave').addEventListener('click',()=>{if(!el('invoiceClient').value.trim()){alert('Sisesta kliendi nimi.');return}if(!rows.some(r=>r.nimi.trim())){alert('Lisa vähemalt üks kirjeldatud arverida.');return}const d={id:currentId,read:rows.map(x=>({...x})),updatedAt:new Date().toISOString()};fields.forEach(f=>d[f]=el('invoice'+f).value.trim());const a=drafts().filter(x=>x.id!==currentId);a.unshift(d);try{localStorage.setItem(KEY,JSON.stringify(a));openHome()}catch(e){alert('Mustandi salvestamine ebaõnnestus: '+e.message)}});
+ el('invoiceSave').addEventListener('click',async()=>{
+  if(!el('invoiceClient').value.trim()){alert('Sisesta kliendi nimi.');return;}
+  if(!rows.some(r=>r.nimi.trim())){alert('Lisa vähemalt üks kirjeldatud arverida.');return;}
+  const btn=el('invoiceSave');if(btn.disabled)return;
+  const d={id:currentId,read:rows.map(x=>({...x})),updatedAt:new Date().toISOString()};
+  fields.forEach(f=>d[f]=el('invoice'+f).value.trim());
+  const a=drafts().filter(x=>x.id!==currentId);a.unshift(d);
+  try{localStorage.setItem(KEY,JSON.stringify(a));}
+  catch(e){alert('Mustandi salvestamine ebaõnnestus: '+e.message);return;}
+  btn.disabled=true;btn.textContent='Salvestan kliendiregistrisse…';
+  try{
+   const result=await runScript('psArveMustandiKlientSalvesta',[{
+    nimi:d.Client,registrikood:d.Reg,kmkr:psNormalizeKmkr(d.Kmkr),
+    arveAadress:d.Address,email:d.Email
+   }]);
+   if(!result||result.ok!==true)throw new Error(result?.error||'Kliendiregistri vastus puudub.');
+   await loadInvoiceCustomers();
+   openHome();
+  }catch(e){
+   alert('Arve mustand salvestati sellesse seadmesse, kuid Kliendid lehe uuendamine ebaõnnestus: '+e.message+'\n\nMustand jääb alles; proovi salvestada uuesti.');
+  }finally{btn.disabled=false;btn.textContent='Salvesta mustand';}
+ });
  el('invoiceDraftList').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const id=b.dataset.invoiceOpen||b.dataset.invoiceDelete;const d=drafts().find(x=>x.id===id);if(!d)return;if(b.dataset.invoiceDelete){if(confirm('Kas kustutada see kohalik mustand?')){localStorage.setItem(KEY,JSON.stringify(drafts().filter(x=>x.id!==id)));renderDrafts()}}else edit(d)});
  // Olemasolevad vaatevahetused jätame puutumata; peidame arvevaate teiste navinuppude vajutamisel.
  ['openQuotesButton','openClientsButton','openSitesButton','tabRegister','tabTodo','newObjectButton'].forEach(id=>{const b=el(id);if(b)b.addEventListener('click',()=>{el('invoiceView').style.display='none'},true)});
