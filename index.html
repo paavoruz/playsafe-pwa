@@ -4133,10 +4133,44 @@ document.getElementById('psQuoteRegistryBtn')?.addEventListener('click',()=>{
    if(!registryLoaded)list.replaceChildren();
   }finally{registryLoading=false;button.disabled=false;}
  }
- function addLine(data={}){rows.push({nimi:data.nimi||'',liik:data.liik||'teenus',kogus:data.kogus??1,uhik:data.uhik||(data.liik==='transport'?'km':'tk'),uhikuhind:data.uhikuhind??0,soodustusProtsent:data.soodustusProtsent??0});renderLines()}
- function renderLines(){el('invoiceLines').innerHTML=rows.map((r,i)=>`<div class="invoiceLine"><div class="formGroup"><label class="formLabel">Kirjeldus</label><input class="formInput" data-idx="${i}" data-field="nimi" value="${esc(r.nimi)}"></div><div class="invoiceLineGrid"><div><label class="formLabel">Liik</label><select class="formInput" data-idx="${i}" data-field="liik"><option value="teenus" ${r.liik==='teenus'?'selected':''}>Teenus</option><option value="transport" ${r.liik==='transport'?'selected':''}>Transport</option></select></div><div><label class="formLabel">Ühik</label><select class="formInput" data-idx="${i}" data-field="uhik"><option value="tk" ${r.uhik==='tk'?'selected':''}>tk</option><option value="km" ${r.uhik==='km'?'selected':''}>km</option><option value="h" ${r.uhik==='h'?'selected':''}>h</option></select></div><div><label class="formLabel">Kogus</label><input class="formInput" type="number" min="0" step="any" data-idx="${i}" data-field="kogus" value="${esc(r.kogus)}"></div><div><label class="formLabel">Ühiku hind €</label><input class="formInput" type="number" min="0" step="0.01" data-idx="${i}" data-field="uhikuhind" value="${esc(r.uhikuhind)}"></div><div><label class="formLabel">Soodustus %</label><input class="formInput" type="number" min="0" max="100" step="any" data-idx="${i}" data-field="soodustusProtsent" value="${esc(r.soodustusProtsent)}"></div></div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:9px"><b data-line-total="${i}"></b><button class="btn btnGray" type="button" data-remove="${i}">Eemalda</button></div></div>`).join('');calc()}
+ let invoiceWorks=[];
+ let invoiceWorksLoaded=false;
+ let invoiceWorksLoading=false;
+ async function loadInvoiceWorks(){
+  if(invoiceWorksLoaded||invoiceWorksLoading)return;
+  invoiceWorksLoading=true;
+  try{
+   const result=await runScript('psArveToodeNimekiri',[]);
+   if(!Array.isArray(result))throw new Error('Tööde registri vastus ei ole nimekiri.');
+   invoiceWorks=result.filter(w=>w&&w.tooNr&&w.objekt);
+   invoiceWorksLoaded=true;
+   renderLines();
+  }catch(e){
+   const status=el('invoiceWorkStatus');
+   if(status)status.textContent='Tööde laadimine ebaõnnestus: '+(e.message||e);
+  }finally{invoiceWorksLoading=false;}
+ }
+ function invoiceWorkDescription(r){
+  const base=String(r.nimi||'').trim();
+  const nr=String(r.tooNr||'').trim();
+  return nr?base+' (töö nr '+nr+')':base;
+ }
+ function addLine(data={}){
+  rows.push({nimi:data.nimi||'',liik:data.liik||'teenus',kogus:data.kogus??1,uhik:data.uhik||(data.liik==='transport'?'km':'tk'),uhikuhind:data.uhikuhind??0,soodustusProtsent:data.soodustusProtsent??0,tooNr:data.tooNr||''});
+  renderLines();
+ }
+ function renderLines(){
+  el('invoiceLines').innerHTML=rows.map((r,i)=>{
+   const works=invoiceWorks.map(w=>`<option value="${esc(w.tooNr)}" ${r.tooNr===w.tooNr?'selected':''}>${esc(w.tooNr+' – '+w.objekt+(w.tellija?' · '+w.tellija:''))}</option>`).join('');
+   const unknown=r.tooNr&&!invoiceWorks.some(w=>w.tooNr===r.tooNr)?`<option value="${esc(r.tooNr)}" selected>${esc(r.tooNr+' – varem seotud töö')}</option>`:'';
+   return `<div class="invoiceLine"><div class="formGroup"><label class="formLabel">Kirjeldus</label><input class="formInput" data-idx="${i}" data-field="nimi" value="${esc(r.nimi)}"></div>
+   <div class="formGroup"><label class="formLabel">Seotud töö (töö nr – objekt)</label><input class="formInput" data-work-search="${i}" placeholder="Otsi töö numbri, objekti või tellija järgi…" autocomplete="off"><select class="formInput" data-idx="${i}" data-field="tooNr"><option value="">Tööd ei seota</option>${unknown}${works}</select><div class="muted" style="margin-top:5px">Arvel: ${esc(invoiceWorkDescription(r)||'—')}</div></div>
+   <div class="invoiceLineGrid"><div><label class="formLabel">Liik</label><select class="formInput" data-idx="${i}" data-field="liik"><option value="teenus" ${r.liik==='teenus'?'selected':''}>Teenus</option><option value="transport" ${r.liik==='transport'?'selected':''}>Transport</option></select></div><div><label class="formLabel">Ühik</label><select class="formInput" data-idx="${i}" data-field="uhik"><option value="tk" ${r.uhik==='tk'?'selected':''}>tk</option><option value="km" ${r.uhik==='km'?'selected':''}>km</option><option value="h" ${r.uhik==='h'?'selected':''}>h</option></select></div><div><label class="formLabel">Kogus</label><input class="formInput" type="number" min="0" step="any" data-idx="${i}" data-field="kogus" value="${esc(r.kogus)}"></div><div><label class="formLabel">Ühiku hind €</label><input class="formInput" type="number" min="0" step="0.01" data-idx="${i}" data-field="uhikuhind" value="${esc(r.uhikuhind)}"></div><div><label class="formLabel">Soodustus %</label><input class="formInput" type="number" min="0" max="100" step="any" data-idx="${i}" data-field="soodustusProtsent" value="${esc(r.soodustusProtsent)}"></div></div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:9px"><b data-line-total="${i}"></b><button class="btn btnGray" type="button" data-remove="${i}">Eemalda</button></div></div>`;
+  }).join('');
+  calc();
+ }
  function calc(){let sum=0;rows.forEach((r,i)=>{const n=Math.max(0,Number(r.kogus)||0)*Math.max(0,Number(r.uhikuhind)||0)*(1-Math.min(100,Math.max(0,Number(r.soodustusProtsent)||0))/100);const v=Math.round(n*100)/100;sum+=v;const x=el('invoiceLines').querySelector(`[data-line-total="${i}"]`);if(x)x.textContent=money(v)});sum=Math.round(sum*100)/100;const vat=Math.round(sum*24)/100;el('invoiceNet').textContent=money(sum);el('invoiceVat').textContent=money(vat);el('invoiceTotal').textContent=money(sum+vat)}
- function edit(d){previewFingerprint=null;el('invoiceIssue').disabled=true;el('invoicePreviewStatus').textContent='';el('invoicePreviewLink').replaceChildren();currentId=d?.id||((typeof crypto!=='undefined'&&crypto.randomUUID)?crypto.randomUUID():String(Date.now())+'-'+Math.random());fields.forEach(f=>el('invoice'+f).value=d?.[f]||'');if(!d){const now=new Date();const iso=new Date(now.getTime()-now.getTimezoneOffset()*60000).toISOString().slice(0,10);el('invoiceDate').value=iso;el('invoiceDue').value=iso}rows=(d?.read||[]).map(x=>({...x,uhik:x.uhik||(x.liik==='transport'?'km':'tk')}));if(!rows.length)rows=[{nimi:'',liik:'teenus',kogus:1,uhikuhind:0,soodustusProtsent:0}];renderLines();el('invoiceHome').style.display='none';el('invoiceEditor').style.display='block'}
+ function edit(d){previewFingerprint=null;el('invoiceIssue').disabled=true;el('invoicePreviewStatus').textContent='';el('invoicePreviewLink').replaceChildren();currentId=d?.id||((typeof crypto!=='undefined'&&crypto.randomUUID)?crypto.randomUUID():String(Date.now())+'-'+Math.random());fields.forEach(f=>el('invoice'+f).value=d?.[f]||'');if(!d){const now=new Date();const iso=new Date(now.getTime()-now.getTimezoneOffset()*60000).toISOString().slice(0,10);el('invoiceDate').value=iso;el('invoiceDue').value=iso}rows=(d?.read||[]).map(x=>({...x,uhik:x.uhik||(x.liik==='transport'?'km':'tk')}));if(!rows.length)rows=[{nimi:'',liik:'teenus',kogus:1,uhikuhind:0,soodustusProtsent:0}];renderLines();loadInvoiceWorks();el('invoiceHome').style.display='none';el('invoiceEditor').style.display='block'}
  function show(){['listView','detailView','workView','quoteView','todoView','psDatabaseView'].forEach(id=>{const x=el(id);if(x)x.style.display='none'});el('invoiceView').style.display='block';el('pageTitle').textContent='Arved';if(typeof setActiveTab==='function')setActiveTab('register');openHome();loadInvoiceRegistry();window.scrollTo(0,0)}
  el('openInvoicesButton').addEventListener('click',show);
  function invoicePayload(){
@@ -4147,7 +4181,7 @@ document.getElementById('psQuoteRegistryBtn')?.addEventListener('click',()=>{
    selgitus:el('invoiceNotes').value.trim(),objekt:el('invoiceObject').value.trim(),hinnapakkumiseNr:el('invoiceQuote').value.trim(),
    saajaEmail:el('invoiceEmail').value.trim(),markused:el('invoiceNotes').value.trim(),
    teenusteSoodustusProtsent:0,fikseeritudSoodustus:0,
-   read:rows.map(r=>({kirjeldus:String(r.nimi).trim(),liik:r.liik||'teenus',kogus:Number(r.kogus),uhik:r.uhik||(r.liik==='transport'?'km':'tk'),uhikuhind:Number(r.uhikuhind),soodustusProtsent:Number(r.soodustusProtsent||0),kmMaar:0.24}))
+   read:rows.map(r=>({kirjeldus:invoiceWorkDescription(r),liik:r.liik||'teenus',kogus:Number(r.kogus),uhik:r.uhik||(r.liik==='transport'?'km':'tk'),uhikuhind:Number(r.uhikuhind),soodustusProtsent:Number(r.soodustusProtsent||0),kmMaar:0.24}))
   };
  }
  function invoiceValid(){
@@ -4201,7 +4235,7 @@ document.getElementById('psQuoteRegistryBtn')?.addEventListener('click',()=>{
    kuupaev:el('invoiceDate').value,maksetahtaeg:el('invoiceDue').value,
    selgitus:el('invoiceNotes').value.trim(),objekt:el('invoiceObject').value.trim(),hinnapakkumiseNr:el('invoiceQuote').value.trim(),
    teenusteSoodustusProtsent:0,fikseeritudSoodustus:0,
-   read:rows.map(r=>({kirjeldus:String(r.nimi).trim(),liik:r.liik||'teenus',kogus:Number(r.kogus),uhik:r.uhik||(r.liik==='transport'?'km':'tk'),uhikuhind:Number(r.uhikuhind),soodustusProtsent:Number(r.soodustusProtsent||0),kmMaar:0.24}))
+   read:rows.map(r=>({kirjeldus:invoiceWorkDescription(r),liik:r.liik||'teenus',kogus:Number(r.kogus),uhik:r.uhik||(r.liik==='transport'?'km':'tk'),uhikuhind:Number(r.uhikuhind),soodustusProtsent:Number(r.soodustusProtsent||0),kmMaar:0.24}))
   };
   previewFingerprint=null;el('invoiceIssue').disabled=true;btn.disabled=true;status.textContent='Koostan PDF-i eelvaadet…';links.replaceChildren();
   try{
@@ -4239,8 +4273,18 @@ document.getElementById('psQuoteRegistryBtn')?.addEventListener('click',()=>{
  });
  el('invoiceRefresh').addEventListener('click',loadInvoiceRegistry);
  el('invoiceNew').addEventListener('click',()=>edit(null));el('invoiceBack').addEventListener('click',openHome);el('invoiceAddLine').addEventListener('click',()=>addLine());
+ el('invoiceLines').addEventListener('input',e=>{
+  const t=e.target;
+  if(t.dataset.workSearch===undefined)return;
+  const select=el('invoiceLines').querySelector(`select[data-idx="${t.dataset.workSearch}"][data-field="tooNr"]`);
+  if(!select)return;
+  const query=t.value.toLocaleLowerCase('et').trim();
+  for(const option of select.options){
+   option.hidden=!!query&&!!option.value&&!option.textContent.toLocaleLowerCase('et').includes(query);
+  }
+ });
  el('invoiceLines').addEventListener('input',e=>{const t=e.target;if(t.dataset.idx===undefined)return;rows[Number(t.dataset.idx)][t.dataset.field]=t.value;if(t.dataset.field==='liik'){rows[Number(t.dataset.idx)].uhik=t.value==='transport'?'km':'tk';renderLines()}else calc()});
- el('invoiceLines').addEventListener('change',e=>{const t=e.target;if(t.dataset.idx!==undefined){rows[Number(t.dataset.idx)][t.dataset.field]=t.value;if(t.dataset.field==='liik'){rows[Number(t.dataset.idx)].uhik=t.value==='transport'?'km':'tk';renderLines()}}});
+ el('invoiceLines').addEventListener('change',e=>{const t=e.target;if(t.dataset.idx!==undefined){rows[Number(t.dataset.idx)][t.dataset.field]=t.value;if(t.dataset.field==='liik'){rows[Number(t.dataset.idx)].uhik=t.value==='transport'?'km':'tk';renderLines()}else if(t.dataset.field==='tooNr'){renderLines()}}});
  el('invoiceLines').addEventListener('click',e=>{const b=e.target.closest('[data-remove]');if(!b)return;rows.splice(Number(b.dataset.remove),1);renderLines()});
  el('invoiceSave').addEventListener('click',()=>{if(!el('invoiceClient').value.trim()){alert('Sisesta kliendi nimi.');return}if(!rows.some(r=>r.nimi.trim())){alert('Lisa vähemalt üks kirjeldatud arverida.');return}const d={id:currentId,read:rows.map(x=>({...x})),updatedAt:new Date().toISOString()};fields.forEach(f=>d[f]=el('invoice'+f).value.trim());const a=drafts().filter(x=>x.id!==currentId);a.unshift(d);try{localStorage.setItem(KEY,JSON.stringify(a));openHome()}catch(e){alert('Mustandi salvestamine ebaõnnestus: '+e.message)}});
  el('invoiceDraftList').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const id=b.dataset.invoiceOpen||b.dataset.invoiceDelete;const d=drafts().find(x=>x.id===id);if(!d)return;if(b.dataset.invoiceDelete){if(confirm('Kas kustutada see kohalik mustand?')){localStorage.setItem(KEY,JSON.stringify(drafts().filter(x=>x.id!==id)));renderDrafts()}}else edit(d)});
