@@ -422,7 +422,7 @@ body:has(#quoteView[style*="display: block"]) #newObjectButton{display:none!impo
   <div class="card"><div class="detailTitle">Arve mustand</div>
    <div class="formGrid">
     <div class="formGroup"><label class="formLabel" for="invoiceClient">Klient *</label><input class="formInput" id="invoiceClient" autocomplete="organization" list="invoiceCustomerOptions"><datalist id="invoiceCustomerOptions"></datalist></div>
-    <div class="formGroup"><label class="formLabel" for="invoiceKmkr">KMKR number</label><input class="formInput" id="invoiceKmkr" placeholder="EE123456789"></div>
+    <div class="formGroup"><label class="formLabel" for="invoiceKmkr">KMKR number</label><input class="formInput" id="invoiceKmkr" placeholder="Sisesta KMKR number"></div>
     <div class="formGroup"><label class="formLabel" for="invoiceReg">Registrikood</label><input class="formInput" id="invoiceReg"></div>
     <div class="formGroup"><label class="formLabel" for="invoiceAddress">Arveldusaadress</label><input class="formInput" id="invoiceAddress"></div>
     <div class="formGroup"><label class="formLabel" for="invoiceEmail">Arve e-post</label><input class="formInput" id="invoiceEmail" type="email"></div>
@@ -3355,13 +3355,13 @@ function psDbEdit(id=''){
 }
 async function psDbSave(){
  const data={id:psDbEditing||''};
+ if(psDbTab==='asutused' && psDbEditing){const vana=psDbAsutused.find(a=>a.id===psDbEditing);if(vana){data._eelmineNimi=vana.nimi||'';data._eelmineRegistrikood=vana.registrikood||'';}}
  $('psDbFields').querySelectorAll('[data-psfield]').forEach(el=>data[el.dataset.psfield]=el.value.trim());
  if(!data.nimi){toast('Sisesta nimi');return;}
  if(psDbTab==='valjakud'&&!data.tyyp){alert('Vali väljaku tüüp tööde registri C-veeru valikutest.');return;}
  const btn=$('psDbSave');btn.disabled=true;
  try{
-  const result=await runScript(psDbTab==='asutused'?'psSalvestaAsutus':'psSalvestaValjak',[data]);
-  if(psDbTab==='asutused')await runScript('psSalvestaAsutuseKmkr',[result.id,data.kmkr||'']);
+  const result=await runScript(psDbTab==='asutused'?'psSalvestaAsutusJaKlient':'psSalvestaValjak',[data]);
   $('psDbEditor').style.display='none';toast('Salvestatud');await psDbLoad();
  }catch(e){alert('Salvestamine ebaõnnestus: '+e.message);}finally{btn.disabled=false;}
 }
