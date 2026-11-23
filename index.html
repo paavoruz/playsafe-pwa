@@ -3296,8 +3296,21 @@ function psDbRender(){
 async function psDbLoad(){
  $('psDbList').textContent='Laadin andmeid...';
  try{
+  // Too Kliendid registris olevad, kuid Asutused lehelt puuduvad kliendid nähtavale.
+  await runScript('psSunkrooniKliendidAsutustesse',[]);
   const [asutused,valjakud,valikud,kliendid]=await Promise.all([runScript('psGetAsutused',[]),runScript('psGetValjakud',[]),runScript('psRegistriValikud',[]),runScript('crmKliendid',[])]);
-  psDbAsutused=asutused;psDbValjakud=valjakud;psDbTyypid=valikud.valjakuTyypid||[];psDbKliendid=Array.isArray(kliendid)?kliendid:[];
+  // Kuvame sama registrikoodiga kliendi ainult korra; lehtedel olevaid ridu ei kustuta.
+  const norm=v=>String(v||'').trim().toLocaleLowerCase('et-EE').replace(/\s+/g,' ');
+  const seenReg=new Set(),seenName=new Set();
+  psDbAsutused=asutused.filter(a=>{
+   const reg=String(a.registrikood||'').trim(),name=norm(a.nimi);
+   if(reg&&seenReg.has(reg))return false;
+   if(name&&seenName.has(name)&&!reg)return false;
+   if(reg)seenReg.add(reg);
+   if(name)seenName.add(name);
+   return true;
+  });
+  psDbValjakud=valjakud;psDbTyypid=valikud.valjakuTyypid||[];psDbKliendid=Array.isArray(kliendid)?kliendid:[];
   psDbRender();psSetSiteMode(psSiteMode);
  }
  catch(e){$('psDbList').textContent='Andmete laadimine ebaõnnestus: '+e.message;}
