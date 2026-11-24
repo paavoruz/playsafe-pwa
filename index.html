@@ -423,7 +423,6 @@ body:has(#quoteView[style*="display: block"]) #newObjectButton{display:none!impo
    <div class="formGrid">
     <div class="formGroup"><label class="formLabel" for="invoiceClient">Klient *</label><input class="formInput" id="invoiceClient" autocomplete="organization" list="invoiceCustomerOptions"><datalist id="invoiceCustomerOptions"></datalist></div>
     <div class="formGroup"><button type="button" class="btn btnGray" id="invoiceRegistryBtn">Otsi äriregistrist</button><div id="invoiceRegistryResults" aria-live="polite"></div></div>
-    <div class="formGroup"><label class="formLabel" for="invoiceKmkr">KMKR number</label><input class="formInput" id="invoiceKmkr" placeholder="EE123456789"></div>
     <div class="formGroup"><label class="formLabel" for="invoiceReg">Registrikood</label><input class="formInput" id="invoiceReg"></div>
     <div class="formGroup"><label class="formLabel" for="invoiceAddress">Juriidiline aadress</label><textarea class="formInput" id="invoiceAddress" rows="3"></textarea></div>
     <div class="formGroup"><label class="formLabel" for="invoiceEmail">Arve e-post</label><input class="formInput" id="invoiceEmail" type="email"></div>
@@ -3339,17 +3338,6 @@ function psDbBindAutoMap(){
  // Olemasolevat linki avamisel ei asendata.
  if(!map.value.trim())sync();
 }
-function psNormalizeKmkr(value){
- const v=String(value||'').trim().replace(/\s+/g,'').toUpperCase();
- return /^\d{9}$/.test(v)?'EE'+v:v;
-}
-function psDbLeiaKmkr(asutus){
- const reg=String(asutus.registrikood||'').trim();
- const norm=v=>String(v||'').trim().toLocaleLowerCase('et-EE').replace(/\s+/g,' ');
- const client=psDbKliendid.find(c=>reg&&String(c.registrikood||'').trim()===reg)
-  ||psDbKliendid.find(c=>norm(c.nimi)===norm(asutus.nimi));
- return client?.kmkr||'';
-}
 function psDbEdit(id=''){
  const as=psDbTab==='asutused';
  const x=(as?psDbAsutused:psDbValjakud).find(o=>o.id===id)||{};
@@ -3357,7 +3345,7 @@ function psDbEdit(id=''){
  $('psDbDelete').style.display=id?'inline-block':'none';
  $('psDbEditorTitle').textContent=(id?'Muuda ':'Lisa ')+(as?'klienti':'väljakut');
  let html=psDbField('nimi','Nimi *',x.nimi)+psDbField('aadress','Aadress',x.aadress);
- if(as){html+='<button type="button" class="btn btnGray" id="psDbRegistryBtn" style="margin-top:8px">Otsi äriregistrist</button><div id="psDbRegistryResults" aria-live="polite"></div>';html+=psDbField('registrikood','Registrikood',x.registrikood)+psDbField('kontaktisik','Kontaktisik',x.kontaktisik)+psDbField('telefon','Telefon',x.telefon,'tel')+psDbField('email','E-post',x.email,'email')+psDbField('kmkr','KMKR number (EE)',psDbLeiaKmkr(x),'text');}
+ if(as){html+='<button type="button" class="btn btnGray" id="psDbRegistryBtn" style="margin-top:8px">Otsi äriregistrist</button><div id="psDbRegistryResults" aria-live="polite"></div>';html+=psDbField('registrikood','Registrikood',x.registrikood)+psDbField('kontaktisik','Kontaktisik',x.kontaktisik)+psDbField('telefon','Telefon',x.telefon,'tel')+psDbField('email','E-post',x.email,'email');}
  else{
   html+=`<label style="display:block;margin-top:10px;font-size:13px;font-weight:600">Asutus (valikuline)<select class="formInput" data-psfield="asutuseId" style="display:block;width:100%;margin-top:4px"><option value="">Asutus määramata</option>${psDbAsutused.map(a=>`<option value="${psDbSafe(a.id)}" ${a.id===x.asutuseId?'selected':''}>${psDbSafe(a.nimi)}</option>`).join('')}</select></label>`;
   const existingType=String(x.tyyp||'');
@@ -3375,7 +3363,6 @@ async function psDbSave(){
  const data={id:psDbEditing||''};
  if(psDbTab==='asutused' && psDbEditing){const vana=psDbAsutused.find(a=>a.id===psDbEditing);if(vana){data._eelmineNimi=vana.nimi||'';data._eelmineRegistrikood=vana.registrikood||'';}}
  $('psDbFields').querySelectorAll('[data-psfield]').forEach(el=>data[el.dataset.psfield]=el.value.trim());
- if(psDbTab==='asutused' && data.kmkr)data.kmkr=psNormalizeKmkr(data.kmkr);
  if(!data.nimi){toast('Sisesta nimi');return;}
  if(psDbTab==='valjakud'&&!data.tyyp){alert('Vali väljaku tüüp tööde registri C-veeru valikutest.');return;}
  const btn=$('psDbSave');btn.disabled=true;
@@ -4115,7 +4102,7 @@ document.getElementById('psQuoteRegistryBtn')?.addEventListener('click',()=>{
 (function(){
  const el=id=>document.getElementById(id);
  const KEY='playsafe_invoice_drafts_v1';
- const fields=['Client','Reg','Kmkr','Address','Email','Object','Quote','Date','Due','Notes'];
+ const fields=['Client','Reg','Address','Email','Object','Quote','Date','Due','Notes'];
  // Äriregistri ühe reali aadress -> tänav, sihtnumber + linn, maakond/riik.
  function invoiceAddressLines(value){
   const raw=String(value||'').trim();
@@ -4149,7 +4136,6 @@ document.getElementById('psQuoteRegistryBtn')?.addEventListener('click',()=>{
   if(matches.length!==1)return;
   const c=matches[0];
   el('invoiceReg').value=c.registrikood||'';
-  el('invoiceKmkr').value=psNormalizeKmkr(c.kmkr||'');
   el('invoiceAddress').value=invoiceAddressLines(c.arveAadress||'').join('\n');
   el('invoiceEmail').value=c.email||'';
   invoiceMarkChanged();
@@ -4159,11 +4145,10 @@ document.getElementById('psQuoteRegistryBtn')?.addEventListener('click',()=>{
   el('invoiceClient').value=item.nimi||'';
   el('invoiceReg').value=item.registrikood||'';
   if(item.aadress)el('invoiceAddress').value=invoiceAddressLines(item.aadress).join('\n');
-  // Täida olemasolevast kliendiregistrist KMKR ja e-post, kui klient on juba olemas.
+  // Täida olemasolevast kliendiregistrist e-post, kui klient on juba olemas.
   const existing=invoiceCustomers.find(c=>
    (item.registrikood&&String(c.registrikood||'').trim()===String(item.registrikood).trim())||
    String(c.nimi||'').trim().toLocaleLowerCase('et-EE')===String(item.nimi||'').trim().toLocaleLowerCase('et-EE'));
-  el('invoiceKmkr').value=existing?psNormalizeKmkr(existing.kmkr||''):'';
   el('invoiceEmail').value=existing?.email||'';
   invoiceMarkChanged();
  };
@@ -4172,14 +4157,13 @@ document.getElementById('psQuoteRegistryBtn')?.addEventListener('click',()=>{
   psRegistryLookup(el('invoiceReg').value.trim()||el('invoiceClient').value.trim(),'invoiceRegistryResults',invoiceRegistrySelect);
  });
  el('invoiceClient').addEventListener('change',fillInvoiceCustomer);
- el('invoiceKmkr').addEventListener('blur',()=>{el('invoiceKmkr').value=psNormalizeKmkr(el('invoiceKmkr').value);});
  let currentId=null;
  let rows=[];
  let previewFingerprint=null;
  let issueBusy=false;
  const money=n=>new Intl.NumberFormat('et-EE',{style:'currency',currency:'EUR'}).format(n);
  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
- function drafts(){try{return JSON.parse(localStorage.getItem(KEY)||'[]')}catch{return []}}
+ function drafts(){try{const a=JSON.parse(localStorage.getItem(KEY)||'[]');let changed=false;for(const d of a){if(Object.prototype.hasOwnProperty.call(d,'Kmkr')){delete d.Kmkr;changed=true;}}if(changed){try{localStorage.setItem(KEY,JSON.stringify(a));}catch(e){console.warn('Mustandite puhastus ebaõnnestus',e);}}return a;}catch{return []}}
  function renderDrafts(){const a=drafts();el('invoiceDraftList').innerHTML=a.length?a.map(d=>`<div class="row" style="display:flex;justify-content:space-between;gap:8px;align-items:center"><button class="btn btnGray" data-invoice-open="${esc(d.id)}" type="button" style="text-align:left;flex:1">${esc(d.Client||'Nimetu klient')} · ${esc(d.Object||'Objekt puudub')}</button><button class="btn btnGray" data-invoice-delete="${esc(d.id)}" type="button" aria-label="Kustuta mustand">✕</button></div>`).join(''):'<div class="muted">Mustandeid veel ei ole.</div>'}
  function openHome(){el('invoiceQuoteImport').style.display='none';previewFingerprint=null;el('invoiceHome').style.display='block';el('invoiceEditor').style.display='none';renderDrafts()}
  let registryLoaded=false;
@@ -4279,7 +4263,7 @@ document.getElementById('psQuoteRegistryBtn')?.addEventListener('click',()=>{
  function invoicePayload(){
   const templateAddress=invoiceTemplateAddress();
   return {
-   klient:{nimi:el('invoiceClient').value.trim(),registrikood:el('invoiceReg').value.trim(),kmkr:psNormalizeKmkr(el('invoiceKmkr').value),...templateAddress},
+   klient:{nimi:el('invoiceClient').value.trim(),registrikood:el('invoiceReg').value.trim(),...templateAddress},
    kuupaev:el('invoiceDate').value,maksetahtaeg:el('invoiceDue').value,
    selgitus:el('invoiceNotes').value.trim(),objekt:el('invoiceObject').value.trim(),hinnapakkumiseNr:el('invoiceQuote').value.trim(),
    saajaEmail:el('invoiceEmail').value.trim(),markused:el('invoiceNotes').value.trim(),
@@ -4334,7 +4318,7 @@ document.getElementById('psQuoteRegistryBtn')?.addEventListener('click',()=>{
   }
   const templateAddress=invoiceTemplateAddress();
   const payload={
-   klient:{nimi:el('invoiceClient').value.trim(),registrikood:el('invoiceReg').value.trim(),kmkr:psNormalizeKmkr(el('invoiceKmkr').value),...templateAddress},
+   klient:{nimi:el('invoiceClient').value.trim(),registrikood:el('invoiceReg').value.trim(),...templateAddress},
    kuupaev:el('invoiceDate').value,maksetahtaeg:el('invoiceDue').value,
    selgitus:el('invoiceNotes').value.trim(),objekt:el('invoiceObject').value.trim(),hinnapakkumiseNr:el('invoiceQuote').value.trim(),
    teenusteSoodustusProtsent:0,fikseeritudSoodustus:0,
@@ -4401,7 +4385,7 @@ document.getElementById('psQuoteRegistryBtn')?.addEventListener('click',()=>{
   btn.disabled=true;btn.textContent='Salvestan kliendiregistrisse…';
   try{
    const result=await runScript('psArveMustandiKlientSalvesta',[{
-    nimi:d.Client,registrikood:d.Reg,kmkr:psNormalizeKmkr(d.Kmkr),
+    nimi:d.Client,registrikood:d.Reg,
     arveAadress:d.Address,email:d.Email
    }]);
    if(!result||result.ok!==true)throw new Error(result?.error||'Kliendiregistri vastus puudub.');
