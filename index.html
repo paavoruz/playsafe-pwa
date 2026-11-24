@@ -407,6 +407,9 @@ body:has(#quoteView[style*="display: block"]) #newObjectButton{display:none!impo
    <div class="detailTitle">Arved</div>
    <p class="muted">Arvete koostamine ja Google Sheetsi arvete register. Väljastamine ühendatakse järgmises etapis.</p>
    <button class="btn btnDark" id="invoiceNew" type="button">+ Uus arve</button>
+   <button class="btn btnGray" id="invoiceReserveE" type="button" style="margin-top:8px;background:#fff4bc">Reserveeri e-arve nr</button>
+   <div id="invoiceReserveStatus" role="status" class="muted" style="margin-top:8px"></div>
+   <button class="btn btnGray" id="invoiceReserveCopy" type="button" style="display:none;margin-top:8px">Kopeeri arvenumber</button>
    <button class="btn btnGray" id="invoiceFromQuote" type="button" style="margin-left:6px">Arve hinnapakkumisest</button>
   </div>
   <div class="card"><b>Salvestatud mustandid selles seadmes</b><div id="invoiceDraftList" style="margin-top:12px"></div></div>
@@ -4162,10 +4165,10 @@ document.getElementById('psQuoteRegistryBtn')?.addEventListener('click',()=>{
    if(!result.arved.length){const empty=document.createElement('div');empty.className='muted';empty.textContent='Väljastatud arveid veel ei ole.';list.appendChild(empty);}
    result.arved.forEach(arve=>{
     const card=document.createElement('div');card.className='row';card.style.cssText='padding:12px 0;border-bottom:1px solid #e5e5ea';
-    const heading=document.createElement('div');heading.style.cssText='font-weight:700;overflow-wrap:anywhere';heading.textContent=`Arve ${arve.arveNr || '—'} · ${arve.klient || 'Klient puudub'}`;
+    const heading=document.createElement('div');heading.style.cssText='font-weight:700;overflow-wrap:anywhere';heading.textContent=`Arve ${arve.arveNr || '—'} · ${arve.klient || (arve.staatus==='Ootab e-arvet'?'Reserveeritud e-arve':'Klient puudub')}`;
     const meta=document.createElement('div');meta.className='muted';meta.style.cssText='margin-top:4px;overflow-wrap:anywhere';
     const total=Number(arve.kokku);
-    meta.textContent=[arve.kuupaev,arve.staatus,Number.isFinite(total)?money(total):'',arve.objekt].filter(Boolean).join(' · ');
+    meta.textContent=[arve.kuupaev,arve.staatus,arve.staatus!=='Ootab e-arvet'&&Number.isFinite(total)?money(total):'',arve.objekt].filter(Boolean).join(' · ');
     card.append(heading,meta);
     if(arve.pdfUrl){
      try{const url=new URL(arve.pdfUrl);if(url.protocol==='https:'){
@@ -4314,6 +4317,31 @@ document.getElementById('psQuoteRegistryBtn')?.addEventListener('click',()=>{
    if(q.hinnaErinevus!==null&&Math.abs(q.hinnaErinevus)>0.01){el('invoicePreviewStatus').textContent='Tähelepanu: pakkumise ja arve netosummad erinevad '+money(Math.abs(q.hinnaErinevus))+'. Kontrolli ridu enne eelvaadet.';}
    else el('invoicePreviewStatus').textContent='Pakkumise '+nr+' read on mustandisse toodud. Kontrolli kliendi rekvisiite, aadressi ja summasid.';
   }catch(e){status.textContent='Importimine ebaõnnestus: '+(e.message||e)}finally{btn.disabled=false;}
+ });
+ const reserveKey='playsafe_earve_pending_v1';
+ let reserveBusy=false, reservedNumber='';
+ el('invoiceReserveCopy').addEventListener('click',async()=>{
+  try{await navigator.clipboard.writeText(reservedNumber);el('invoiceReserveStatus').textContent='Arve nr '+reservedNumber+' kopeeritud.';}
+  catch(e){el('invoiceReserveStatus').textContent='Kopeeri käsitsi: '+reservedNumber;}
+ });
+ el('invoiceReserveE').addEventListener('click',async()=>{
+  if(reserveBusy)return;
+  const btn=el('invoiceReserveE'),status=el('invoiceReserveStatus');
+  reserveBusy=true;btn.disabled=true;
+  try{
+   let id=localStorage.getItem(reserveKey);
+   if(!confirm(id?'Jätkata poolelioleva reserveeringuga?':'Reserveerida järgmine päris arvenumber e-arve jaoks?'))return;
+   if(!id){id='earve-'+crypto.randomUUID();localStorage.setItem(reserveKey,id);}
+   status.textContent='Reserveerin arvenumbrit…';
+   const result=await runScript('psReserveeriEArveNr',[id]);
+   if(!result||result.ok!==true||!/^\d+$/.test(String(result.arveNr)))throw new Error('Reserveeringu vastus on puudulik.');
+   reservedNumber=String(result.arveNr);
+   status.textContent='Reserveeritud e-arve nr '+reservedNumber;
+   el('invoiceReserveCopy').style.display='inline-block';
+   localStorage.removeItem(reserveKey);
+   await loadInvoiceRegistry();
+  }catch(e){status.textContent='Reserveering vajab kontrolli: '+(e.message||e)+'. Kontrolli registrit; korduskatse kasutab sama ID-d.';}
+  finally{reserveBusy=false;btn.disabled=false;}
  });
  el('invoiceRefresh').addEventListener('click',loadInvoiceRegistry);
  el('invoiceNew').addEventListener('click',()=>edit(null));el('invoiceBack').addEventListener('click',openHome);el('invoiceAddLine').addEventListener('click',()=>addLine());
