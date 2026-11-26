@@ -406,9 +406,12 @@ body:has(#quoteView[style*="display: block"]) #newObjectButton{display:none!impo
 <section id="invoiceView" style="display:none" aria-label="Arved">
  <div id="invoiceHome">
   <div id="invoiceSummary" style="background:#f1ebfa;color:#34264b;border-radius:16px;padding:12px 14px;margin-top:10px;font-variant-numeric:tabular-nums">
-   <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span style="font-size:12px;font-weight:600">Väljastatud arved · KM-ta</span><select id="invoiceSummaryYear" aria-label="Ülevaate aasta" style="background:#fff;color:#6542a5;border:1px solid #ded2ef;border-radius:8px;padding:4px 8px;font-size:14px"></select></div>
-   <div id="invoiceSummaryNet" style="font-size:25px;font-weight:800;color:#6542a5">—</div>
-   <div id="invoiceSummaryGross" style="font-size:12px;margin-bottom:9px">Laadin arveid…</div>
+   <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">
+    <div style="min-width:0"><span style="font-size:12px;font-weight:600">Väljastatud arved · KM-ta</span>
+    <div id="invoiceSummaryNet" style="font-size:25px;font-weight:800;color:#6542a5">—</div>
+    <div id="invoiceSummaryGross" style="font-size:12px;margin-bottom:9px">Laadin arveid…</div></div>
+    <div style="display:grid;justify-items:end;gap:5px"><select id="invoiceSummaryYear" aria-label="Ülevaate aasta" style="background:#fff;color:#6542a5;border:1px solid #ded2ef;border-radius:8px;padding:4px 8px;font-size:14px"></select><button id="invoiceChartToggle" type="button" aria-label="Arved kuude lõikes" aria-expanded="false" aria-controls="invoiceChartPanel" style="background:white;color:#6542a5;border:1px solid #ded2ef;border-radius:8px;width:42px;height:34px;padding:5px"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3v18h18M7 17v-5m5 5V7m5 10V4"/></svg></button></div>
+   </div>
    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;border-top:1px solid #ded2ef;padding-top:8px">
     <div><div style="font-size:11px">Tasutud · KM-ga</div><strong id="invoiceSummaryPaid" style="font-size:17px;color:#25834d">—</strong></div>
     <div><div style="font-size:11px">Maksmata · KM-ga</div><strong id="invoiceSummaryUnpaid" style="font-size:17px;color:#98600d">—</strong></div>
@@ -416,6 +419,12 @@ body:has(#quoteView[style*="display: block"]) #newObjectButton{display:none!impo
    <div style="height:5px;background:#e9b94e;border-radius:8px;overflow:hidden;margin-top:9px"><div id="invoiceSummaryBar" style="height:100%;width:0;background:#429b68"></div></div>
    <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;font-size:11px;margin-top:5px"><span id="invoiceSummaryPercent">—</span><span id="invoiceSummaryLate" style="color:#b42323">Üle tähtaja —</span></div>
    <div id="invoiceSummaryNote" style="font-size:11px;margin-top:5px" hidden></div>
+   <div id="invoiceChartPanel" hidden style="border-top:1px solid #ded2ef;margin-top:10px;padding-top:10px">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:6px"><strong style="font-size:13px">Arved kuude lõikes</strong><select id="invoiceChartVat" aria-label="Graafiku summad" style="background:white;color:#6542a5;border:1px solid #ded2ef;border-radius:8px;padding:5px"><option value="neto">KM-ta</option><option value="kokku">KM-ga</option></select></div>
+    <div id="invoiceChartPlot" style="margin-top:8px"></div>
+    <div id="invoiceChartDetail" role="status" style="font-size:12px;min-height:32px;margin-top:5px"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11px"><div>Keskmine kuus<br><strong id="invoiceChartAverage" style="font-size:15px"></strong></div><div>Parim kuu<br><strong id="invoiceChartBest" style="font-size:15px"></strong></div></div>
+   </div>
   </div>
   <input id="invoiceSearch" class="formInput" placeholder="Otsi arvet..." style="margin:12px 0">
   <div id="invoiceFilters" class="psQuoteFilters" role="group" aria-label="Arvete filtrid"></div>
@@ -4161,6 +4170,31 @@ document.getElementById('psQuoteRegistryBtn')?.addEventListener('click',()=>{
  const invoicePdfIcon=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 32" width="25" height="29" aria-hidden="true"><path d="M4 1h14l7 7v22H4a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2Z" fill="#fff" stroke="#d52c32" stroke-width="1.8"/><path d="M18 1v8h7" fill="none" stroke="#d52c32" stroke-width="1.8"/><rect x="5" y="16" width="19" height="9" rx="2" fill="#d52c32"/><text x="14.5" y="22.6" font-size="6.8" font-weight="800" text-anchor="middle" fill="white" font-family="Arial,sans-serif">PDF</text></svg>`;
  const invoiceEditable=['Väljastatud','Osaliselt tasutud','Tasutud','Tühistatud'];
  function invoiceSummaryYear(a){const d=String(a.kuupaev||'');return (d.match(/^(\d{4})-\d{2}-\d{2}/)||d.match(/^\d{1,2}\.\d{1,2}\.(\d{4})$/)||[])[1]||'';}
+ const invoiceMonthNames=['Jaanuar','Veebruar','Märts','Aprill','Mai','Juuni','Juuli','August','September','Oktoober','November','Detsember'];
+ let invoiceChartSelected=-1;
+ function invoiceMonth(a){const d=String(a.kuupaev||'');const m=d.match(/^\d{4}-(\d{2})-\d{2}/)||d.match(/^\d{1,2}\.(\d{1,2})\.\d{4}$/);return m?Number(m[1])-1:-1;}
+ function renderInvoiceChart(){
+  if(el('invoiceChartPanel').hidden)return;
+  const plot=el('invoiceChartPlot'),detail=el('invoiceChartDetail');
+  if(!registryLoaded){plot.textContent='Laadin arveid…';return;}
+  const year=Number(el('invoiceSummaryYear').value), key=el('invoiceChartVat').value;
+  const months=Array.from({length:12},()=>({cents:0,count:0}));
+  for(const a of invoiceCache){if(!['Väljastatud','Osaliselt tasutud','Tasutud'].includes(a.staatus)||Number(invoiceSummaryYear(a))!==year)continue;const m=invoiceMonth(a);if(m<0||m>11)continue;months[m].cents+=Math.round((Number(a[key])||0)*100);months[m].count++;}
+  const values=months.map(m=>m.cents/100), max=Math.max(0,...values), min=Math.min(0,...values), span=max-min||1;
+  const y=v=>12+(max-v)/span*115, zero=y(0);
+  const labels=['J','V','M','A','M','J','J','A','S','O','N','D'];
+  plot.innerHTML=`<svg viewBox="0 0 336 151" width="100%" role="group" aria-label="Kuude arvesummad">${[0,1,2,3].map(i=>{const v=min+span*i/3;return `<line x1="42" x2="334" y1="${y(v)}" y2="${y(v)}" stroke="#d8cbe9"/><text x="38" y="${y(v)+3}" text-anchor="end" font-size="9" fill="#655477">${new Intl.NumberFormat('et-EE',{notation:'compact',maximumFractionDigits:1}).format(v)}</text>`}).join('')}${values.map((v,i)=>{const x=44+i*24;return `<g data-month="${i}" role="button" tabindex="0" aria-label="${invoiceMonthNames[i]}: ${esc(money(v))}, ${months[i].count} arvet"><rect x="${x}" y="0" width="24" height="151" fill="transparent"/><rect x="${x+3}" y="${Math.min(y(v),zero)-(v===0?1:0)}" width="18" height="${Math.max(1,Math.abs(y(v)-zero))}" rx="2" fill="${i===invoiceChartSelected?'#6542a5':'#ad94d5'}"/><text x="${x+12}" y="145" text-anchor="middle" font-size="10" fill="#655477">${labels[i]}</text></g>`}).join('')}</svg>`;
+  const choose=i=>{invoiceChartSelected=i;renderInvoiceChart();plot.querySelector(`[data-month="${i}"]`)?.focus({preventScroll:true});};
+  plot.querySelectorAll('[data-month]').forEach(g=>{g.addEventListener('click',()=>choose(Number(g.dataset.month)));g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();choose(Number(g.dataset.month));}});});
+  detail.textContent=invoiceChartSelected<0?'Vajuta tulbale, et näha kuu summat ja arvete arvu.':invoiceMonthNames[invoiceChartSelected]+': '+money(values[invoiceChartSelected])+' · '+months[invoiceChartSelected].count+' arvet';
+  const now=new Date(), elapsed=year<now.getFullYear()?12:year===now.getFullYear()?now.getMonth()+1:0;
+  const last=months.reduce((n,m,i)=>m.count?i+1:n,0), divisor=Math.max(elapsed,last);
+  el('invoiceChartAverage').textContent=divisor?money(values.reduce((a,b)=>a+b,0)/divisor):'—';
+  const active=months.map((m,i)=>i).filter(i=>months[i].count);const best=active.reduce((b,i)=>b<0||values[i]>values[b]?i:b,-1);
+  el('invoiceChartBest').textContent=best<0?'—':invoiceMonthNames[best]+' · '+money(values[best]);
+ }
+ el('invoiceChartToggle').addEventListener('click',()=>{const panel=el('invoiceChartPanel');panel.hidden=!panel.hidden;el('invoiceChartToggle').setAttribute('aria-expanded',String(!panel.hidden));renderInvoiceChart();});
+ el('invoiceChartVat').addEventListener('change',renderInvoiceChart);
  function renderInvoiceSummary(){
   const select=el('invoiceSummaryYear'), current=String(new Date().getFullYear()), selected=select.value||current;
   const years=[...new Set([current,...invoiceCache.map(invoiceSummaryYear).filter(Boolean)])].sort((a,b)=>Number(b)-Number(a));
@@ -4181,8 +4215,9 @@ document.getElementById('psQuoteRegistryBtn')?.addEventListener('click',()=>{
   el('invoiceSummaryPercent').textContent=new Intl.NumberFormat('et-EE',{maximumFractionDigits:1}).format(percent)+'% täielikult tasutud';
   const notes=[];if(partial.length)notes.push('Osaliselt tasutud: '+partial.length+' arvet. Laekunud osasumma puudub; maksmata summa on ülempiir.');if(valid.some(a=>!invoiceSummaryYear(a)))notes.push('Kuupäevata arved ei sisaldu aasta ülevaates.');
   el('invoiceSummaryNote').textContent=notes.join(' ');el('invoiceSummaryNote').hidden=!notes.length;
+  renderInvoiceChart();
  }
- el('invoiceSummaryYear').addEventListener('change',renderInvoiceSummary);
+ el('invoiceSummaryYear').addEventListener('change',()=>{invoiceChartSelected=-1;renderInvoiceSummary();});
  function renderDrafts(){renderInvoiceRows()}
  function renderInvoiceRows(){
  renderInvoiceSummary();
