@@ -413,8 +413,8 @@ body:has(#quoteView[style*="display: block"]) #newObjectButton{display:none!impo
    <div id="invoiceReserveStatus" role="status" class="muted" style="margin-top:8px"></div>
    <button class="btn btnGray" id="invoiceReserveCopy" type="button" style="display:none;margin-top:8px">Kopeeri arvenumber</button>
    <button class="btn btnGray" id="invoiceFromQuote" type="button" style="margin-left:6px">Arve hinnapakkumisest</button>
-  </div>
  <div id="invoiceQuoteImport" class="card" style="display:none;margin-bottom:12px"><b>Koosta arve hinnapakkumisest</b><div class="formGroup" style="margin-top:10px"><label class="formLabel" for="invoiceQuoteSelect">Vali hinnapakkumine</label><select id="invoiceQuoteSelect" class="formInput"></select></div><button id="invoiceQuoteImportGo" type="button" class="btn btnDark" style="margin-top:10px">Loo arve mustand</button><button id="invoiceQuoteImportCancel" type="button" class="btn btnGray" style="margin-left:6px">Tagasi</button><p id="invoiceQuoteImportStatus" class="muted" role="status"></p></div>
+  </div>
   <div id="invoiceDraftList"></div>
   <div id="invoiceRegistryList"></div>
   <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><div id="invoiceRegistryStatus" class="muted" role="status"></div><button class="btn btnGray" id="invoiceRefresh" type="button" aria-label="Värskenda arveid">↻</button></div>
@@ -4157,7 +4157,7 @@ document.getElementById('psQuoteRegistryBtn')?.addEventListener('click',()=>{
  el('invoiceRegistryList').innerHTML=invoiceCache.filter(a=>(invoiceFilter==='all'||invoiceGroup(a)===invoiceFilter)&&match(a.arveNr,a.klient,a.objekt,a.staatus)).map(a=>{const g=invoiceGroups.find(x=>x[0]===invoiceGroup(a))||['other','Muu','×','#eee','#777'];const total=Number(a.kokku);let pdf='<span></span>';const editable=invoiceEditable.includes(a.staatus);try{const u=new URL(a.pdfUrl);if(u.protocol==='https:')pdf=`<a class="psQuoteAction psQuotePdf" href="${esc(u.href)}" target="_blank" rel="noopener noreferrer" aria-label="Ava PDF">${invoicePdfIcon}</a>`}catch(_){}return `<div class="psQuoteRow"><button type="button" class="psQuoteRowMain psInvoiceMain" data-invoice-detail="${esc(a.arveNr)}"><div class="psQuoteRowTitle"><b>${esc(a.arveNr||'—')}</b> · ${esc(a.kuupaev||'')}</div><div class="psQuoteRowName">${esc(a.klient||(a.staatus==='Ootab e-arvet'?'Reserveeritud e-arve':'Klient puudub'))}</div></button><button type="button" class="psInvoiceBadge" ${editable?'data-invoice-status="'+esc(a.arveNr)+'"':'disabled'} title="${esc(a.staatus)}" aria-label="${esc(a.staatus)}${editable?' – muuda staatust':''}" style="border:0;padding:0;background:${g[3]};color:${g[4]}">${g[2]}</button><div class="psQuoteRowAmount">${a.staatus!=='Ootab e-arvet'&&Number.isFinite(total)?esc(money(total)):''}</div>${pdf}<button type="button" disabled class="psQuoteAction psQuoteEnvelope" title="E-kirja saatmine lisandub hiljem" aria-label="E-kirja saatmine pole veel saadaval" style="opacity:.45">✉</button><div class="psInvoiceDetails" hidden style="grid-column:1/-1;font-size:13px;overflow-wrap:anywhere">${esc([a.staatus,a.objekt,a.maksetahtaeg||a.tahtaeg].filter(Boolean).join(' · '))}</div></div>`}).join('');
  }
  el('invoiceSearch').addEventListener('input',renderInvoiceRows);
- el('invoiceFilters').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.hasAttribute('data-invoice-create')){el('invoiceCreateMenu').hidden=!el('invoiceCreateMenu').hidden;return;}invoiceFilter=b.dataset.invoiceFilter;renderInvoiceRows()});
+ el('invoiceFilters').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.hasAttribute('data-invoice-create')){el('invoiceCreateMenu').hidden=!el('invoiceCreateMenu').hidden;if(el('invoiceCreateMenu').hidden)el('invoiceQuoteImport').style.display='none';return;}invoiceFilter=b.dataset.invoiceFilter;renderInvoiceRows()});
  el('invoiceRegistryList').addEventListener('click',e=>{
   const b=e.target.closest('[data-invoice-status]');if(!b)return;
   const a=invoiceCache.find(x=>x.arveNr===b.dataset.invoiceStatus);if(!a)return;
@@ -4290,7 +4290,9 @@ document.getElementById('psQuoteRegistryBtn')?.addEventListener('click',()=>{
  });
  el('invoiceFromQuote').addEventListener('click',async()=>{
   const panel=el('invoiceQuoteImport'),sel=el('invoiceQuoteSelect'),status=el('invoiceQuoteImportStatus');
+  if(panel.style.display==='block'){panel.style.display='none';return;}
   panel.style.display='block';status.textContent='Laadin hinnapakkumisi…';sel.replaceChildren();
+  requestAnimationFrame(()=>panel.scrollIntoView({block:'nearest',behavior:'smooth'}));
   try{const quotes=await runScript('crmHinnapakkumised',[]);if(!Array.isArray(quotes))throw new Error('Pakkumiste vastus on vigane.');
    const blank=document.createElement('option');blank.value='';blank.textContent='Vali pakkumine…';sel.appendChild(blank);
    quotes.forEach(q=>{const o=document.createElement('option');o.value=String(q.nr);o.textContent=[q.nr,q.tellija,q.objekt,q.staatus].filter(Boolean).join(' · ');sel.appendChild(o)});
