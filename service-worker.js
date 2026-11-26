@@ -1,5 +1,5 @@
 const CACHE_NAME =
-  "playsafe-v41";
+  "playsafe-v42";
 
 const APP_FILES = [
   "./",
