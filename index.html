@@ -348,6 +348,8 @@ body:has(#quoteView[style*="display: block"]) #newObjectButton{display:none!impo
 .psDetailNote{width:100%;min-height:125px;box-sizing:border-box;border:1px solid #d8d3e2;border-radius:12px;padding:12px;font:inherit;resize:vertical}
 .psDetailSmallButton{background:#eee9ff;color:#50309e;border:0;border-radius:12px;padding:12px 18px;font:inherit;font-weight:650;cursor:pointer}
 @media(max-width:390px){.psDetailNav{margin-left:-10px;margin-right:-10px}.psDetailBack{font-size:15px}.psDetailNavTitle{font-size:17px}.psDetailTab{font-size:14px}.psDetailAction{font-size:17px}}
+
+#invoiceFilters .psQuoteFilter{font-size:20px;font-weight:700}#invoiceFilters .psQuoteCount{font-size:11px}#invoiceHome .psInvoiceMain{border:0;background:none;text-align:left;padding:0;color:inherit}#invoiceHome .psInvoiceBadge{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;font-size:19px;font-weight:700}#invoiceCreateMenu[hidden],.psInvoiceDetails[hidden]{display:none!important}
 </style>
 
 <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -403,21 +405,18 @@ body:has(#quoteView[style*="display: block"]) #newObjectButton{display:none!impo
 
 <section id="invoiceView" style="display:none" aria-label="Arved">
  <div id="invoiceHome">
-  <div class="card" style="margin-bottom:12px">
-   <div class="detailTitle">Arved</div>
-   <p class="muted">Arvete koostamine ja Google Sheetsi arvete register. Väljastamine ühendatakse järgmises etapis.</p>
+  <input id="invoiceSearch" class="formInput" placeholder="Otsi arvet..." style="margin:12px 0">
+  <div id="invoiceFilters" class="psQuoteFilters" role="group" aria-label="Arvete filtrid"></div>
+  <div id="invoiceCreateMenu" class="card" hidden>
    <button class="btn btnDark" id="invoiceNew" type="button">+ Uus arve</button>
    <button class="btn btnGray" id="invoiceReserveE" type="button" style="margin-top:8px;background:#fff4bc">Reserveeri e-arve nr</button>
    <div id="invoiceReserveStatus" role="status" class="muted" style="margin-top:8px"></div>
    <button class="btn btnGray" id="invoiceReserveCopy" type="button" style="display:none;margin-top:8px">Kopeeri arvenumber</button>
    <button class="btn btnGray" id="invoiceFromQuote" type="button" style="margin-left:6px">Arve hinnapakkumisest</button>
   </div>
-  <div class="card"><b>Salvestatud mustandid selles seadmes</b><div id="invoiceDraftList" style="margin-top:12px"></div></div>
-  <div class="card" style="margin-top:12px">
-   <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"><b>Registris olevad arved</b><button class="btn btnGray" id="invoiceRefresh" type="button">↻ Värskenda</button></div>
-   <div id="invoiceRegistryStatus" class="muted" role="status" style="margin-top:10px">Registrit ei ole veel laaditud.</div>
-   <div id="invoiceRegistryList" style="margin-top:10px"></div>
-  </div>
+  <div id="invoiceDraftList"></div>
+  <div id="invoiceRegistryList"></div>
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><div id="invoiceRegistryStatus" class="muted" role="status"></div><button class="btn btnGray" id="invoiceRefresh" type="button" aria-label="Värskenda arveid">↻</button></div>
  </div>
  <div id="invoiceQuoteImport" class="card" style="display:none;margin-bottom:12px"><b>Koosta arve hinnapakkumisest</b><div class="formGroup" style="margin-top:10px"><label class="formLabel" for="invoiceQuoteSelect">Vali hinnapakkumine</label><select id="invoiceQuoteSelect" class="formInput"></select></div><button id="invoiceQuoteImportGo" type="button" class="btn btnDark" style="margin-top:10px">Loo arve mustand</button><button id="invoiceQuoteImportCancel" type="button" class="btn btnGray" style="margin-left:6px">Tagasi</button><p id="invoiceQuoteImportStatus" class="muted" role="status"></p></div>
  <div id="invoiceEditor" style="display:none">
@@ -4144,44 +4143,23 @@ document.getElementById('psQuoteRegistryBtn')?.addEventListener('click',()=>{
  const money=n=>new Intl.NumberFormat('et-EE',{style:'currency',currency:'EUR'}).format(n);
  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  function drafts(){try{const a=JSON.parse(localStorage.getItem(KEY)||'[]');let changed=false;for(const d of a){if(Object.prototype.hasOwnProperty.call(d,'Kmkr')){delete d.Kmkr;changed=true;}}if(changed){try{localStorage.setItem(KEY,JSON.stringify(a));}catch(e){console.warn('Mustandite puhastus ebaõnnestus',e);}}return a;}catch{return []}}
- function renderDrafts(){const a=drafts();el('invoiceDraftList').innerHTML=a.length?a.map(d=>`<div class="row" style="display:flex;justify-content:space-between;gap:8px;align-items:center"><button class="btn btnGray" data-invoice-open="${esc(d.id)}" type="button" style="text-align:left;flex:1">${esc(d.Client||'Nimetu klient')} · ${esc(d.Object||'Objekt puudub')}</button><button class="btn btnGray" data-invoice-delete="${esc(d.id)}" type="button" aria-label="Kustuta mustand">✕</button></div>`).join(''):'<div class="muted">Mustandeid veel ei ole.</div>'}
- function openHome(){el('invoiceQuoteImport').style.display='none';previewFingerprint=null;el('invoiceHome').style.display='block';el('invoiceEditor').style.display='none';renderDrafts()}
- let registryLoaded=false;
- let registryLoading=false;
- async function loadInvoiceRegistry(){
-  if(registryLoading)return;
-  registryLoading=true;
-  const button=el('invoiceRefresh');
-  const status=el('invoiceRegistryStatus');
-  const list=el('invoiceRegistryList');
-  button.disabled=true;
-  status.textContent='Laadin arveid Google Sheetsist…';
-  try{
-   const result=await runScript('psArvedRegistriNimekiri',[]);
-   if(!result||result.ok!==true||!Array.isArray(result.arved))throw new Error('Registri vastus ei ole oodatud kujul.');
-   registryLoaded=true;
-   list.replaceChildren();
-   status.textContent=`Arveid registris: ${result.kokku ?? result.arved.length}`;
-   if(!result.arved.length){const empty=document.createElement('div');empty.className='muted';empty.textContent='Väljastatud arveid veel ei ole.';list.appendChild(empty);}
-   result.arved.forEach(arve=>{
-    const card=document.createElement('div');card.className='row';card.style.cssText='padding:12px 0;border-bottom:1px solid #e5e5ea';
-    const heading=document.createElement('div');heading.style.cssText='font-weight:700;overflow-wrap:anywhere';heading.textContent=`Arve ${arve.arveNr || '—'} · ${arve.klient || (arve.staatus==='Ootab e-arvet'?'Reserveeritud e-arve':'Klient puudub')}`;
-    const meta=document.createElement('div');meta.className='muted';meta.style.cssText='margin-top:4px;overflow-wrap:anywhere';
-    const total=Number(arve.kokku);
-    meta.textContent=[arve.kuupaev,arve.staatus,arve.staatus!=='Ootab e-arvet'&&Number.isFinite(total)?money(total):'',arve.objekt].filter(Boolean).join(' · ');
-    card.append(heading,meta);
-    if(arve.pdfUrl){
-     try{const url=new URL(arve.pdfUrl);if(url.protocol==='https:'){
-      const a=document.createElement('a');a.href=url.href;a.target='_blank';a.rel='noopener noreferrer';a.className='btn btnGray';a.style.cssText='display:inline-block;margin-top:8px;text-decoration:none';a.textContent='Ava PDF';card.appendChild(a);
-     }}catch(_){}
-    }
-    list.appendChild(card);
-   });
-  }catch(err){
-   status.textContent='Registri laadimine ebaõnnestus: '+(err?.message||String(err));
-   if(!registryLoaded)list.replaceChildren();
-  }finally{registryLoading=false;button.disabled=false;}
+ let registryLoaded=false, registryLoading=false, invoiceCache=[], invoiceFilter='all';
+ const invoiceGroups=[['all','Kõik','▦','#e9dcff','#6537c5'],['draft','Mustandid ja ootel','✎','#eeeef0','#737985'],['issued','Väljastatud ja osaliselt tasutud','➤','#e0efff','#126bce'],['late','Maksetähtaeg ületatud','!','#ffe4e4','#bd3030'],['paid','Tasutud','✓','#dff7e8','#118346']];
+ function invoiceGroup(a){const st=a.staatus;if(st==='Tasutud')return 'paid';if(['Mustand','Number reserveeritud','Ootab e-arvet'].includes(st))return 'draft';if(['Väljastatud','Osaliselt tasutud'].includes(st)){const raw=String(a.maksetahtaeg||a.tahtaeg||'');const m=raw.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);const iso=m?`${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`:raw.slice(0,10);const now=new Date();const today=[now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),String(now.getDate()).padStart(2,'0')].join('-');return /^\d{4}-\d{2}-\d{2}$/.test(iso)&&iso<today?'late':'issued';}return 'other';}
+ const invoicePdfIcon=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 32" width="25" height="29" aria-hidden="true"><path d="M4 1h14l7 7v22H4a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2Z" fill="#fff" stroke="#d52c32" stroke-width="1.8"/><path d="M18 1v8h7" fill="none" stroke="#d52c32" stroke-width="1.8"/><rect x="5" y="16" width="19" height="9" rx="2" fill="#d52c32"/><text x="14.5" y="22.6" font-size="6.8" font-weight="800" text-anchor="middle" fill="white" font-family="Arial,sans-serif">PDF</text></svg>`;
+ function renderDrafts(){renderInvoiceRows()}
+ function renderInvoiceRows(){
+ const ds=drafts(), q=el('invoiceSearch').value.trim().toLowerCase();
+ const match=(...v)=>v.some(x=>String(x||'').toLowerCase().includes(q));
+ el('invoiceFilters').innerHTML=invoiceGroups.map(([k,label,ic,bg,fg])=>`<button type="button" class="psQuoteFilter" data-invoice-filter="${k}" aria-pressed="${invoiceFilter===k}" title="${label}" aria-label="${label}" style="background:${bg};color:${fg}">${ic}<span class="psQuoteCount">${invoiceCache.filter(a=>k==='all'||invoiceGroup(a)===k).length+(['all','draft'].includes(k)?ds.length:0)}</span></button>`).join('')+'<button type="button" class="psQuoteFilter psQuoteNew" data-invoice-create title="Uus arve" aria-label="Uus arve">+</button>';
+ el('invoiceDraftList').innerHTML=['all','draft'].includes(invoiceFilter)?ds.filter(d=>match(d.Client,d.Object)).map(d=>`<div class="psQuoteRow"><button type="button" class="psQuoteRowMain psInvoiceMain" data-invoice-open="${esc(d.id)}"><div class="psQuoteRowTitle"><b>Mustand</b> · ${esc(d.Date||'')}</div><div class="psQuoteRowName">${esc(d.Client||'Nimetu klient')}</div></button><span class="psInvoiceBadge" style="background:#eeeef0;color:#737985">✎</span><span></span><span></span><button class="psQuoteAction" data-invoice-delete="${esc(d.id)}" aria-label="Kustuta mustand">×</button></div>`).join(''):'';
+ el('invoiceRegistryList').innerHTML=invoiceCache.filter(a=>(invoiceFilter==='all'||invoiceGroup(a)===invoiceFilter)&&match(a.arveNr,a.klient,a.objekt,a.staatus)).map(a=>{const g=invoiceGroups.find(x=>x[0]===invoiceGroup(a))||['other','Muu','×','#eee','#777'];const total=Number(a.kokku);let pdf='<span></span>';try{const u=new URL(a.pdfUrl);if(u.protocol==='https:')pdf=`<a class="psQuoteAction psQuotePdf" href="${esc(u.href)}" target="_blank" rel="noopener noreferrer" aria-label="Ava PDF">${invoicePdfIcon}</a>`}catch(_){}return `<div class="psQuoteRow"><button type="button" class="psQuoteRowMain psInvoiceMain" data-invoice-detail="${esc(a.arveNr)}"><div class="psQuoteRowTitle"><b>${esc(a.arveNr||'—')}</b> · ${esc(a.kuupaev||'')}</div><div class="psQuoteRowName">${esc(a.klient||(a.staatus==='Ootab e-arvet'?'Reserveeritud e-arve':'Klient puudub'))}</div></button><span class="psInvoiceBadge" title="${esc(a.staatus)}" style="background:${g[3]};color:${g[4]}">${g[2]}</span><div class="psQuoteRowAmount">${a.staatus!=='Ootab e-arvet'&&Number.isFinite(total)?esc(money(total)):''}</div>${pdf}<button type="button" disabled class="psQuoteAction psQuoteEnvelope" title="E-kirja saatmine lisandub hiljem" aria-label="E-kirja saatmine pole veel saadaval" style="opacity:.45">✉</button><div class="psInvoiceDetails" hidden style="grid-column:1/-1;font-size:13px;overflow-wrap:anywhere">${esc([a.staatus,a.objekt,a.maksetahtaeg||a.tahtaeg].filter(Boolean).join(' · '))}</div></div>`}).join('');
  }
+ el('invoiceSearch').addEventListener('input',renderInvoiceRows);
+ el('invoiceFilters').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.hasAttribute('data-invoice-create')){el('invoiceCreateMenu').hidden=!el('invoiceCreateMenu').hidden;return;}invoiceFilter=b.dataset.invoiceFilter;renderInvoiceRows()});
+ el('invoiceRegistryList').addEventListener('click',e=>{const b=e.target.closest('[data-invoice-detail]');if(b){const d=b.closest('.psQuoteRow').querySelector('.psInvoiceDetails');d.hidden=!d.hidden;}});
+ function openHome(){el('invoiceQuoteImport').style.display='none';previewFingerprint=null;el('invoiceHome').style.display='block';el('invoiceEditor').style.display='none';el('invoiceCreateMenu').hidden=true;renderDrafts()}
+ async function loadInvoiceRegistry(){if(registryLoading)return;registryLoading=true;const button=el('invoiceRefresh'),status=el('invoiceRegistryStatus');button.disabled=true;status.textContent='Laadin arveid Google Sheetsist…';try{const result=await runScript('psArvedRegistriNimekiri',[]);if(!result||result.ok!==true||!Array.isArray(result.arved))throw new Error('Registri vastus ei ole oodatud kujul.');invoiceCache=result.arved;registryLoaded=true;renderInvoiceRows();status.textContent=`Arveid registris: ${result.kokku??invoiceCache.length}`;}catch(err){status.textContent='Registri laadimine ebaõnnestus: '+(err?.message||String(err));}finally{registryLoading=false;button.disabled=false;}}
  let invoiceWorks=[];
  let invoiceWorksLoaded=false;
  let invoiceWorksLoading=false;
