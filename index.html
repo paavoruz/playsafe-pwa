@@ -405,6 +405,18 @@ body:has(#quoteView[style*="display: block"]) #newObjectButton{display:none!impo
 
 <section id="invoiceView" style="display:none" aria-label="Arved">
  <div id="invoiceHome">
+  <div id="invoiceSummary" style="background:#f1ebfa;color:#34264b;border-radius:16px;padding:12px 14px;margin-top:10px;font-variant-numeric:tabular-nums">
+   <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span style="font-size:12px;font-weight:600">Väljastatud arved · KM-ta</span><select id="invoiceSummaryYear" aria-label="Ülevaate aasta" style="background:#fff;color:#6542a5;border:1px solid #ded2ef;border-radius:8px;padding:4px 8px;font-size:14px"></select></div>
+   <div id="invoiceSummaryNet" style="font-size:25px;font-weight:800;color:#6542a5">—</div>
+   <div id="invoiceSummaryGross" style="font-size:12px;margin-bottom:9px">Laadin arveid…</div>
+   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;border-top:1px solid #ded2ef;padding-top:8px">
+    <div><div style="font-size:11px">Tasutud · KM-ga</div><strong id="invoiceSummaryPaid" style="font-size:17px;color:#25834d">—</strong></div>
+    <div><div style="font-size:11px">Maksmata · KM-ga</div><strong id="invoiceSummaryUnpaid" style="font-size:17px;color:#98600d">—</strong></div>
+   </div>
+   <div style="height:5px;background:#e9b94e;border-radius:8px;overflow:hidden;margin-top:9px"><div id="invoiceSummaryBar" style="height:100%;width:0;background:#429b68"></div></div>
+   <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;font-size:11px;margin-top:5px"><span id="invoiceSummaryPercent">—</span><span id="invoiceSummaryLate" style="color:#b42323">Üle tähtaja —</span></div>
+   <div id="invoiceSummaryNote" style="font-size:11px;margin-top:5px" hidden></div>
+  </div>
   <input id="invoiceSearch" class="formInput" placeholder="Otsi arvet..." style="margin:12px 0">
   <div id="invoiceFilters" class="psQuoteFilters" role="group" aria-label="Arvete filtrid"></div>
   <div id="invoiceCreateMenu" class="card" hidden>
@@ -4148,8 +4160,32 @@ document.getElementById('psQuoteRegistryBtn')?.addEventListener('click',()=>{
  function invoiceGroup(a){const st=a.staatus;if(st==='Tasutud')return 'paid';if(['Mustand','Number reserveeritud','Ootab e-arvet'].includes(st))return 'draft';if(['Väljastatud','Osaliselt tasutud'].includes(st)){const raw=String(a.maksetahtaeg||a.tahtaeg||'');const m=raw.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);const iso=m?`${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`:raw.slice(0,10);const now=new Date();const today=[now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),String(now.getDate()).padStart(2,'0')].join('-');return /^\d{4}-\d{2}-\d{2}$/.test(iso)&&iso<today?'late':'issued';}return 'other';}
  const invoicePdfIcon=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 32" width="25" height="29" aria-hidden="true"><path d="M4 1h14l7 7v22H4a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2Z" fill="#fff" stroke="#d52c32" stroke-width="1.8"/><path d="M18 1v8h7" fill="none" stroke="#d52c32" stroke-width="1.8"/><rect x="5" y="16" width="19" height="9" rx="2" fill="#d52c32"/><text x="14.5" y="22.6" font-size="6.8" font-weight="800" text-anchor="middle" fill="white" font-family="Arial,sans-serif">PDF</text></svg>`;
  const invoiceEditable=['Väljastatud','Osaliselt tasutud','Tasutud','Tühistatud'];
+ function invoiceSummaryYear(a){const d=String(a.kuupaev||'');return (d.match(/^(\d{4})-\d{2}-\d{2}/)||d.match(/^\d{1,2}\.\d{1,2}\.(\d{4})$/)||[])[1]||'';}
+ function renderInvoiceSummary(){
+  const select=el('invoiceSummaryYear'), current=String(new Date().getFullYear()), selected=select.value||current;
+  const years=[...new Set([current,...invoiceCache.map(invoiceSummaryYear).filter(Boolean)])].sort((a,b)=>Number(b)-Number(a));
+  select.replaceChildren(...years.map(y=>{const o=document.createElement('option');o.value=y;o.textContent=y;return o;}));select.value=years.includes(selected)?selected:current;
+  if(!registryLoaded)return;
+  const valid=invoiceCache.filter(a=>['Väljastatud','Osaliselt tasutud','Tasutud'].includes(a.staatus));
+  const list=valid.filter(a=>invoiceSummaryYear(a)===select.value);
+  const sum=(arr,key)=>arr.reduce((n,a)=>n+Math.round((Number(a[key])||0)*100),0)/100;
+  const paid=list.filter(a=>a.staatus==='Tasutud'), unpaid=list.filter(a=>a.staatus!=='Tasutud'), partial=unpaid.filter(a=>a.staatus==='Osaliselt tasutud');
+  const gross=sum(list,'kokku'), paidTotal=sum(paid,'kokku'), unpaidTotal=sum(unpaid,'kokku'), late=sum(unpaid.filter(a=>invoiceGroup(a)==='late'),'kokku');
+  const percent=gross>0?Math.max(0,Math.min(100,paidTotal/gross*100)):0;
+  el('invoiceSummaryNet').textContent=money(sum(list,'neto'));
+  el('invoiceSummaryGross').textContent='Koos käibemaksuga '+money(gross);
+  el('invoiceSummaryPaid').textContent=money(paidTotal);
+  el('invoiceSummaryUnpaid').textContent=(partial.length?'≤ ':'')+money(unpaidTotal);
+  el('invoiceSummaryLate').textContent='Üle tähtaja '+(partial.some(a=>invoiceGroup(a)==='late')?'≤ ':'')+money(late);
+  el('invoiceSummaryBar').style.width=percent+'%';
+  el('invoiceSummaryPercent').textContent=new Intl.NumberFormat('et-EE',{maximumFractionDigits:1}).format(percent)+'% täielikult tasutud';
+  const notes=[];if(partial.length)notes.push('Osaliselt tasutud: '+partial.length+' arvet. Laekunud osasumma puudub; maksmata summa on ülempiir.');if(valid.some(a=>!invoiceSummaryYear(a)))notes.push('Kuupäevata arved ei sisaldu aasta ülevaates.');
+  el('invoiceSummaryNote').textContent=notes.join(' ');el('invoiceSummaryNote').hidden=!notes.length;
+ }
+ el('invoiceSummaryYear').addEventListener('change',renderInvoiceSummary);
  function renderDrafts(){renderInvoiceRows()}
  function renderInvoiceRows(){
+ renderInvoiceSummary();
  const ds=drafts(), q=el('invoiceSearch').value.trim().toLowerCase();
  const match=(...v)=>v.some(x=>String(x||'').toLowerCase().includes(q));
  el('invoiceFilters').innerHTML=invoiceGroups.map(([k,label,ic,bg,fg])=>`<button type="button" class="psQuoteFilter" data-invoice-filter="${k}" aria-pressed="${invoiceFilter===k}" title="${label}" aria-label="${label}" style="background:${bg};color:${fg}">${ic}<span class="psQuoteCount">${invoiceCache.filter(a=>k==='all'||invoiceGroup(a)===k).length+(['all','draft'].includes(k)?ds.length:0)}</span></button>`).join('')+'<button type="button" class="psQuoteFilter psQuoteNew" data-invoice-create title="Uus arve" aria-label="Uus arve">+</button>';
@@ -4173,7 +4209,7 @@ document.getElementById('psQuoteRegistryBtn')?.addEventListener('click',()=>{
  });
  el('invoiceRegistryList').addEventListener('click',e=>{const b=e.target.closest('[data-invoice-detail]');if(b){const d=b.closest('.psQuoteRow').querySelector('.psInvoiceDetails');d.hidden=!d.hidden;}});
  function openHome(){el('invoiceQuoteImport').style.display='none';previewFingerprint=null;el('invoiceHome').style.display='block';el('invoiceEditor').style.display='none';el('invoiceCreateMenu').hidden=true;renderDrafts()}
- async function loadInvoiceRegistry(){if(registryLoading)return;registryLoading=true;const button=el('invoiceRefresh'),status=el('invoiceRegistryStatus');button.disabled=true;status.textContent='Laadin arveid Google Sheetsist…';try{const result=await runScript('psArvedRegistriNimekiri',[]);if(!result||result.ok!==true||!Array.isArray(result.arved))throw new Error('Registri vastus ei ole oodatud kujul.');invoiceCache=result.arved;registryLoaded=true;renderInvoiceRows();status.textContent=`Arveid registris: ${result.kokku??invoiceCache.length}`;}catch(err){status.textContent='Registri laadimine ebaõnnestus: '+(err?.message||String(err));}finally{registryLoading=false;button.disabled=false;}}
+ async function loadInvoiceRegistry(){if(registryLoading)return;registryLoading=true;const button=el('invoiceRefresh'),status=el('invoiceRegistryStatus');button.disabled=true;status.textContent='Laadin arveid Google Sheetsist…';try{const result=await runScript('psArvedRegistriNimekiri',[]);if(!result||result.ok!==true||!Array.isArray(result.arved))throw new Error('Registri vastus ei ole oodatud kujul.');invoiceCache=result.arved;registryLoaded=true;renderInvoiceRows();status.textContent=`Arveid registris: ${result.kokku??invoiceCache.length}`;}catch(err){status.textContent='Registri laadimine ebaõnnestus: '+(err?.message||String(err));el('invoiceSummaryGross').textContent=registryLoaded?'Viimati laaditud andmed · värskendamine ebaõnnestus':'Andmete laadimine ebaõnnestus';}finally{registryLoading=false;button.disabled=false;}}
  let invoiceWorks=[];
  let invoiceWorksLoaded=false;
  let invoiceWorksLoading=false;
