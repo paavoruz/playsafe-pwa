@@ -471,7 +471,7 @@ body:has(#quoteView[style*="display: block"]) #newObjectButton{display:none!impo
 
 <section id="quoteView" style="display:none">
 <div class="quoteNav" style="display:none"><button id="quoteCreateTab" class="btn btnDark" type="button">Uus pakkumine</button><button id="quoteListTab" class="btn btnGray" type="button">Pakkumised</button></div>
-<div id="quoteCreatePanel"><button type="button" id="psBackToQuotes" class="btn btnGray" style="margin:8px 0">← Pakkumised</button>
+<div id="quoteCreatePanel"><div id="psQuoteEditBanner" style="display:none;padding:12px;background:#eee7fa;border-radius:12px;margin:8px 0;color:#56368a;font-weight:600"></div><button type="button" id="psBackToQuotes" class="btn btnGray" style="margin:8px 0">← Pakkumised</button>
 
   <div class="card">
     <div class="detailTitle">Uus hinnapakkumine</div>
@@ -2629,13 +2629,16 @@ function psOpenQuoteDetail(nr){
  detail.innerHTML=`<div class="psDetailNav"><button type="button" class="psDetailBack" id="psDetailBack"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 3-9 9 9 9"/></svg><span>Pakkumised</span></button><div class="psDetailNavTitle">${crmEsc(x.nr)}</div></div>
  <div class="psDetailBody"><div class="psDetailTabs" role="tablist"><button type="button" class="psDetailTab" data-tab="info" aria-selected="true">Üldinfo</button><button type="button" class="psDetailTab" data-tab="sites" aria-selected="false">${crmEsc(siteLabel)}</button><button type="button" class="psDetailTab" data-tab="notes" aria-selected="false">Märkused</button></div>
  <div data-detail-panel="info"><div class="psDetailCard"><h2 class="psDetailTitle">${crmEsc(x.objekt||x.tellija||'Pakkumine')}</h2><div class="psDetailSub">${crmEsc(x.aadress||x.objektiAadress||'')}</div><div class="psDetailInfoGrid"><div><div class="psDetailLabel">Kuupäev</div><div class="psDetailValue">${crmEsc(x.kuupaev||'—')}</div></div><div><div class="psDetailLabel">Summa</div><div class="psDetailAmount">${crmEsc(psEuroOnce(x.kokku))}</div></div></div><div class="psDetailLabel">Staatus</div><span class="psDetailStatus ${statusClass}">${statusIcon}${crmEsc(status)}</span>${pdf?`<div style="margin-top:14px">${pdf}</div>`:''}</div>
- <div class="psDetailActions"><button type="button" class="psDetailAction" id="psDetailMail">${mail}<span>Saada pakkumine</span><span></span></button><button type="button" class="psDetailAction" id="psDetailAddSite">${pin}<span>Lisa väljakud</span><span></span></button><button type="button" class="psDetailAction work" id="psDetailWork">${wrench}<span>Loo töö</span><span></span></button><button type="button" class="psDetailAction delete" id="psDetailDelete">${'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15M10 10v7M14 10v7"/></svg>'}<span>Kustuta pakkumine</span><span></span></button></div></div>
+ <div class="psDetailActions"><button type="button" class="psDetailAction" id="psDetailMail">${mail}<span>Saada pakkumine</span><span></span></button><button type="button" class="psDetailAction" id="psDetailEdit"><span>✎</span><span>Muuda pakkumist</span><span></span></button><button type="button" class="psDetailAction" id="psDetailCopy"><span>▣</span><span>Kopeeri uueks pakkumiseks</span><span></span></button><button type="button" class="psDetailAction" id="psDetailAddSite">${pin}<span>Lisa väljakud</span><span></span></button><button type="button" class="psDetailAction work" id="psDetailWork">${wrench}<span>Loo töö</span><span></span></button><button type="button" class="psDetailAction delete" id="psDetailDelete">${'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15M10 10v7M14 10v7"/></svg>'}<span>Kustuta pakkumine</span><span></span></button></div></div>
  <div data-detail-panel="sites" style="display:none"><div class="psDetailCard"><h2 class="psDetailTitle">Pakkumise väljakud</h2><p style="color:#777680">Vaata või lisa pakkumisega seotud väljakuid.</p><button type="button" class="psDetailSmallButton" id="psDetailSites">${pin} Ava väljakud</button></div></div>
  <div data-detail-panel="notes" style="display:none"><div class="psDetailCard"><h2 class="psDetailTitle">Märkused</h2><textarea id="psDetailNote" class="psDetailNote" placeholder="Lisa märkused..."></textarea><p style="font-size:12px;color:#777">Märkused salvestuvad ainult selles seadmes.</p><button type="button" class="psDetailSmallButton" id="psDetailSaveNote">Salvesta märkused</button></div></div></div>`;
  document.querySelector('#quoteListPanel .psQuoteListShell').style.display='none';detail.style.display='block';
  $('psDetailBack').onclick=psCloseQuoteDetail;
  detail.querySelectorAll('.psDetailTab').forEach(b=>b.onclick=()=>psQuoteDetailTab(b.dataset.tab));
  $('psDetailMail').onclick=()=>psOpenMail(nr);
+ $('psDetailEdit').style.display=['Koostatud','Saadetud'].includes(status)?'':'none';
+ $('psDetailEdit').onclick=()=>psQuotePrefill(nr,true);
+ $('psDetailCopy').onclick=()=>psQuotePrefill(nr,false);
  $('psDetailSites').onclick=()=>psOpenQuoteSites(nr);
  $('psDetailAddSite').onclick=()=>psOpenQuoteSites(nr);
  $('psDetailWork').onclick=()=>psOpenWork(nr);
@@ -2653,7 +2656,33 @@ async function crmLoadQuotes(){
  try{crmQuoteCache=await runScript('crmHinnapakkumised',[]);crmQuoteCache.forEach(x=>{if(x.staatus==='Tagasi lükatud')x.staatus='Arhiveeritud';});crmRenderQuotes();}
  catch(e){showError('Pakkumiste laadimise viga: '+e.message);$('quoteListContent').textContent='Laadimine ebaõnnestus.';}
 }
+let psQuoteEdit=null,psQuotePrefillBusy=false;
+function psQuoteResetEdit(){
+ if(!psQuoteEdit)return;
+ psQuoteEdit=null;$('psQuoteEditBanner').style.display='none';$('saveQuote').textContent='Salvesta pakkumine';
+ ['quoteCustomer','quoteRegCode','quoteBillingAddress','quoteContact','quotePhone','quoteEmail','quoteObject','quoteAddress','quoteFieldType'].forEach(id=>$(id).value='');
+ $('quoteDate').value=localDateISO();$('quoteTransportKm').value='0';$('quoteTransportPrice').value='0.50';selectedQuoteServices.clear();quoteServiceValues.clear();renderQuoteServices();
+}
+async function psQuotePrefill(nr,edit){
+ if(psQuotePrefillBusy)return;psQuotePrefillBusy=true;
+ try{
+  const q=await runScript('psPakkumiseMuutmiseAndmed',[nr]);
+  if(edit&&!q.muudetav)throw new Error('Seda pakkumist saab ainult uueks kopeerida.');
+  if(!hinnakiri.length)await loadHinnakiri();await loadValjakuTyypid();
+  const missing=q.teenused.filter(t=>!hinnakiri.some(s=>String(s.id)===String(t.id)));
+  if(missing.length)throw new Error('Hinnakirjast puuduvad teenused: '+missing.map(t=>t.id).join(', '));
+  if(!Array.from($('quoteFieldType').options).some(o=>o.value===q.valjakuTyyp)||!Array.from($('quoteAssessment').options).some(o=>o.value===q.hindamisliik))throw new Error('Varasem väljaku tüüp või hindamisliik ei ole enam valikus.');
+  psQuoteResetEdit();crmSwitchTab(false);psAiPendingThread='';
+  psQuoteEdit={nr,edit,token:q.token};
+  const fields={quoteCustomer:q.tellija,quoteRegCode:q.registrikood,quoteBillingAddress:q.arveAadress,quoteContact:q.kontaktisik,quotePhone:q.telefon,quoteEmail:q.email,quoteObject:q.objekt,quoteAddress:q.aadress,quoteFieldType:q.valjakuTyyp,quoteAssessment:q.hindamisliik,quoteTransportKm:q.transportKm,quoteTransportPrice:q.transportKmHind,quoteDate:localDateISO()};
+  Object.entries(fields).forEach(([id,value])=>$(id).value=value??'');
+  selectedQuoteServices.clear();quoteServiceValues.clear();q.teenused.forEach(t=>{const id=String(t.id);selectedQuoteServices.add(id);quoteServiceValues.set(id,{kogus:Number(t.kogus),uhikuhind:Number(t.uhikuhind),soodustusRakendub:!!t.soodustusRakendub,soodustusProtsent:Number(t.soodustusProtsent||0)});});
+  $('psQuoteEditBanner').textContent=edit?'Muuda '+nr+' · V'+(q.versioon+1):'Uus pakkumine · aluseks '+nr;$('psQuoteEditBanner').style.display='block';$('saveQuote').textContent=edit?'Salvesta uus versioon':'Salvesta uus pakkumine';renderQuoteServices();$('quoteCreatePanel').scrollIntoView({block:'start'});
+ }catch(e){showError('Pakkumise avamine ebaõnnestus: '+e.message);}finally{psQuotePrefillBusy=false;}
+}
+
 function crmSwitchTab(list){
+ if(list)psQuoteResetEdit();
  if(psCurrentQuoteDetail)psCloseQuoteDetail();
  $('quoteCreatePanel').style.display=list?'none':'block';$('quoteListPanel').style.display=list?'block':'none';
  $('quoteCreateTab').className='btn '+(list?'btnGray':'btnDark');$('quoteListTab').className='btn '+(list?'btnDark':'btnGray');
@@ -2783,7 +2812,7 @@ async function saveQuote(){
 
  try{
   await ensureToken();
-  const result=await runScript("lisaHinnapakkumine",[{
+  const payload={
    kuupaev:$("quoteDate").value||localDateISO(),
    tellija,
    registrikood:$("quoteRegCode").value.trim(),
@@ -2820,7 +2849,10 @@ async function saveQuote(){
    summa:totals.net,
    km:totals.vat,
    kokku:totals.gross
-  }]);
+  };
+  const editing=psQuoteEdit?.edit===true;
+  const result=editing?await runScript("psMuudaHinnapakkumist",[psQuoteEdit.nr,psQuoteEdit.token,payload]):await runScript("lisaHinnapakkumine",[payload]);
+  if(editing){toast(`Pakkumine ${result.pakkumiseNr} V${result.versioon} salvestatud`);psQuoteResetEdit();crmSwitchTab(true);return;}
 
   if(result?.pakkumiseNr){
     if(psAiPendingThread){
@@ -2854,6 +2886,7 @@ async function saveQuote(){
     toast("Pakkumine salvestatud");
   }
 
+  if(psQuoteEdit){psQuoteResetEdit();crmSwitchTab(true);return;}
   selectedQuoteServices.clear();
    quoteServiceValues.clear();
   $("quoteCustomer").value="";
@@ -2869,7 +2902,7 @@ async function saveQuote(){
   showError("Pakkumise salvestamise viga: "+e.message);
  }finally{
   button.disabled=false;
-  button.textContent="Salvesta pakkumine";
+  button.textContent=psQuoteEdit?.edit?"Salvesta uus versioon":psQuoteEdit?"Salvesta uus pakkumine":"Salvesta pakkumine";
  }
 }
 
